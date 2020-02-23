@@ -100,18 +100,20 @@ def main(argv):
    except getopt.GetoptError:
       print_help()
    if (len(sys.argv) == 1):
-      print_help()
-   for opt, arg in opts:
-      if opt == '-h':
-         print_help()
-      elif opt in ("-i", "--ifile"):
-         inputfile = arg
-      elif opt in ("-o", "--ofile"):
-         outputfile = arg
-      elif opt in ("-v"):
-         logging.basicConfig(level=logging.DEBUG)
-      else:
-         print_help()
+      inputfile = input("Enter the name of the input xls file: ")
+      outputfile = input("Enter the name of the output xlsx/xls file: ")
+   else:
+      for opt, arg in opts:
+         if opt == '-h':
+            print_help()
+         elif opt in ("-i", "--ifile"):
+            inputfile = arg
+         elif opt in ("-o", "--ofile"):
+            outputfile = arg
+         elif opt in ("-v"):
+            logging.basicConfig(level=logging.DEBUG)
+         else:
+            print_help()
 
    in_wb = xlrd.open_workbook(inputfile, formatting_info=True)
    nsheets = in_wb.nsheets
