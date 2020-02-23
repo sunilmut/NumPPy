@@ -99,6 +99,8 @@ def main(argv):
       opts, args = getopt.getopt(argv,"vhi:o:",["ifile=","ofile="])
    except getopt.GetoptError:
       print_help()
+   if (len(sys.argv) == 1):
+      print_help()
    for opt, arg in opts:
       if opt == '-h':
          print_help()
