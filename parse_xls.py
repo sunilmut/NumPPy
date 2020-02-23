@@ -86,7 +86,7 @@ def generate_output(out_wb):
 
 def print_help():
    print('parse_xls.py -i <inputfile.xls> -o <outputfile.xlsx>')
-   print('Ex: extract_xls.py -i c:\\test\\input.xls -o d:\\data\\output.xlsx')
+   print('Ex: parse_xls.py -i c:\\test\\input.xls -o d:\\data\\output.xlsx')
    print('Notes:')
    print('- Only works with xls files for input for now. Output can be xlsx.')
    print('- Close the output file prior to running.')
