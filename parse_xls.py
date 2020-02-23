@@ -6,20 +6,16 @@ import getopt
 from collections import defaultdict
 import xlsxwriter
 import logging as log
-
-def nested_dict(n, type):
-   if n == 1:
-      return defaultdict(type)
-   else:
-      return defaultdict(lambda: nested_dict(n - 1, type))
+from nested_dict import nested_dict
 
 # dictionary to store the parsed input data
-# this is a 2 level nested dictionary such as
+# this is a 3 level nested dictionary such as
 # input_dic_parsed[sheet number][background color] = []
-input_dic_parsed = nested_dict(100, float)
+input_dic_parsed = nested_dict(3, list)
 
 # distinct color to sheet number map
 color_to_sheet_num_map = {}
+cur_column_per_color = {}
 
 # parses the input workbook and stores the data in the input dictionary
 def parse_input_workbook(in_wb, sheet, sheet_num):
@@ -27,46 +23,60 @@ def parse_input_workbook(in_wb, sheet, sheet_num):
    # Get the total number of rows and columns in this sheet
    rows, cols = sheet.nrows, sheet.ncols
    # print "Number of rows: %s   number of cols: %s" % (rows, cols)
-   for row in range(0, rows):  # Iterate through rows
-      for col in range(0, cols):  # Iterate through columns
+   for col in range(0, cols):  # Iterate through columns
+      color_seen_in_this_row = {}
+      for row in range(0, rows):  # Iterate through rows 
          col_type = sheet.cell_type(row, col)
          if col_type is xlrd.XL_CELL_EMPTY:
-            continue # If emtpy cell, continue
-         if col_type is not xlrd.XL_CELL_NUMBER:
-            raise Exception("%s[row: %s, col %s] is not of type int or float" % (sheet.name, row, col))
+            continue # skip empty cells
          cell_obj = sheet.cell(row, col)  # Get cell object by row, col
          xfx = sheet.cell_xf_index(row, col)
          xf = in_wb.xf_list[xfx]
          bgx = xf.background.pattern_colour_index
-         # print('[%s,%s] cell_obj: [%s] [%s]' % (row + 1, col + 1, cell_obj, bgx))
-         if bgx in input_dic_parsed[sheet_num].keys():  # if key is present in the list, just append the value
-            input_dic_parsed[sheet_num][bgx].append(cell_obj.value)
-         else:
-            input_dic_parsed[sheet_num][bgx] = []  # else create a empty list as value for the key
-            input_dic_parsed[sheet_num][bgx].append(cell_obj.value)  # now append the value for that key
+         if bgx not in color_seen_in_this_row.keys():
+            color_seen_in_this_row[bgx] = 1
+         if bgx not in cur_column_per_color.keys():
+            cur_column_per_color[bgx] = -1
+         column = cur_column_per_color[bgx]
+         column += 1
+         color_map = in_wb.colour_map[bgx]
+         if bgx == 64:
+            continue # skip white
+         if bgx not in color_seen_in_this_row.keys():
+            color_seen_in_this_row[bgx]
+         print('[%s,%s] cell_obj: [%s] [%s], column: %d' % (row + 1, col + 1, cell_obj, bgx, column))
+         input_dic_parsed[sheet_num][bgx][column].append(cell_obj.value)
+      print('colors in this col %s', color_seen_in_this_row)
+      for colors in color_seen_in_this_row:
+         cur_column_per_color[colors] += 1
+      print("current column per color %s" % (cur_column_per_color))
+   print('parsed dict %s' % (input_dic_parsed))
 
 def generate_output(out_wb):
    cur_column_per_color = {}
    cell_format = out_wb.add_format()
    for sheet_num in input_dic_parsed:
-      for color in input_dic_parsed[sheet_num]:
-         row = 0
+      for color in list(input_dic_parsed[sheet_num]):
+         print ('color %s', color)
          if color not in cur_column_per_color.keys():
             cur_column_per_color[color] = 0
          col = cur_column_per_color[color]
          # print 'Color code: %s, col is %s' % (color, col)
-         for value in input_dic_parsed[sheet_num][color]:
-            # print '\t%s' % (value)
-            sheet_name = "Sheet" + str(color_to_sheet_num_map[color])
-            sheet = out_wb.get_worksheet_by_name(sheet_name)
-            sheet.write(row, col, value)
-            row += 1
-         cur_column_per_color[color] += 1
+         for column in input_dic_parsed[sheet_num][color]:
+            row = 0
+            for value in input_dic_parsed[sheet_num][color][column]:
+               print ('column %s, value: %s' % (column, value))
+               sheet_name = "Sheet" + str(color_to_sheet_num_map[color])
+               sheet = out_wb.get_worksheet_by_name(sheet_name)
+               #.set_bg_color('green')
+               sheet.write(row, column, value, cell_format)
+               row += 1
+         cur_column_per_color[color] += col
 
 def print_help():
-   print 'extract_xls.py -i <inputfile> -o <outputfile>'
-   print 'only works with xls files for input for now'
-   print 'close the output file prior to running'
+   print ('extract_xls.py -i <inputfile.xls> -o <outputfile.xlsx>')
+   print ('Only works with xls files for input for now')
+   print ('Close the output file prior to running')
    sys.exit()
 
 def main(argv):
