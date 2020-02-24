@@ -8,6 +8,7 @@ import xlsxwriter
 import logging as log
 from nested_dict import nested_dict
 import logging, sys
+import os
 
 # dictionary to store the parsed input data
 # this is a 3 level nested dictionary such as:
@@ -101,6 +102,9 @@ def main(argv):
       print_help()
    if (len(sys.argv) == 1):
       inputfile = input("Enter the name of the input xls file: ")
+      # strip the quotes at the start and end, else
+      # paths with white spaces won't work.
+      inputfile = inputfile.strip('\"')
       outputfile = input("Enter the name of the output xlsx/xls file: ")
    else:
       for opt, arg in opts:
