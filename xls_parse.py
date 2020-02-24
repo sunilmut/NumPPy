@@ -106,6 +106,7 @@ def main(argv):
       # paths with white spaces won't work.
       inputfile = inputfile.strip('\"')
       outputfile = input("Enter the name of the output [.xlsx/.xls] file: ")
+      input("Warning: Program will overwrite the output file if it exists. Hit Enter to continue or Ctrl+C to exit.")
    else:
       for opt, arg in opts:
          if opt == '-h':
