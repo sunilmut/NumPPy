@@ -101,11 +101,11 @@ def main(argv):
    except getopt.GetoptError:
       print_help()
    if (len(sys.argv) == 1):
-      inputfile = input("Enter the name of the input xls file: ")
+      inputfile = input("Enter the name of the input [.xls] file: ")
       # strip the quotes at the start and end, else
       # paths with white spaces won't work.
       inputfile = inputfile.strip('\"')
-      outputfile = input("Enter the name of the output xlsx/xls file: ")
+      outputfile = input("Enter the name of the output [.xlsx/.xls] file: ")
    else:
       for opt, arg in opts:
          if opt == '-h':
