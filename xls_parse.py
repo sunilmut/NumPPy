@@ -23,7 +23,9 @@ input_dic_parsed = nested_dict(3, list)
 color_to_sheet_num_map = {}
 
 # A record of all the colors seen to track the column index
-# for any given color.
+# for any given color, for the output.
+# Requirement: Each unique color in an input column should go
+# to the same column in the output.
 cur_column_per_color = {}
 
 # Parse the given sheet from the input workbook and store
@@ -59,20 +61,20 @@ def parse_input_workbook(in_wb, sheet, sheet_num):
          logging.debug('[%s,%s] cell_obj: [%s] [%s], column: %d' % (row + 1, col + 1, cell_obj, bgx, column))
          input_dic_parsed[sheet_num][bgx][column].append(cell_obj.value)
       logging.debug('colors in this col %s', color_seen_in_this_row)
-      # for all the colors that were there in this row, increment
+      # for all the colors that were there in this column, increment
       # the column count, so that the next hit of this color can
-      # go to the next column.
+      # go to the next output column.
       for colors in color_seen_in_this_row:
          cur_column_per_color[colors] += 1
       logging.debug("current column per color %s" % (cur_column_per_color))
    logging.debug('parsed dict %s' % (input_dic_parsed))
 
-def generate_output(out_wb):
+def generate_output(out_wb, in_wb):
    cur_column_per_color = {}
    cell_format = out_wb.add_format()
    for sheet_num in input_dic_parsed:
       for color in list(input_dic_parsed[sheet_num]):
-         logging.debug('color %s', color)
+         logging.debug('color %s, sheet_num: %d', color, sheet_num)
          if color not in cur_column_per_color.keys():
             cur_column_per_color[color] = 0
          # print 'Color code: %s, col is %s' % (color, col)
@@ -82,6 +84,11 @@ def generate_output(out_wb):
                logging.debug('column %s, value: %s' %(column, value))
                sheet_name = "Sheet" + str(color_to_sheet_num_map[color])
                sheet = out_wb.get_worksheet_by_name(sheet_name)
+               if (row == 0):
+                  # first entry is the input sheet name
+                  input_sheet = in_wb.sheet_by_index(sheet_num)
+                  sheet.write(row, column, input_sheet.name, cell_format)
+                  row += 1
                sheet.write(row, column, value, cell_format)
                row += 1
 
@@ -138,7 +145,7 @@ def main(argv):
             color_to_sheet_num_map[color] = color_sheet_map_count
             color_sheet_map_count += 1
 
-   generate_output(out_wb)
+   generate_output(out_wb, in_wb)
    print('Output file written: %s' % outputfile)
    out_wb.close()
 
