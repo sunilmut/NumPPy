@@ -31,9 +31,13 @@ OUTPUT_COL1_MI = "Motion Index"
 OUTPUT_COL2_MI_AVG = "Avg of MI"
 OUTPUT_COL3_FREEZE_TP = "Freezing TurnPoints"
 
-# output directory name
+# output directory and file names
 OUTPUT_DIR_NAME = "output"
 PARAMETERS_DIR_NAME = "parameters\param.csv"
+OUTPUT_ZERO_TO_ONE_CSV_NAME = "_output_0_to_1.csv"
+OUTPUT_ZERO_TO_ONE_UN_CSV_NAME = "_output_0_to_1_unspecified.csv"
+OUTPUT_ONE_TO_ZERO_CSV_NAME = "_output_1_to_0.csv"
+OUTPUT_ONE_TO_ZERO_UN_CSV_NAME = "__output_1_to_0_unspecified.csv"
 
 # Parameters column
 PARAM_TS_CRITERIA = "Criteria_Timestamp_In_Sec"
@@ -51,16 +55,16 @@ out_file_one_to_zero = ""
 out_file_one_to_zero_un = ""
 param_col_names = [PARAM_TS_CRITERIA,
                    PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
-param_time_duration_criteria = 0
+param_min_time_duration = 0
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
 
 
-def apply_duration_criteria(ts_series, param_time_duration_criteria):
+def apply_duration_criteria(ts_series, param_min_time_duration):
     it = ts_series.iteritems()
     prev_ts = 0
     for idx, val in it:
-        if (val - prev_ts >= param_time_duration_criteria):
+        if (val - prev_ts >= param_min_time_duration):
             yield idx
         prev_ts = val
 
@@ -91,21 +95,22 @@ def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero):
     out_one_to_zero_df.to_csv(out_file_one_to_zero, index=False)
 
 
+# Format the output file names
 def format_out_file_names(input_file, output_folder):
     global out_file_zero_to_one, out_file_zero_to_one_un, out_file_one_to_zero, out_file_one_to_zero_un
     input_file_name = os.path.basename(input_file)
     input_file_without_ext = os.path.splitext(input_file_name)[0]
     out_file_zero_to_one = os.path.join(
-        output_folder, input_file_without_ext + "_output_0_to_1.csv"
+        output_folder, input_file_without_ext + OUTPUT_ZERO_TO_ONE_CSV_NAME
     )
     out_file_zero_to_one_un = os.path.join(
-        output_folder, input_file_without_ext + "_output_0_to_1_unspecified.csv"
+        output_folder, input_file_without_ext + OUTPUT_ZERO_TO_ONE_UN_CSV_NAME
     )
     out_file_one_to_zero = os.path.join(
-        output_folder, input_file_without_ext + "_output_1_to_0.csv"
+        output_folder, input_file_without_ext + OUTPUT_ONE_TO_ZERO_CSV_NAME
     )
     out_file_one_to_zero_un = os.path.join(
-        output_folder, input_file_without_ext + "_output_1_to_0_unspecified.csv"
+        output_folder, input_file_without_ext + OUTPUT_ONE_TO_ZERO_UN_CSV_NAME
     )
 
     print("\nInput file: ", os.path.basename(input_file_name))
@@ -115,6 +120,7 @@ def format_out_file_names(input_file, output_folder):
     print("\tunspecified [0->1]: ", os.path.basename(out_file_zero_to_one_un))
     print("\tunspeified [1->0]: ", os.path.basename(out_file_one_to_zero_un))
 
+# Parse the input file
 # returns bool, dataframe
 # bool - True if parsing was successful, FALSE otherwise
 # dataframe - Parsed dataframe
@@ -147,30 +153,42 @@ def parse_input_file_into_df(input_file):
     return True, df
 
 
+# Parse the paramter file
 def parse_param_file(param_file):
-    global param_time_duration_criteria, param_window_duration, param_start_timestamp_series
+    global param_min_time_duration, param_window_duration, param_start_timestamp_series
     if os.path.isfile(param_file):
         param_df = pd.read_csv(
             param_file, names=param_col_names, header=None, skiprows=1)
 
         value = param_df[PARAM_TS_CRITERIA].iat[0]
         if not pd.isnull(value):
-            param_time_duration_criteria = value
-            print("using time duration: ", param_time_duration_criteria)
+            param_min_time_duration = value
+            print("Parameter - time duration: ",
+                  param_min_time_duration)
 
         value = param_df[PARAM_TIME_WINDOW_DURATION].iat[0]
         if not pd.isnull(value):
             param_window_duration = value
-            print("using window duration: ", param_window_duration)
+            print("Parameter - window duration: ", param_window_duration)
 
         param_start_timestamp_series = param_df[PARAM_TIME_WINDOW_START_LIST]
         param_start_timestamp_series.sort_values(ascending=True)
         #  print(param_start_timestamp_series)
 
 
+# Print a dataframe with the message
+def print_df(msg, df):
+    if df.empty:
+        return
+
+    logging.debug(msg)
+    logging.debug(df)
+
+
+# Main logic routine to parse the input and spit out the output
 def parse_input_workbook(input_file, output_folder, param_file):
     global out_file_zero_to_one, out_file_zero_to_one_un, out_file_one_to_zero, out_file_one_to_zero_un
-    global param_time_duration_criteria, param_window_duration, param_start_timestamp_series
+    global param_min_time_duration, param_window_duration, param_start_timestamp_series
 
     # Parse the input file
     success, df = parse_input_file_into_df(input_file)
@@ -225,17 +243,16 @@ def parse_input_workbook(input_file, output_folder, param_file):
             sum += row.values[1]
             itr += 1
 
-    logging.debug(out_df)
     if out_df.empty:
         return
 
+    print_df("After initial parsing (without any criteria or filter", out_df)
+
     # Apply any minimum time duration criteria
-    if param_time_duration_criteria > 0:
+    if param_min_time_duration > 0:
         out_df = out_df.loc[list(apply_duration_criteria(
-            out_df.iloc[:, 0], param_time_duration_criteria))]
-        if not out_df.empty:
-            logging.debug("After applying min time duration criteria")
-            logging.debug(out_df)
+            out_df.iloc[:, 0], param_min_time_duration))]
+        print_df("After applying min time duration criteria", df)
 
     # Apply time window filter
     out_unspecified_df = pd.DataFrame()
@@ -244,13 +261,9 @@ def parse_input_workbook(input_file, output_folder, param_file):
             out_df.iloc[:, 0], param_start_timestamp_series, param_window_duration))
         out_unspecified_df = out_df.loc[~out_df.index.isin(filter_list)]
         out_df = out_df.loc[filter_list]
-        if not out_df.empty:
-            logging.debug("After applying timestamp filter")
-            logging.debug(out_df)
-        if not out_unspecified_df.empty:
-            logging.debug(
-                "unspecified entries after applying timestamp filter")
-            logging.debug(out_unspecified_df)
+        print_df("After applying timestamp filter", out_df)
+        print_df("unspecified entries after applying timestamp filter",
+                 out_unspecified_df)
 
     split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero)
     split_df_and_output(out_unspecified_df,
