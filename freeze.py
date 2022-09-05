@@ -417,7 +417,7 @@ def set_min_time_duration_box_value():
 
 # main entry point
 if __name__ == "__main__":
-    app = App("Freeze Data Processing App")
+    app = App("Freeze Data Processing App",  height=700, width=800)
     line()
     Text(app, "Select Input Folder and then process")
     line()
