@@ -106,6 +106,23 @@ def parse_input_workbook(input_file, output_file):
             itr += 1
 
     logging.debug(out_df)
+
+    prev_ts = 0
+    out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
+    out_one_to_zero_df = pd.DataFrame(columns=out_col_names)
+    # Apply any minimum time duration criteria
+    for (idx, row) in out_df.iterrows():
+        if (row.values[0] - prev_ts > 0.5):
+            if (row.values[3] == ZERO_TO_ONE):
+                out_zero_to_one_df = pd.concat(
+                    [out_zero_to_one_df, out_df.loc[[idx]]], ignore_index=True, sort=False)
+            else:
+                out_one_to_zero_df = pd.concat(
+                    [out_one_to_zero_df, out_df.loc[[idx]]], ignore_index=True, sort=False)
+        prev_ts = row.values[0]
+
+    print("zero to one: ", out_zero_to_one_df)
+    print("one to zero: ", out_one_to_zero_df)
     out_df.to_csv(output_file, index=False)
 
 
