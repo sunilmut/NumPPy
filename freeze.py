@@ -270,6 +270,7 @@ def parse_input_workbook(input_file, output_folder, param_file):
                         out_file_zero_to_one_un, out_file_one_to_zero_un)
 
 
+# Print help
 def print_help():
     print("\nHelp/Usage:\n")
     print(
@@ -292,9 +293,6 @@ def print_help():
     print("\nNotes:")
     print("\tClose the output file prior to running.")
     sys.exit()
-
-
-input_folder_or_file = ""
 
 
 def main(argv, input_folder_or_file):
@@ -361,6 +359,10 @@ def main(argv, input_folder_or_file):
 
     return output_folder
 
+# ------------------------------------------------------------
+# UI related stuff
+# ------------------------------------------------------------
+
 
 def line():
     Text(app, "------------------------------------------------------------")
@@ -392,6 +394,7 @@ def process():
     output_folder_textbox.value = ("Output folder: " + output_dir)
 
 
+# main entry point
 if __name__ == "__main__":
     app = App("Freeze Data Processing App")
     line()
