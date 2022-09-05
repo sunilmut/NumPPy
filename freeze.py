@@ -51,13 +51,16 @@ out_file_one_to_zero = ""
 out_file_one_to_zero_un = ""
 param_col_names = [PARAM_TS_CRITERIA,
                    PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
+param_time_duration_criteria = 0
+param_window_duration = 0
+param_start_timestamp_series = pd.Series(dtype=np.float64)
 
 
-def apply_duration_criteria(ts_series, time_duration_criteria):
+def apply_duration_criteria(ts_series, param_time_duration_criteria):
     it = ts_series.iteritems()
     prev_ts = 0
     for idx, val in it:
-        if (val - prev_ts >= time_duration_criteria):
+        if (val - prev_ts >= param_time_duration_criteria):
             yield idx
         prev_ts = val
 
@@ -144,35 +147,41 @@ def parse_input_file_into_df(input_file):
     return True, df
 
 
-def parse_input_workbook(input_file, output_folder, param_file):
-    global out_file_zero_to_one, out_file_zero_to_one_un, out_file_one_to_zero, out_file_one_to_zero_un
-    format_out_file_names(input_file, output_folder)
-
-    success, df = parse_input_file_into_df(input_file)
-    if not success:
-        return
-
-    # Parse the parameters file.
-    time_duration_criteria = 0
-    window_duration = 0
-    start_timestamp_series = pd.Series(dtype=np.float64)
+def parse_param_file(param_file):
+    global param_time_duration_criteria, param_window_duration, param_start_timestamp_series
     if os.path.isfile(param_file):
         param_df = pd.read_csv(
             param_file, names=param_col_names, header=None, skiprows=1)
 
         value = param_df[PARAM_TS_CRITERIA].iat[0]
         if not pd.isnull(value):
-            time_duration_criteria = value
-            print("using time duration: ", time_duration_criteria)
+            param_time_duration_criteria = value
+            print("using time duration: ", param_time_duration_criteria)
 
         value = param_df[PARAM_TIME_WINDOW_DURATION].iat[0]
         if not pd.isnull(value):
-            window_duration = value
-            print("using window duration: ", window_duration)
+            param_window_duration = value
+            print("using window duration: ", param_window_duration)
 
-        start_timestamp_series = param_df[PARAM_TIME_WINDOW_START_LIST]
-        start_timestamp_series.sort_values(ascending=True)
-        #  print(start_timestamp_series)
+        param_start_timestamp_series = param_df[PARAM_TIME_WINDOW_START_LIST]
+        param_start_timestamp_series.sort_values(ascending=True)
+        #  print(param_start_timestamp_series)
+
+
+def parse_input_workbook(input_file, output_folder, param_file):
+    global out_file_zero_to_one, out_file_zero_to_one_un, out_file_one_to_zero, out_file_one_to_zero_un
+    global param_time_duration_criteria, param_window_duration, param_start_timestamp_series
+
+    # Parse the input file
+    success, df = parse_input_file_into_df(input_file)
+    if not success:
+        return
+
+    # Parse the parameters file.
+    parse_param_file(param_file)
+
+    # Format the file names of the output files
+    format_out_file_names(input_file, output_folder)
 
     sum = 0
     itr = 0
@@ -221,18 +230,18 @@ def parse_input_workbook(input_file, output_folder, param_file):
         return
 
     # Apply any minimum time duration criteria
-    if time_duration_criteria > 0:
+    if param_time_duration_criteria > 0:
         out_df = out_df.loc[list(apply_duration_criteria(
-            out_df.iloc[:, 0], time_duration_criteria))]
+            out_df.iloc[:, 0], param_time_duration_criteria))]
         if not out_df.empty:
             logging.debug("After applying min time duration criteria")
             logging.debug(out_df)
 
     # Apply time window filter
     out_unspecified_df = pd.DataFrame()
-    if not start_timestamp_series.empty:
+    if not param_start_timestamp_series.empty:
         filter_list = list(apply_timewindow_filter(
-            out_df.iloc[:, 0], start_timestamp_series, window_duration))
+            out_df.iloc[:, 0], param_start_timestamp_series, param_window_duration))
         out_unspecified_df = out_df.loc[~out_df.index.isin(filter_list)]
         out_df = out_df.loc[filter_list]
         if not out_df.empty:
