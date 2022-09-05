@@ -8,50 +8,55 @@ import os
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import glob
+import guizero
+from guizero import App, PushButton, Text, TextBox
+import subprocess
 
 # Constants:
 # Number of initial rows to skip.
-num_initial_rows_to_skip = 3
+NUM_INITIAL_ROWS_TO_SKIP = 3
 
-zero_to_one = "0 to 1"
-one_to_zero = "1 to 0"
+ZERO_TO_ONE = "0 to 1"
+ONE_TO_ZERO = "1 to 0"
 
 # input coloumns
-input_col1 = "Timestamp"
-input_col2 = "Motion Index"
-input_col3 = "Freeze"
+INPUT_COL1 = "Timestamp"
+INPUT_COL2 = "Motion Index"
+INPUT_COL3 = "Freeze"
 
 # output columns
-output_col1 = "Timestamp"
-output_col2 = "Motion Index"
-output_col3 = "Avg of MI"
-output_col4 = "Freezing TurnPoints"
+OUTPUT_COL1 = "Timestamp"
+OUTPUT_COL2 = "Motion Index"
+OUTPUT_COL3 = "Avg of MI"
+OUTPUT_COL4 = "Freezing TurnPoints"
 
 # output directory name
-output_dir_name = "output"
+OUTPUT_DIR_NAME = "output"
+
+# globals
+input_dir = ""
+output_dir = ""
 
 
 def parse_input_workbook(input_file, output_file):
-    in_col_names = [input_col1, input_col2, input_col3]
-
-    out_col_names = [output_col1, output_col2, output_col3, output_col4]
-
+    in_col_names = [INPUT_COL1, INPUT_COL2, INPUT_COL3]
+    out_col_names = [OUTPUT_COL1, OUTPUT_COL2, OUTPUT_COL3, OUTPUT_COL4]
     df = pd.read_csv(input_file, names=in_col_names,
-                     skiprows=num_initial_rows_to_skip)
+                     skiprows=NUM_INITIAL_ROWS_TO_SKIP)
     out_df = pd.DataFrame(columns=out_col_names)
 
     # Do some basic format checking. All input fields are expected
     # to be numeric in nature.
     if not (
-        is_numeric_dtype(df[input_col1])
-        and is_numeric_dtype(df[input_col2])
-        and is_numeric_dtype(df[input_col3])
+        is_numeric_dtype(df[INPUT_COL1])
+        and is_numeric_dtype(df[INPUT_COL2])
+        and is_numeric_dtype(df[INPUT_COL3])
     ):
         print("Invalid input file format: " + input_file)
         return
 
     # Freeze column is supposed to be binary (0 or 1)
-    if df[input_col3].min() < 0 or df[input_col3].max() > 1:
+    if df[INPUT_COL3].min() < 0 or df[INPUT_COL3].max() > 1:
         print(
             "Invalid input file format in "
             + input_file
@@ -68,23 +73,20 @@ def parse_input_workbook(input_file, output_file):
         if idx == 0:
             prev_freeze = row.values[2]
 
-        # print("processing ", idx + num_initial_rows_to_skip + 1)
-
         # For output, we only care about rows where there is a transition
         #  of freeze value. i.e. [0->1] or [1->0]
         if row.values[2] != prev_freeze:
             # First thing is to capture the current values.
-            # print('', idx + num_initial_rows_to_skip + 1, sum, itr, sum/itr)
             if prev_freeze == 0:
-                freeze = zero_to_one
+                freeze = ZERO_TO_ONE
             else:
-                freeze = one_to_zero
+                freeze = ONE_TO_ZERO
             df = pd.DataFrame(
                 {
-                    output_col1: [row.values[0]],
-                    output_col2: [row.values[1]],
-                    output_col3: [sum / itr],
-                    output_col4: [freeze],
+                    OUTPUT_COL1: [row.values[0]],
+                    OUTPUT_COL2: [row.values[1]],
+                    OUTPUT_COL3: [sum / itr],
+                    OUTPUT_COL4: [freeze],
                 }
             )
             out_df = pd.concat([out_df, df], ignore_index=True, sort=False)
@@ -132,11 +134,13 @@ def print_help():
     sys.exit()
 
 
-def main(argv):
-    input_folder_or_file = ""
+input_folder_or_file = ""
+
+
+def main(argv, input_folder_or_file):
     input_files = []
-    output_folder = ""
     output_file = ""
+    output_folder = ""
 
     try:
         opts, args = getopt.getopt(argv, "vhi:o:d:h:")
@@ -180,7 +184,7 @@ def main(argv):
     # Else, output folder is '<parent of input file or folder>\output', create it
     if not output_file and not output_folder:
         output_folder = os.path.dirname(input_folder_or_file)
-        output_folder = os.path.join(output_folder, output_dir_name)
+        output_folder = os.path.join(output_folder, OUTPUT_DIR_NAME)
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
 
@@ -205,6 +209,51 @@ def main(argv):
         print("Output file: ", out_file)
         parse_input_workbook(input_file, out_file)
 
+    return output_folder
+
+
+def line():
+    Text(app, "------------------------------------------------------------")
+
+
+def get_folder():
+    global input_dir
+    input_dir.value = app.select_folder()
+    output_folder_textbox.value = ""
+
+
+def open_output_folder():
+    global output_dir
+    if not output_dir:
+        app.warn(
+            "Uh oh!", "Output folder can be browsed once input is processed. Select input folder and process first!")
+        return
+    subprocess.Popen(f'explorer /select,{output_dir}')
+
+
+def process():
+    global output_dir
+    global input_dir
+    if not input_dir.value:
+        app.warn(
+            "Uh oh!", "No input folder specified. Please select an input folder and run again!")
+        return
+    output_dir = main(sys.argv[1:], input_dir.value)
+    output_folder_textbox.value = ("Output folder: " + output_dir)
+
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    app = App("Freeze Data Processing App")
+    line()
+    instruction = Text(
+        app, "Select Input Folder and then process")
+    line()
+    PushButton(app, command=get_folder, text="Input Folder")
+    input_dir = Text(app)
+    line()
+    button = PushButton(app, text="Process", command=process)
+    line()
+    output_folder_textbox = Text(app, text="", color="red")
+    PushButton(app, command=open_output_folder, text="Browse output folder")
+    line()
+    app.display()
