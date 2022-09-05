@@ -49,7 +49,6 @@ out_file_zero_to_one = ""
 out_file_zero_to_one_un = ""
 out_file_one_to_zero = ""
 out_file_one_to_zero_un = ""
-in_col_names = [INPUT_COL0, INPUT_COL1, INPUT_COL2]
 param_col_names = [PARAM_TS_CRITERIA,
                    PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
 
@@ -113,13 +112,45 @@ def format_out_file_names(input_file, output_folder):
     print("\tunspecified [0->1]: ", os.path.basename(out_file_zero_to_one_un))
     print("\tunspeified [1->0]: ", os.path.basename(out_file_one_to_zero_un))
 
+# returns bool, dataframe
+# bool - True if parsing was successful, FALSE otherwise
+# dataframe - Parsed dataframe
+
+
+def parse_input_file_into_df(input_file):
+    in_col_names = [INPUT_COL0, INPUT_COL1, INPUT_COL2]
+    df = pd.read_csv(input_file, names=in_col_names,
+                     skiprows=NUM_INITIAL_ROWS_TO_SKIP)
+
+    # Do some basic format checking. All input fields are expected
+    # to be numeric in nature.
+    if not (
+        is_numeric_dtype(df[INPUT_COL0])
+        and is_numeric_dtype(df[INPUT_COL1])
+        and is_numeric_dtype(df[INPUT_COL2])
+    ):
+        print("Invalid input file format: " + input_file)
+        return False, pd.DataFrame()
+
+    # Freeze column is supposed to be binary (0 or 1)
+    if df[INPUT_COL2].min() < 0 or df[INPUT_COL2].max() > 1:
+        print(
+            "Invalid input file format in "
+            + input_file
+            + ". Column 3 (freeze) value outside bounds (should be 0 or 1)"
+        )
+        return False, pd.DataFrame()
+
+    return True, df
+
 
 def parse_input_workbook(input_file, output_folder, param_file):
     global out_file_zero_to_one, out_file_zero_to_one_un, out_file_one_to_zero, out_file_one_to_zero_un
     format_out_file_names(input_file, output_folder)
-    df = pd.read_csv(input_file, names=in_col_names,
-                     skiprows=NUM_INITIAL_ROWS_TO_SKIP)
-    out_df = pd.DataFrame(columns=out_col_names)
+
+    success, df = parse_input_file_into_df(input_file)
+    if not success:
+        return
 
     # Parse the parameters file.
     time_duration_criteria = 0
@@ -143,27 +174,9 @@ def parse_input_workbook(input_file, output_folder, param_file):
         start_timestamp_series.sort_values(ascending=True)
         #  print(start_timestamp_series)
 
-    # Do some basic format checking. All input fields are expected
-    # to be numeric in nature.
-    if not (
-        is_numeric_dtype(df[INPUT_COL0])
-        and is_numeric_dtype(df[INPUT_COL1])
-        and is_numeric_dtype(df[INPUT_COL2])
-    ):
-        print("Invalid input file format: " + input_file)
-        return
-
-    # Freeze column is supposed to be binary (0 or 1)
-    if df[INPUT_COL2].min() < 0 or df[INPUT_COL2].max() > 1:
-        print(
-            "Invalid input file format in "
-            + input_file
-            + ". Column 3 (freeze) value outside bounds (should be 0 or 1)"
-        )
-        return
-
     sum = 0
     itr = 0
+    out_df = pd.DataFrame(columns=out_col_names)
 
     # Iterate over all the rows
     for (idx, row) in df.iterrows():
@@ -179,7 +192,7 @@ def parse_input_workbook(input_file, output_folder, param_file):
                 freeze = ZERO_TO_ONE
             else:
                 freeze = ONE_TO_ZERO
-            df = pd.DataFrame(
+            df_o = pd.DataFrame(
                 {
                     OUTPUT_COL0_TS: [row.values[0]],
                     OUTPUT_COL1_MI: [row.values[1]],
@@ -187,7 +200,7 @@ def parse_input_workbook(input_file, output_folder, param_file):
                     OUTPUT_COL3_FREEZE_TP: [freeze],
                 }
             )
-            out_df = pd.concat([out_df, df], ignore_index=True, sort=False)
+            out_df = pd.concat([out_df, df_o], ignore_index=True, sort=False)
 
             # Since this is a transition, update the previous freeze value to
             # take the new value.
