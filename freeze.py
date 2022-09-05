@@ -11,6 +11,7 @@ import glob
 import guizero
 from guizero import App, PushButton, Text, TextBox
 import subprocess
+import numpy as np
 
 # Constants:
 # Number of initial rows to skip.
@@ -32,27 +33,82 @@ OUTPUT_COL3 = "Freezing TurnPoints"
 
 # output directory name
 OUTPUT_DIR_NAME = "output"
+PARAMETERS_DIR_NAME = "parameters\param.csv"
+
+# Parameters column
+PARAM_TS_CRITERIA = "Criteria_Timestamp_In_Sec"
+PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
+PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
 
 # globals
 input_dir = ""
 output_dir = ""
 
 
-def apply_duration_criteria(ts_series):
+def apply_duration_criteria(ts_series, time_duration_criteria):
     it = ts_series.iteritems()
     prev_ts = 0
     for idx, val in it:
-        if (val - prev_ts > 0.5):
+        if (val - prev_ts >= time_duration_criteria):
             yield idx
         prev_ts = val
 
 
-def parse_input_workbook(input_file, out_file_zero_to_one, out_file_one_to_zero):
+def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
+    it = ts_series.iteritems()
+    for idx, val in it:
+        for filter_idx, filter_val in timstamp_filter_series.items():
+            if val < filter_val:
+                break
+            if val >= filter_val and val <= filter_val + duration:
+                yield idx
+                break
+
+
+def parse_input_workbook(input_file, output_folder, param_file):
+    input_file_name = os.path.basename(input_file)
+    out_file_zero_to_one = os.path.join(
+        output_folder, os.path.splitext(
+            input_file_name)[0] + "_output_0_to_1.csv"
+    )
+    out_file_one_to_zero = os.path.join(
+        output_folder, os.path.splitext(
+            input_file_name)[0] + "_output_1_to_0.csv"
+    )
+
+    print("\nInput file: ", os.path.basename(input_file_name))
+    print("Output file [0->1]: ", os.path.basename(out_file_zero_to_one))
+    print("Output file [1->0]: ", os.path.basename(out_file_one_to_zero))
+
     in_col_names = [INPUT_COL0, INPUT_COL1, INPUT_COL2]
     out_col_names = [OUTPUT_COL0, OUTPUT_COL1, OUTPUT_COL2, OUTPUT_COL3]
     df = pd.read_csv(input_file, names=in_col_names,
                      skiprows=NUM_INITIAL_ROWS_TO_SKIP)
     out_df = pd.DataFrame(columns=out_col_names)
+
+    # Parse the parameters file.
+    time_duration_criteria = 0
+    window_duration = 0
+    start_timestamp_series = pd.Series(dtype=np.float64)
+    if os.path.isfile(param_file):
+        param_col_names = [PARAM_TS_CRITERIA,
+                           PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
+        param_df = pd.read_csv(
+            param_file, names=param_col_names, header=None, skiprows=1)
+
+        value = param_df[PARAM_TS_CRITERIA].iat[0]
+        if not pd.isnull(value):
+            time_duration_criteria = value
+            print("using time duration: ", time_duration_criteria)
+
+        value = param_df[PARAM_TIME_WINDOW_DURATION].iat[0]
+        if not pd.isnull(value):
+            window_duration = value
+            print("using window duration: ", window_duration)
+
+        start_timestamp_series = param_df[PARAM_TIME_WINDOW_START_LIST]
+        start_timestamp_series.sort_values(ascending=True)
+        #  print(start_timestamp_series)
 
     # Do some basic format checking. All input fields are expected
     # to be numeric in nature.
@@ -117,7 +173,18 @@ def parse_input_workbook(input_file, out_file_zero_to_one, out_file_one_to_zero)
     logging.debug(out_df)
 
     # Apply any minimum time duration criteria
-    out_df = out_df.loc[list(apply_duration_criteria(out_df.iloc[:, 0]))]
+    if time_duration_criteria > 0:
+        out_df = out_df.loc[list(apply_duration_criteria(
+            out_df.iloc[:, 0], time_duration_criteria))]
+        logging.debug("After applying min time duration criteria")
+        logging.debug(out_df)
+
+    # Apply time window filter
+    if not start_timestamp_series.empty:
+        out_df = out_df.loc[list(apply_timewindow_filter(
+            out_df.iloc[:, 0], start_timestamp_series, window_duration))]
+        logging.debug("After applying timestamp filter")
+        logging.debug(out_df)
 
     # Split the dataframe based on whether it is a [0->1] or [1->0] transitions
     out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
@@ -125,7 +192,10 @@ def parse_input_workbook(input_file, out_file_zero_to_one, out_file_one_to_zero)
     out_zero_to_one_df = out_df.loc[out_df[OUTPUT_COL3] == ZERO_TO_ONE]
     out_one_to_zero_df = out_df.loc[out_df[OUTPUT_COL3] == ONE_TO_ZERO]
     out_zero_to_one_df.to_csv(out_file_zero_to_one, index=False)
+    logging.debug(out_zero_to_one_df)
+
     out_one_to_zero_df.to_csv(out_file_one_to_zero, index=False)
+    logging.debug(out_one_to_zero_df)
 
 
 def print_help():
@@ -184,11 +254,14 @@ def main(argv, input_folder_or_file):
         input_folder_or_file = input(
             "Provide an input folder or .csv file name: ")
 
+    input_folder = ""
     if os.path.isdir(input_folder_or_file):
+        input_folder = input_folder_or_file
         search_path = input_folder_or_file + "\*.csv"
         for file in glob.glob(search_path):
             input_files.append(file)
     elif os.path.isfile(input_folder_or_file):
+        input_folder = os.path.dirname(input_folder_or_file)
         input_files.append(input_folder_or_file)
     else:
         print("The input path is not a valid directory or file: ",
@@ -203,25 +276,16 @@ def main(argv, input_folder_or_file):
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
 
+    # Get the parameters folder, which is:
+    # '<input folder>\parameters'
+    param_file = os.path.join(input_folder, PARAMETERS_DIR_NAME)
     out_file_zero_to_one = ""
     out_file_one_to_zero = ""
+    print("\nInput folder: ", input_folder)
+    print("Parameters file: ", param_file)
+    print("Output folder: ", output_folder)
     for input_file in input_files:
-        # construct an output file using:
-        #     'output_folder\<input file name>_output.csv'
-        file_name = os.path.basename(input_file)
-        out_file_zero_to_one = os.path.join(
-            output_folder, os.path.splitext(
-                file_name)[0] + "_output_0_to_1.csv"
-        )
-        out_file_one_to_zero = os.path.join(
-            output_folder, os.path.splitext(
-                file_name)[0] + "_output_1_to_0.csv"
-        )
-
-        print("\nInput file: ", input_file)
-        print("Output folder: ", output_folder)
-        parse_input_workbook(
-            input_file, out_file_zero_to_one, out_file_one_to_zero)
+        parse_input_workbook(input_file, output_folder, param_file)
 
     return output_folder
 
