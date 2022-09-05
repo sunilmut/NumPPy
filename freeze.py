@@ -26,10 +26,10 @@ INPUT_COL1 = "Motion Index"
 INPUT_COL2 = "Freeze"
 
 # output columns
-OUTPUT_COL0 = "Timestamp"
-OUTPUT_COL1 = "Motion Index"
-OUTPUT_COL2 = "Avg of MI"
-OUTPUT_COL3 = "Freezing TurnPoints"
+OUTPUT_COL0_TS = "Timestamp"
+OUTPUT_COL1_MI = "Motion Index"
+OUTPUT_COL2_MI_AVG = "Avg of MI"
+OUTPUT_COL3_FREEZE_TP = "Freezing TurnPoints"
 
 # output directory name
 OUTPUT_DIR_NAME = "output"
@@ -43,6 +43,15 @@ PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
 # globals
 input_dir = ""
 output_dir = ""
+out_col_names = [OUTPUT_COL0_TS, OUTPUT_COL1_MI,
+                 OUTPUT_COL2_MI_AVG, OUTPUT_COL3_FREEZE_TP]
+out_file_zero_to_one = ""
+out_file_zero_to_one_un = ""
+out_file_one_to_zero = ""
+out_file_one_to_zero_un = ""
+in_col_names = [INPUT_COL0, INPUT_COL1, INPUT_COL2]
+param_col_names = [PARAM_TS_CRITERIA,
+                   PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
 
 
 def apply_duration_criteria(ts_series, time_duration_criteria):
@@ -65,9 +74,6 @@ def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
                 break
 
 
-out_col_names = [OUTPUT_COL0, OUTPUT_COL1, OUTPUT_COL2, OUTPUT_COL3]
-
-
 # Split the dataframe based on whether it is a [0->1] or [1->0] transitions
 # and output to respective files.
 def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero):
@@ -75,13 +81,16 @@ def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero):
         return
     out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
     out_one_to_zero_df = pd.DataFrame(columns=out_col_names)
-    out_zero_to_one_df = out_df.loc[out_df[OUTPUT_COL3] == ZERO_TO_ONE]
-    out_one_to_zero_df = out_df.loc[out_df[OUTPUT_COL3] == ONE_TO_ZERO]
+    out_zero_to_one_df = out_df.loc[out_df[OUTPUT_COL3_FREEZE_TP]
+                                    == ZERO_TO_ONE]
+    out_one_to_zero_df = out_df.loc[out_df[OUTPUT_COL3_FREEZE_TP]
+                                    == ONE_TO_ZERO]
     out_zero_to_one_df.to_csv(out_file_zero_to_one, index=False)
     out_one_to_zero_df.to_csv(out_file_one_to_zero, index=False)
 
 
-def parse_input_workbook(input_file, output_folder, param_file):
+def format_out_file_names(input_file, output_folder):
+    global out_file_zero_to_one, out_file_zero_to_one_un, out_file_one_to_zero, out_file_one_to_zero_un
     input_file_name = os.path.basename(input_file)
     input_file_without_ext = os.path.splitext(input_file_name)[0]
     out_file_zero_to_one = os.path.join(
@@ -98,10 +107,16 @@ def parse_input_workbook(input_file, output_folder, param_file):
     )
 
     print("\nInput file: ", os.path.basename(input_file_name))
-    print("Output file [0->1]: ", os.path.basename(out_file_zero_to_one))
-    print("Output file [1->0]: ", os.path.basename(out_file_one_to_zero))
+    print("Output file:")
+    print("\t[0->1]: ", os.path.basename(out_file_zero_to_one))
+    print("\t[1->0]: ", os.path.basename(out_file_one_to_zero))
+    print("\tunspecified [0->1]: ", os.path.basename(out_file_zero_to_one_un))
+    print("\tunspeified [1->0]: ", os.path.basename(out_file_one_to_zero_un))
 
-    in_col_names = [INPUT_COL0, INPUT_COL1, INPUT_COL2]
+
+def parse_input_workbook(input_file, output_folder, param_file):
+    global out_file_zero_to_one, out_file_zero_to_one_un, out_file_one_to_zero, out_file_one_to_zero_un
+    format_out_file_names(input_file, output_folder)
     df = pd.read_csv(input_file, names=in_col_names,
                      skiprows=NUM_INITIAL_ROWS_TO_SKIP)
     out_df = pd.DataFrame(columns=out_col_names)
@@ -111,8 +126,6 @@ def parse_input_workbook(input_file, output_folder, param_file):
     window_duration = 0
     start_timestamp_series = pd.Series(dtype=np.float64)
     if os.path.isfile(param_file):
-        param_col_names = [PARAM_TS_CRITERIA,
-                           PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
         param_df = pd.read_csv(
             param_file, names=param_col_names, header=None, skiprows=1)
 
@@ -168,10 +181,10 @@ def parse_input_workbook(input_file, output_folder, param_file):
                 freeze = ONE_TO_ZERO
             df = pd.DataFrame(
                 {
-                    OUTPUT_COL0: [row.values[0]],
-                    OUTPUT_COL1: [row.values[1]],
-                    OUTPUT_COL2: [sum / itr],
-                    OUTPUT_COL3: [freeze],
+                    OUTPUT_COL0_TS: [row.values[0]],
+                    OUTPUT_COL1_MI: [row.values[1]],
+                    OUTPUT_COL2_MI_AVG: [sum / itr],
+                    OUTPUT_COL3_FREEZE_TP: [freeze],
                 }
             )
             out_df = pd.concat([out_df, df], ignore_index=True, sort=False)
