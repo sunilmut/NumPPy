@@ -9,7 +9,7 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import glob
 import guizero
-from guizero import App, PushButton, Text, TextBox
+from guizero import App, ListBox, PushButton, Text, TextBox
 import subprocess
 import numpy as np
 
@@ -43,9 +43,9 @@ OUTPUT_ONE_TO_ZERO_UN_CSV_NAME = "__output_1_to_0_unspecified.csv"
 PARAM_TS_CRITERIA = "Criteria_Timestamp_In_Sec"
 PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
 PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
+PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT = "Min time duration criteria: "
 
 # globals
-input_dir = ""
 output_dir = ""
 out_col_names = [OUTPUT_COL0_TS, OUTPUT_COL1_MI,
                  OUTPUT_COL2_MI_AVG, OUTPUT_COL3_FREEZE_TP]
@@ -175,8 +175,12 @@ def parse_param_file(param_file):
         param_start_timestamp_series.sort_values(ascending=True)
         #  print(param_start_timestamp_series)
 
+    set_min_time_duration_box_value()
+    refresh_ts_list_box(param_start_timestamp_series)
 
 # Print a dataframe with the message
+
+
 def print_df(msg, df):
     if df.empty:
         return
@@ -369,9 +373,13 @@ def line():
 
 
 def get_folder():
-    global input_dir
-    input_dir.value = app.select_folder()
+    input_dir_box.value = app.select_folder()
     output_folder_textbox.value = ""
+
+    # Get the parameters folder, which is:
+    # '<input folder>\parameters'
+    param_file = os.path.join(input_dir_box.value, PARAMETERS_DIR_NAME)
+    parse_param_file(param_file)
 
 
 def open_output_folder():
@@ -385,28 +393,46 @@ def open_output_folder():
 
 def process():
     global output_dir
-    global input_dir
-    if not input_dir.value:
+    if not input_dir_box.value:
         app.warn(
             "Uh oh!", "No input folder specified. Please select an input folder and run again!")
         return
-    output_dir = main(sys.argv[1:], input_dir.value)
+
+    print("param_min_time_duration is : ", min_time_duration_box.value)
+    output_dir = main(sys.argv[1:], input_dir_box.value)
     output_folder_textbox.value = ("Output folder: " + output_dir)
+
+
+def refresh_ts_list_box(ts_series):
+    ts_series_list_box.clear()
+    for val in ts_series:
+        ts_series_list_box.append(val)
+
+
+def set_min_time_duration_box_value():
+    global param_min_time_duration
+    min_time_duration_box.value = (
+        PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT + str(param_min_time_duration))
 
 
 # main entry point
 if __name__ == "__main__":
     app = App("Freeze Data Processing App")
     line()
-    instruction = Text(
-        app, "Select Input Folder and then process")
+    Text(app, "Select Input Folder and then process")
     line()
     PushButton(app, command=get_folder, text="Input Folder")
-    input_dir = Text(app)
+    input_dir_box = Text(app)
+    line()
+    min_time_duration_box = Text(app, text="")
+    set_min_time_duration_box_value()
+    Text(app, text="Time window durations:")
+    ts_series_list_box = ListBox(
+        app, param_start_timestamp_series, scrollbar=True)
     line()
     button = PushButton(app, text="Process", command=process)
     line()
-    output_folder_textbox = Text(app, text="", color="red")
+    output_folder_textbox = Text(app, text="", color="green")
     PushButton(app, command=open_output_folder, text="Browse output folder")
     line()
     app.display()
