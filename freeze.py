@@ -65,15 +65,36 @@ def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
                 break
 
 
+out_col_names = [OUTPUT_COL0, OUTPUT_COL1, OUTPUT_COL2, OUTPUT_COL3]
+
+
+# Split the dataframe based on whether it is a [0->1] or [1->0] transitions
+# and output to respective files.
+def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero):
+    if out_df.empty:
+        return
+    out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
+    out_one_to_zero_df = pd.DataFrame(columns=out_col_names)
+    out_zero_to_one_df = out_df.loc[out_df[OUTPUT_COL3] == ZERO_TO_ONE]
+    out_one_to_zero_df = out_df.loc[out_df[OUTPUT_COL3] == ONE_TO_ZERO]
+    out_zero_to_one_df.to_csv(out_file_zero_to_one, index=False)
+    out_one_to_zero_df.to_csv(out_file_one_to_zero, index=False)
+
+
 def parse_input_workbook(input_file, output_folder, param_file):
     input_file_name = os.path.basename(input_file)
+    input_file_without_ext = os.path.splitext(input_file_name)[0]
     out_file_zero_to_one = os.path.join(
-        output_folder, os.path.splitext(
-            input_file_name)[0] + "_output_0_to_1.csv"
+        output_folder, input_file_without_ext + "_output_0_to_1.csv"
+    )
+    out_file_zero_to_one_un = os.path.join(
+        output_folder, input_file_without_ext + "_output_0_to_1_unspecified.csv"
     )
     out_file_one_to_zero = os.path.join(
-        output_folder, os.path.splitext(
-            input_file_name)[0] + "_output_1_to_0.csv"
+        output_folder, input_file_without_ext + "_output_1_to_0.csv"
+    )
+    out_file_one_to_zero_un = os.path.join(
+        output_folder, input_file_without_ext + "_output_1_to_0_unspecified.csv"
     )
 
     print("\nInput file: ", os.path.basename(input_file_name))
@@ -81,7 +102,6 @@ def parse_input_workbook(input_file, output_folder, param_file):
     print("Output file [1->0]: ", os.path.basename(out_file_one_to_zero))
 
     in_col_names = [INPUT_COL0, INPUT_COL1, INPUT_COL2]
-    out_col_names = [OUTPUT_COL0, OUTPUT_COL1, OUTPUT_COL2, OUTPUT_COL3]
     df = pd.read_csv(input_file, names=in_col_names,
                      skiprows=NUM_INITIAL_ROWS_TO_SKIP)
     out_df = pd.DataFrame(columns=out_col_names)
@@ -171,31 +191,35 @@ def parse_input_workbook(input_file, output_folder, param_file):
             itr += 1
 
     logging.debug(out_df)
+    if out_df.empty:
+        return
 
     # Apply any minimum time duration criteria
     if time_duration_criteria > 0:
         out_df = out_df.loc[list(apply_duration_criteria(
             out_df.iloc[:, 0], time_duration_criteria))]
-        logging.debug("After applying min time duration criteria")
-        logging.debug(out_df)
+        if not out_df.empty:
+            logging.debug("After applying min time duration criteria")
+            logging.debug(out_df)
 
     # Apply time window filter
+    out_unspecified_df = pd.DataFrame()
     if not start_timestamp_series.empty:
-        out_df = out_df.loc[list(apply_timewindow_filter(
-            out_df.iloc[:, 0], start_timestamp_series, window_duration))]
-        logging.debug("After applying timestamp filter")
-        logging.debug(out_df)
+        filter_list = list(apply_timewindow_filter(
+            out_df.iloc[:, 0], start_timestamp_series, window_duration))
+        out_unspecified_df = out_df.loc[~out_df.index.isin(filter_list)]
+        out_df = out_df.loc[filter_list]
+        if not out_df.empty:
+            logging.debug("After applying timestamp filter")
+            logging.debug(out_df)
+        if not out_unspecified_df.empty:
+            logging.debug(
+                "unspecified entries after applying timestamp filter")
+            logging.debug(out_unspecified_df)
 
-    # Split the dataframe based on whether it is a [0->1] or [1->0] transitions
-    out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
-    out_one_to_zero_df = pd.DataFrame(columns=out_col_names)
-    out_zero_to_one_df = out_df.loc[out_df[OUTPUT_COL3] == ZERO_TO_ONE]
-    out_one_to_zero_df = out_df.loc[out_df[OUTPUT_COL3] == ONE_TO_ZERO]
-    out_zero_to_one_df.to_csv(out_file_zero_to_one, index=False)
-    logging.debug(out_zero_to_one_df)
-
-    out_one_to_zero_df.to_csv(out_file_one_to_zero, index=False)
-    logging.debug(out_one_to_zero_df)
+    split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero)
+    split_df_and_output(out_unspecified_df,
+                        out_file_zero_to_one_un, out_file_one_to_zero_un)
 
 
 def print_help():
