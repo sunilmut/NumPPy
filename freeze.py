@@ -20,15 +20,15 @@ ZERO_TO_ONE = "0 to 1"
 ONE_TO_ZERO = "1 to 0"
 
 # input coloumns
-INPUT_COL1 = "Timestamp"
-INPUT_COL2 = "Motion Index"
-INPUT_COL3 = "Freeze"
+INPUT_COL0 = "Timestamp"
+INPUT_COL1 = "Motion Index"
+INPUT_COL2 = "Freeze"
 
 # output columns
-OUTPUT_COL1 = "Timestamp"
-OUTPUT_COL2 = "Motion Index"
-OUTPUT_COL3 = "Avg of MI"
-OUTPUT_COL4 = "Freezing TurnPoints"
+OUTPUT_COL0 = "Timestamp"
+OUTPUT_COL1 = "Motion Index"
+OUTPUT_COL2 = "Avg of MI"
+OUTPUT_COL3 = "Freezing TurnPoints"
 
 # output directory name
 OUTPUT_DIR_NAME = "output"
@@ -38,9 +38,18 @@ input_dir = ""
 output_dir = ""
 
 
-def parse_input_workbook(input_file, output_file):
-    in_col_names = [INPUT_COL1, INPUT_COL2, INPUT_COL3]
-    out_col_names = [OUTPUT_COL1, OUTPUT_COL2, OUTPUT_COL3, OUTPUT_COL4]
+def apply_duration_criteria(ts_series):
+    it = ts_series.iteritems()
+    prev_ts = 0
+    for idx, val in it:
+        if (val - prev_ts > 0.5):
+            yield idx
+        prev_ts = val
+
+
+def parse_input_workbook(input_file, out_file_zero_to_one, out_file_one_to_zero):
+    in_col_names = [INPUT_COL0, INPUT_COL1, INPUT_COL2]
+    out_col_names = [OUTPUT_COL0, OUTPUT_COL1, OUTPUT_COL2, OUTPUT_COL3]
     df = pd.read_csv(input_file, names=in_col_names,
                      skiprows=NUM_INITIAL_ROWS_TO_SKIP)
     out_df = pd.DataFrame(columns=out_col_names)
@@ -48,15 +57,15 @@ def parse_input_workbook(input_file, output_file):
     # Do some basic format checking. All input fields are expected
     # to be numeric in nature.
     if not (
-        is_numeric_dtype(df[INPUT_COL1])
+        is_numeric_dtype(df[INPUT_COL0])
+        and is_numeric_dtype(df[INPUT_COL1])
         and is_numeric_dtype(df[INPUT_COL2])
-        and is_numeric_dtype(df[INPUT_COL3])
     ):
         print("Invalid input file format: " + input_file)
         return
 
     # Freeze column is supposed to be binary (0 or 1)
-    if df[INPUT_COL3].min() < 0 or df[INPUT_COL3].max() > 1:
+    if df[INPUT_COL2].min() < 0 or df[INPUT_COL2].max() > 1:
         print(
             "Invalid input file format in "
             + input_file
@@ -74,7 +83,7 @@ def parse_input_workbook(input_file, output_file):
             prev_freeze = row.values[2]
 
         # For output, we only care about rows where there is a transition
-        #  of freeze value. i.e. [0->1] or [1->0]
+        # of freeze value. i.e. [0->1] or [1->0]
         if row.values[2] != prev_freeze:
             # First thing is to capture the current values.
             if prev_freeze == 0:
@@ -83,10 +92,10 @@ def parse_input_workbook(input_file, output_file):
                 freeze = ONE_TO_ZERO
             df = pd.DataFrame(
                 {
-                    OUTPUT_COL1: [row.values[0]],
-                    OUTPUT_COL2: [row.values[1]],
-                    OUTPUT_COL3: [sum / itr],
-                    OUTPUT_COL4: [freeze],
+                    OUTPUT_COL0: [row.values[0]],
+                    OUTPUT_COL1: [row.values[1]],
+                    OUTPUT_COL2: [sum / itr],
+                    OUTPUT_COL3: [freeze],
                 }
             )
             out_df = pd.concat([out_df, df], ignore_index=True, sort=False)
@@ -107,39 +116,31 @@ def parse_input_workbook(input_file, output_file):
 
     logging.debug(out_df)
 
-    prev_ts = 0
+    # Apply any minimum time duration criteria
+    out_df = out_df.loc[list(apply_duration_criteria(out_df.iloc[:, 0]))]
+
+    # Split the dataframe based on whether it is a [0->1] or [1->0] transitions
     out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
     out_one_to_zero_df = pd.DataFrame(columns=out_col_names)
-    # Apply any minimum time duration criteria
-    for (idx, row) in out_df.iterrows():
-        if (row.values[0] - prev_ts > 0.5):
-            if (row.values[3] == ZERO_TO_ONE):
-                out_zero_to_one_df = pd.concat(
-                    [out_zero_to_one_df, out_df.loc[[idx]]], ignore_index=True, sort=False)
-            else:
-                out_one_to_zero_df = pd.concat(
-                    [out_one_to_zero_df, out_df.loc[[idx]]], ignore_index=True, sort=False)
-        prev_ts = row.values[0]
-
-    print("zero to one: ", out_zero_to_one_df)
-    print("one to zero: ", out_one_to_zero_df)
-    out_df.to_csv(output_file, index=False)
+    out_zero_to_one_df = out_df.loc[out_df[OUTPUT_COL3] == ZERO_TO_ONE]
+    out_one_to_zero_df = out_df.loc[out_df[OUTPUT_COL3] == ONE_TO_ZERO]
+    out_zero_to_one_df.to_csv(out_file_zero_to_one, index=False)
+    out_one_to_zero_df.to_csv(out_file_one_to_zero, index=False)
 
 
 def print_help():
     print("\nHelp/Usage:\n")
     print(
-        "python freeze.py -i <input folder or .csv file> -o <output_file.csv> -d <output_directory> -v -h\n"
+        "python freeze.py -i <input folder or .csv file> -d <output_directory> -v -h\n"
     )
     print("where:")
     print("-i (required): input folder or .csv file.")
-    print("-o (optional): output .csv file.")
     print("-d (optional): output folder.")
     print("-v (optional): run in verbose mode")
     print("-h (optional): print this help")
     print("\nExamples:\n")
-    print("\nProcess input file and emit to an output file:")
-    print("\tpython freeze.py -i input.csv -o output.csv")
+    print("\nProcess input file:")
+    print("\tpython freeze.py -i input.csv")
     print("\nProcess all the csv files from the input folder:")
     print("\tpython freeze.py -i c:\\data\\input")
     print(
@@ -156,7 +157,6 @@ input_folder_or_file = ""
 
 def main(argv, input_folder_or_file):
     input_files = []
-    output_file = ""
     output_folder = ""
 
     try:
@@ -168,8 +168,6 @@ def main(argv, input_folder_or_file):
             print_help()
         elif opt in ("-i"):
             input_folder_or_file = arg
-        elif opt in ("-o"):
-            output_file = arg
         elif opt in ("-d"):
             output_folder = arg
         elif opt in ("-v"):
@@ -197,34 +195,33 @@ def main(argv, input_folder_or_file):
               input_folder_or_file)
         print_help()
 
-    # If an output file or folder is specified, use it.
+    # If an output folder is specified, use it.
     # Else, output folder is '<parent of input file or folder>\output', create it
-    if not output_file and not output_folder:
+    if not output_folder:
         output_folder = os.path.dirname(input_folder_or_file)
         output_folder = os.path.join(output_folder, OUTPUT_DIR_NAME)
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
 
-    out_file = ""
+    out_file_zero_to_one = ""
+    out_file_one_to_zero = ""
     for input_file in input_files:
-        # If an output file is specified, use it.
-        # Else, construct an output file using:
+        # construct an output file using:
         #     'output_folder\<input file name>_output.csv'
-        if output_file:
-            if os.path.isdir(output_file):
-                print("The specified output file is a folder: ", output_file)
-                print_help()
-
-            out_file = output_file
-        else:
-            file_name = os.path.basename(input_file)
-            out_file = os.path.join(
-                output_folder, os.path.splitext(file_name)[0] + "_output.csv"
-            )
+        file_name = os.path.basename(input_file)
+        out_file_zero_to_one = os.path.join(
+            output_folder, os.path.splitext(
+                file_name)[0] + "_output_0_to_1.csv"
+        )
+        out_file_one_to_zero = os.path.join(
+            output_folder, os.path.splitext(
+                file_name)[0] + "_output_1_to_0.csv"
+        )
 
         print("\nInput file: ", input_file)
-        print("Output file: ", out_file)
-        parse_input_workbook(input_file, out_file)
+        print("Output folder: ", output_folder)
+        parse_input_workbook(
+            input_file, out_file_zero_to_one, out_file_one_to_zero)
 
     return output_folder
 
