@@ -43,8 +43,9 @@ OUTPUT_ONE_TO_ZERO_UN_CSV_NAME = "__output_1_to_0_unspecified.csv"
 PARAM_TS_CRITERIA = "Criteria_Timestamp_In_Sec"
 PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
 PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
-PARAM_UI_TIME_WINDOW_DURATION = "Time window start (secs):"
+PARAM_UI_TIME_WINDOW_START_TIMES = "Time window start (secs):"
 PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT = "Min time duration criteria (secs): "
+PARAM_UI_TIME_WINDOW_DURATION = "Time window duration (secs): "
 
 # globals
 output_dir = ""
@@ -159,6 +160,7 @@ def parse_input_file_into_df(input_file):
 def parse_param_file():
     global param_file, param_min_time_duration, param_window_duration, param_start_timestamp_series
     param_min_time_duration = 0
+    param_window_duration = 0
     param_start_timestamp_series = pd.Series(dtype=np.float64)
     if os.path.isfile(param_file):
         param_df = pd.read_csv(
@@ -180,6 +182,7 @@ def parse_param_file():
         #  print(param_start_timestamp_series)
 
     set_min_time_duration_box_value()
+    set_time_window_duration_box_value()
     refresh_ts_list_box(param_start_timestamp_series)
 
 # Print a dataframe with the message
@@ -440,6 +443,12 @@ def set_min_time_duration_box_value():
         PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT + str(param_min_time_duration))
 
 
+def set_time_window_duration_box_value():
+    global param_window_duration
+    time_window_duration_box.value = (
+        PARAM_UI_TIME_WINDOW_DURATION + str(param_window_duration))
+
+
 # main entry point
 if __name__ == "__main__":
     app = App("Freeze Data Processing App",  height=700, width=800)
@@ -453,7 +462,9 @@ if __name__ == "__main__":
     line()
     min_time_duration_box = Text(app, text="")
     set_min_time_duration_box_value()
-    Text(app, text=PARAM_UI_TIME_WINDOW_DURATION)
+    time_window_duration_box = Text(app, text="")
+    set_time_window_duration_box_value()
+    Text(app, text=PARAM_UI_TIME_WINDOW_START_TIMES)
     ts_series_list_box = ListBox(
         app, param_start_timestamp_series, scrollbar=True)
     center_box = Box(app, layout="grid")
