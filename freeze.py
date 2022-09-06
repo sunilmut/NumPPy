@@ -31,7 +31,7 @@ OUTPUT_COL2_MI_AVG = "Avg of MI"
 OUTPUT_COL3_FREEZE_TP = "Freezing TurnPoints"
 
 # output directory and file names
-OUTPUT_DIR_NAME = "output"
+OUTPUT_DIR_NAME = "_output"
 PARAMETERS_DIR_NAME = "parameters\param.csv"
 OUTPUT_ZERO_TO_ONE_CSV_NAME = "_output_0_to_1_timewindows.csv"
 OUTPUT_ZERO_TO_ONE_CSV_NAME_TS = "_output_0_to_1_timewindows_TimestampsOnly.csv"
@@ -413,7 +413,8 @@ def main(argv, input_folder_or_file):
     # Else, output folder is '<parent of input file or folder>\output', create it
     if not output_folder:
         output_folder = os.path.dirname(input_folder_or_file)
-        output_folder = os.path.join(output_folder, OUTPUT_DIR_NAME)
+        base_name = os.path.basename(input_folder_or_file)
+        output_folder = os.path.join(output_folder, base_name + OUTPUT_DIR_NAME)
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
 
