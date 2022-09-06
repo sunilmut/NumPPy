@@ -213,6 +213,8 @@ def parse_input_workbook(input_file, output_folder, param_file):
 
     sum = 0
     itr = 0
+    prev_idx = 0
+    prev_freeze = 0
     out_df = pd.DataFrame(columns=out_col_names)
 
     # Iterate over all the rows
@@ -221,48 +223,62 @@ def parse_input_workbook(input_file, output_folder, param_file):
         if idx == 0:
             prev_freeze = row.values[2]
 
+        # All row's with freeze value of '0' are valuable and need to
+        # be summed up (until a transition)
+        if row.values[2] == 0:
+            sum += row.values[1]
+            itr += 1
+
         # For output, we only care about rows where there is a transition
-        # of freeze value. i.e. [0->1] or [1->0]
-        if row.values[2] != prev_freeze:
-            # First thing is to capture the current values.
-            if prev_freeze == 0:
-                freeze = ZERO_TO_ONE
-            else:
-                freeze = ONE_TO_ZERO
+        # of freeze value from [0->1]
+        # No action is needed on transition from [1->0]
+        if row.values[2] != prev_freeze and row.values[2] == 1:
+            # Divide by zero exceptional condition. Capture the details
+            # for troubleshooting.
+            if itr == 0:
+                logging.error("Current index: %s", str(idx + 4))
+                logging.error("Row value: %s", row.to_string())
+                logging.error("Previous index: %s", str(prev_idx + 4))
+
+            # On transition from [0->1], we need to capture two entries:
+            # One for the row which has the freeze value of 0 (idx - 1)
+            # and for the row with the freeze value of 1 (current idx)
+            df_o = pd.DataFrame(
+                {
+                    OUTPUT_COL0_TS: [df.loc[idx - 1].values[0]],
+                    OUTPUT_COL1_MI: [df.loc[idx - 1].values[1]],
+                    OUTPUT_COL2_MI_AVG: [sum / itr],
+                    OUTPUT_COL3_FREEZE_TP: [ZERO_TO_ONE],
+                }
+            )
+            out_df = pd.concat([out_df, df_o], ignore_index=True, sort=False)
             df_o = pd.DataFrame(
                 {
                     OUTPUT_COL0_TS: [row.values[0]],
                     OUTPUT_COL1_MI: [row.values[1]],
                     OUTPUT_COL2_MI_AVG: [sum / itr],
-                    OUTPUT_COL3_FREEZE_TP: [freeze],
+                    OUTPUT_COL3_FREEZE_TP: [ONE_TO_ZERO],
                 }
             )
             out_df = pd.concat([out_df, df_o], ignore_index=True, sort=False)
 
-            # Since this is a transition, update the previous freeze value to
-            # take the new value.
-            prev_freeze = row.values[2]
+            # On transition, reset the values.
+            sum = 0
+            itr = 0
+            prev_idx = idx
 
-            # Reset the sum and the iterator every time freeze transitions from [1->0]
-            if row.values[2] == 0:
-                sum = 0
-                itr = 0
-
-        # We need to average the indexes where the freeze is '0'
-        if row.values[2] == 0:
-            sum += row.values[1]
-            itr += 1
+        prev_freeze = row.values[2]
 
     if out_df.empty:
         return
 
-    print_df("After initial parsing (without any criteria or filter", out_df)
+    print_df("After initial parsing (without any criteria or filter)", out_df)
 
     # Apply any minimum time duration criteria
     if param_min_time_duration > 0:
         out_df = out_df.loc[list(apply_duration_criteria(
             out_df.iloc[:, 0], param_min_time_duration))]
-        print_df("After applying min time duration criteria", df)
+        print_df("After applying min time duration criteria", out_df)
 
     # Apply time window filter
     out_unspecified_df = pd.DataFrame()
