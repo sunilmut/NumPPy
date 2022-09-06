@@ -34,16 +34,17 @@ OUTPUT_COL3_FREEZE_TP = "Freezing TurnPoints"
 # output directory and file names
 OUTPUT_DIR_NAME = "output"
 PARAMETERS_DIR_NAME = "parameters\param.csv"
-OUTPUT_ZERO_TO_ONE_CSV_NAME = "_output_0_to_1.csv"
+OUTPUT_ZERO_TO_ONE_CSV_NAME = "_output_0_to_1_timewindows.csv"
 OUTPUT_ZERO_TO_ONE_UN_CSV_NAME = "_output_0_to_1_unspecified.csv"
-OUTPUT_ONE_TO_ZERO_CSV_NAME = "_output_1_to_0.csv"
+OUTPUT_ONE_TO_ZERO_CSV_NAME = "_output_1_to_0_timewindows.csv"
 OUTPUT_ONE_TO_ZERO_UN_CSV_NAME = "__output_1_to_0_unspecified.csv"
 
 # Parameters column
 PARAM_TS_CRITERIA = "Criteria_Timestamp_In_Sec"
 PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
 PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
-PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT = "Min time duration criteria: "
+PARAM_UI_TIME_WINDOW_DURATION = "Time window start (secs):"
+PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT = "Min time duration criteria (secs): "
 
 # globals
 output_dir = ""
@@ -157,6 +158,8 @@ def parse_input_file_into_df(input_file):
 # Parse the paramter file
 def parse_param_file():
     global param_file, param_min_time_duration, param_window_duration, param_start_timestamp_series
+    param_min_time_duration = 0
+    param_start_timestamp_series = pd.Series(dtype=np.float64)
     if os.path.isfile(param_file):
         param_df = pd.read_csv(
             param_file, names=param_col_names, header=None, skiprows=1)
@@ -371,7 +374,7 @@ def main(argv, input_folder_or_file):
 
 
 def line():
-    Text(app, "------------------------------------------------------------")
+    Text(app, "------------------------------------------------------------------------------")
 
 
 def get_folder():
@@ -441,25 +444,32 @@ def set_min_time_duration_box_value():
 if __name__ == "__main__":
     app = App("Freeze Data Processing App",  height=700, width=800)
     line()
-    Text(app, "Select Input Folder and then process")
+    Text(app, "Select Input Folder and then process", font="Verdana bold")
     line()
-    PushButton(app, command=get_folder, text="Input Folder")
+    input_folder_button = PushButton(
+        app, command=get_folder, text="Input Folder")
+    input_folder_button.tk.config(font=("Verdana bold", 16))
     input_dir_box = Text(app)
     line()
     min_time_duration_box = Text(app, text="")
     set_min_time_duration_box_value()
-    Text(app, text="Time window durations:")
+    Text(app, text=PARAM_UI_TIME_WINDOW_DURATION)
     ts_series_list_box = ListBox(
         app, param_start_timestamp_series, scrollbar=True)
     center_box = Box(app, layout="grid")
-    PushButton(center_box, command=open_params_file,
-               text="Open parameters file", grid=[0, 1])
-    PushButton(center_box, text="Update parameters",
-               command=parse_param_file, grid=[1, 1])
+    open_params_button = PushButton(center_box, command=open_params_file,
+                                    text="Open parameters file", grid=[0, 1])
+    open_params_button.tk.config(font=("Verdana bold", 10))
+    update_params_button = PushButton(center_box, text="Update parameters",
+                                      command=parse_param_file, grid=[1, 1])
+    update_params_button.tk.config(font=("Verdana bold", 10))
     line()
-    PushButton(app, text="Process", command=process)
+    process_button = PushButton(app, text="Process", command=process)
+    process_button.tk.config(font=("Verdana bold", 10))
     line()
     output_folder_textbox = Text(app, text="", color="green")
-    PushButton(app, command=open_output_folder, text="Browse output folder")
+    browse_output_folder_button = PushButton(
+        app, command=open_output_folder, text="Browse output folder")
+    browse_output_folder_button.tk.config(font=("Verdana bold", 10))
     line()
     app.display()
