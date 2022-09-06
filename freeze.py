@@ -9,7 +9,7 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import glob
 import guizero
-from guizero import App, ListBox, PushButton, Text, TextBox
+from guizero import App, Box, ListBox, PushButton, Text
 import subprocess
 import numpy as np
 
@@ -155,8 +155,8 @@ def parse_input_file_into_df(input_file):
 
 
 # Parse the paramter file
-def parse_param_file(param_file):
-    global param_min_time_duration, param_window_duration, param_start_timestamp_series
+def parse_param_file():
+    global param_file, param_min_time_duration, param_window_duration, param_start_timestamp_series
     if os.path.isfile(param_file):
         param_df = pd.read_csv(
             param_file, names=param_col_names, header=None, skiprows=1)
@@ -201,7 +201,7 @@ def parse_input_workbook(input_file, output_folder, param_file):
         return
 
     # Parse the parameters file.
-    parse_param_file(param_file)
+    parse_param_file()
 
     # Format the file names of the output files
     format_out_file_names(input_file, output_folder)
@@ -384,7 +384,7 @@ def get_folder():
     # Get the parameters folder, which is:
     # '<input folder>\parameters'
     param_file = os.path.join(input_dir_box.value, PARAMETERS_DIR_NAME)
-    parse_param_file(param_file)
+    parse_param_file()
 
 
 def open_output_folder():
@@ -410,7 +410,7 @@ def open_params_file():
         return
 
     os.startfile(param_file)
-    parse_param_file(param_file)
+    parse_param_file()
 
 
 def process():
@@ -451,9 +451,11 @@ if __name__ == "__main__":
     Text(app, text="Time window durations:")
     ts_series_list_box = ListBox(
         app, param_start_timestamp_series, scrollbar=True)
-    PushButton(app, command=open_params_file, text="Open parameters file")
-    PushButton(app, text="Update parameters",
-               command=parse_param_file, args=param_file)
+    center_box = Box(app, layout="grid")
+    PushButton(center_box, command=open_params_file,
+               text="Open parameters file", grid=[0, 1])
+    PushButton(center_box, text="Update parameters",
+               command=parse_param_file, grid=[1, 1])
     line()
     PushButton(app, text="Process", command=process)
     line()
