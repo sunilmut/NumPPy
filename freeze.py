@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import sys
-import csv
 import getopt
 import logging
 import os
