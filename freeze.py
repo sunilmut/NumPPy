@@ -34,9 +34,13 @@ OUTPUT_COL3_FREEZE_TP = "Freezing TurnPoints"
 OUTPUT_DIR_NAME = "output"
 PARAMETERS_DIR_NAME = "parameters\param.csv"
 OUTPUT_ZERO_TO_ONE_CSV_NAME = "_output_0_to_1_timewindows.csv"
+OUTPUT_ZERO_TO_ONE_CSV_NAME_TS = "_output_0_to_1_timewindows_TimestampsOnly.csv"
 OUTPUT_ZERO_TO_ONE_UN_CSV_NAME = "_output_0_to_1_unspecified.csv"
+OUTPUT_ZERO_TO_ONE_UN_CSV_NAME_TS = "_output_0_to_1_unspecified_TimestampsOnly.csv"
 OUTPUT_ONE_TO_ZERO_CSV_NAME = "_output_1_to_0_timewindows.csv"
-OUTPUT_ONE_TO_ZERO_UN_CSV_NAME = "__output_1_to_0_unspecified.csv"
+OUTPUT_ONE_TO_ZERO_CSV_NAME_TS = "_output_1_to_0_timewindows_TimestampsOnly.csv"
+OUTPUT_ONE_TO_ZERO_UN_CSV_NAME = "_output_1_to_0_unspecified.csv"
+OUTPUT_ONE_TO_ZERO_UN_CSV_NAME_TS = "_output_1_to_0_unspecified_TimestampsOnly.csv"
 
 # Parameters column
 PARAM_TS_CRITERIA = "Criteria_Timestamp_In_Sec"
@@ -51,9 +55,13 @@ output_dir = ""
 out_col_names = [OUTPUT_COL0_TS, OUTPUT_COL1_MI,
                  OUTPUT_COL2_MI_AVG, OUTPUT_COL3_FREEZE_TP]
 out_file_zero_to_one = ""
+out_file_zero_to_one_ts = ""
 out_file_zero_to_one_un = ""
+out_file_zero_to_one_un_ts = ""
 out_file_one_to_zero = ""
+out_file_one_to_zero_ts = ""
 out_file_one_to_zero_un = ""
+out_file_one_to_zero_un_ts = ""
 param_col_names = [PARAM_TS_CRITERIA,
                    PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
 param_min_time_duration = 0
@@ -84,43 +92,74 @@ def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
 
 # Split the dataframe based on whether it is a [0->1] or [1->0] transitions
 # and output to respective files.
-def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero):
+def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero,
+                        out_file_zero_to_one_ts, out_file_one_to_zero_ts):
     if out_df.empty:
         return
     out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
     out_one_to_zero_df = pd.DataFrame(columns=out_col_names)
     out_zero_to_one_df = out_df.loc[out_df[OUTPUT_COL3_FREEZE_TP]
                                     == ZERO_TO_ONE]
+    out_zero_to_one_ts_df = out_zero_to_one_df.loc[:, OUTPUT_COL0_TS]
     out_one_to_zero_df = out_df.loc[out_df[OUTPUT_COL3_FREEZE_TP]
                                     == ONE_TO_ZERO]
+    out_one_to_zero_ts_df = out_one_to_zero_df.loc[:, OUTPUT_COL0_TS]
     out_zero_to_one_df.to_csv(out_file_zero_to_one, index=False)
+    out_zero_to_one_ts_df.to_csv(
+        out_file_zero_to_one_ts, index=False, header=False)
     out_one_to_zero_df.to_csv(out_file_one_to_zero, index=False)
+    out_one_to_zero_ts_df.to_csv(
+        out_file_one_to_zero_ts, index=False, header=False)
 
 
 # Format the output file names
 def format_out_file_names(input_file, output_folder):
-    global out_file_zero_to_one, out_file_zero_to_one_un, out_file_one_to_zero, out_file_one_to_zero_un
+    global out_file_zero_to_one, out_file_zero_to_one_un
+    global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
+    global out_file_one_to_zero, out_file_one_to_zero_un
+    global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
+
     input_file_name = os.path.basename(input_file)
     input_file_without_ext = os.path.splitext(input_file_name)[0]
     out_file_zero_to_one = os.path.join(
         output_folder, input_file_without_ext + OUTPUT_ZERO_TO_ONE_CSV_NAME
     )
+    out_file_zero_to_one_ts = os.path.join(
+        output_folder, input_file_without_ext + OUTPUT_ZERO_TO_ONE_CSV_NAME_TS
+    )
     out_file_zero_to_one_un = os.path.join(
         output_folder, input_file_without_ext + OUTPUT_ZERO_TO_ONE_UN_CSV_NAME
+    )
+    out_file_zero_to_one_un_ts = os.path.join(
+        output_folder, input_file_without_ext + OUTPUT_ZERO_TO_ONE_UN_CSV_NAME_TS
     )
     out_file_one_to_zero = os.path.join(
         output_folder, input_file_without_ext + OUTPUT_ONE_TO_ZERO_CSV_NAME
     )
+    out_file_one_to_zero_ts = os.path.join(
+        output_folder, input_file_without_ext + OUTPUT_ONE_TO_ZERO_CSV_NAME_TS
+    )
     out_file_one_to_zero_un = os.path.join(
         output_folder, input_file_without_ext + OUTPUT_ONE_TO_ZERO_UN_CSV_NAME
+    )
+    out_file_one_to_zero_un_ts = os.path.join(
+        output_folder, input_file_without_ext + OUTPUT_ONE_TO_ZERO_UN_CSV_NAME_TS
     )
 
     print("\nInput file: ", os.path.basename(input_file_name))
     print("Output file:")
     print("\t[0->1]: ", os.path.basename(out_file_zero_to_one))
     print("\t[1->0]: ", os.path.basename(out_file_one_to_zero))
+    print("\t[0->1] TimeStamps Only: ",
+          os.path.basename(out_file_zero_to_one_ts))
+    print("\t[1->0] TimeStamps Only: ",
+          os.path.basename(out_file_one_to_zero_ts))
     print("\tunspecified [0->1]: ", os.path.basename(out_file_zero_to_one_un))
     print("\tunspeified [1->0]: ", os.path.basename(out_file_one_to_zero_un))
+    print("\tunspecified [0->1] TimeStamps Only:: ",
+          os.path.basename(out_file_zero_to_one_un_ts))
+    print("\tunspeified [1->0] TimeStamps Only:: ",
+          os.path.basename(out_file_one_to_zero_un_ts))
 
 # Parse the input file
 # returns bool, dataframe
@@ -197,7 +236,10 @@ def print_df(msg, df):
 
 # Main logic routine to parse the input and spit out the output
 def parse_input_workbook(input_file, output_folder, param_file):
-    global out_file_zero_to_one, out_file_zero_to_one_un, out_file_one_to_zero, out_file_one_to_zero_un
+    global out_file_zero_to_one, out_file_zero_to_one_un
+    global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
+    global out_file_one_to_zero, out_file_one_to_zero_un
+    global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
     global param_min_time_duration, param_window_duration, param_start_timestamp_series
 
     # Parse the input file
@@ -291,9 +333,11 @@ def parse_input_workbook(input_file, output_folder, param_file):
         print_df("unspecified entries after applying timestamp filter",
                  out_unspecified_df)
 
-    split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero)
+    split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero,
+                        out_file_zero_to_one_ts, out_file_one_to_zero_ts)
     split_df_and_output(out_unspecified_df,
-                        out_file_zero_to_one_un, out_file_one_to_zero_un)
+                        out_file_zero_to_one_un, out_file_one_to_zero_un,
+                        out_file_zero_to_one_un_ts, out_file_one_to_zero_un_ts)
 
 
 # Print help
@@ -376,8 +420,6 @@ def main(argv, input_folder_or_file):
     # Get the parameters folder, which is:
     # '<input folder>\parameters'
     param_file = os.path.join(input_folder, PARAMETERS_DIR_NAME)
-    out_file_zero_to_one = ""
-    out_file_one_to_zero = ""
     print("\nInput folder: ", input_folder)
     print("Parameters file: ", param_file)
     print("Output folder: ", output_folder)
