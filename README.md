@@ -3,12 +3,15 @@
 In a browser go [here](https://git-scm.com/download/win), download and run the "64-bit Git for Windows Setup"
 or
 Open a administrator command prompt and run:
-`winget install --id Git.Git -e --source winget`
+
+```
+winget install --id Git.Git -e --source winget
+```
 
 ## Clone the code:
 Open a new command prompt and run:
 
-```bash
+```
 git clone https://github.com/sunilmut/xls_format_parser.git
 cd xls_format_parser
 ```
