@@ -58,6 +58,7 @@ param_col_names = [PARAM_TS_CRITERIA,
 param_min_time_duration = 0
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
+param_file = ""
 
 
 def apply_duration_criteria(ts_series, param_min_time_duration):
@@ -300,6 +301,7 @@ def print_help():
 
 
 def main(argv, input_folder_or_file):
+    global param_file
     input_files = []
     output_folder = ""
 
@@ -373,8 +375,11 @@ def line():
 
 
 def get_folder():
+    global param_file
     input_dir_box.value = app.select_folder()
     output_folder_textbox.value = ""
+    if not input_dir_box.value:
+        return
 
     # Get the parameters folder, which is:
     # '<input folder>\parameters'
@@ -388,7 +393,24 @@ def open_output_folder():
         app.warn(
             "Uh oh!", "Output folder can be browsed once input is processed. Select input folder and process first!")
         return
+
     subprocess.Popen(f'explorer /select,{output_dir}')
+
+
+def open_params_file():
+    global param_file
+    if not param_file:
+        app.warn(
+            "Uh oh!", "Parameters file does not exist. Please create a parmeters file called 'params.csv' in the <input folder>\parameters folder and try again!")
+        return
+
+    if not os.path.isfile(param_file):
+        app.warn(
+            "Uh oh!", "Parameters file " + param_file + " is not a file!")
+        return
+
+    os.startfile(param_file)
+    parse_param_file(param_file)
 
 
 def process():
@@ -429,8 +451,11 @@ if __name__ == "__main__":
     Text(app, text="Time window durations:")
     ts_series_list_box = ListBox(
         app, param_start_timestamp_series, scrollbar=True)
+    PushButton(app, command=open_params_file, text="Open parameters file")
+    PushButton(app, text="Update parameters",
+               command=parse_param_file, args=param_file)
     line()
-    button = PushButton(app, text="Process", command=process)
+    PushButton(app, text="Process", command=process)
     line()
     output_folder_textbox = Text(app, text="", color="green")
     PushButton(app, command=open_output_folder, text="Browse output folder")
