@@ -8,7 +8,7 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import glob
 import guizero
-from guizero import App, Box, ListBox, PushButton, Text, Window
+from guizero import App, Box, ListBox, PushButton, Text, TitleBox, Window
 import subprocess
 import numpy as np
 
@@ -544,7 +544,10 @@ def set_time_window_duration_box_value():
 
 # main entry point
 if __name__ == "__main__":
-    app = App("Freeze Data Processing App",  height=700, width=800)
+    app = App("",  height=750, width=800)
+    titlebox = TitleBox(app, "")
+    title = Text(titlebox, text="Freeze Data Processing App",
+                 size=14, font="Arial")
     line()
     Text(app, "Select Input Folder and then process", font="Verdana bold")
     line()
