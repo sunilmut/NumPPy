@@ -8,7 +8,7 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import glob
 import guizero
-from guizero import App, Box, ListBox, PushButton, Text
+from guizero import App, Box, ListBox, PushButton, Text, Window
 import subprocess
 import numpy as np
 
@@ -20,12 +20,12 @@ ZERO_TO_ONE = "0 to 1"
 ONE_TO_ZERO = "1 to 0"
 
 # input coloumns
-INPUT_COL0 = "Timestamp"
+INPUT_COL0 = "timestamps"
 INPUT_COL1 = "Motion Index"
 INPUT_COL2 = "Freeze"
 
 # output columns
-OUTPUT_COL0_TS = "Timestamp"
+OUTPUT_COL0_TS = "timestamps"
 OUTPUT_COL1_MI = "Motion Index"
 OUTPUT_COL2_MI_AVG = "Avg of MI"
 OUTPUT_COL3_FREEZE_TP = "Freezing TurnPoints"
@@ -33,14 +33,15 @@ OUTPUT_COL3_FREEZE_TP = "Freezing TurnPoints"
 # output directory and file names
 OUTPUT_DIR_NAME = "_output"
 PARAMETERS_DIR_NAME = "parameters\param.csv"
-OUTPUT_ZERO_TO_ONE_CSV_NAME = "_output_0_to_1_timewindows.csv"
-OUTPUT_ZERO_TO_ONE_CSV_NAME_TS = "_output_0_to_1_timewindows_TimestampsOnly.csv"
-OUTPUT_ZERO_TO_ONE_UN_CSV_NAME = "_output_0_to_1_unspecified.csv"
-OUTPUT_ZERO_TO_ONE_UN_CSV_NAME_TS = "_output_0_to_1_unspecified_TimestampsOnly.csv"
-OUTPUT_ONE_TO_ZERO_CSV_NAME = "_output_1_to_0_timewindows.csv"
-OUTPUT_ONE_TO_ZERO_CSV_NAME_TS = "_output_1_to_0_timewindows_TimestampsOnly.csv"
-OUTPUT_ONE_TO_ZERO_UN_CSV_NAME = "_output_1_to_0_unspecified.csv"
-OUTPUT_ONE_TO_ZERO_UN_CSV_NAME_TS = "_output_1_to_0_unspecified_TimestampsOnly.csv"
+OUTPUT_BASE = "_output_base.csv"
+OUTPUT_ZERO_TO_ONE_CSV_NAME = "_01_OnsetT.csv"
+OUTPUT_ZERO_TO_ONE_CSV_NAME_TS = "_01_OnsetT_ts.csv"
+OUTPUT_ZERO_TO_ONE_UN_CSV_NAME = "_01_unspecified.csv"
+OUTPUT_ZERO_TO_ONE_UN_CSV_NAME_TS = "_01_unspecified_ts.csv"
+OUTPUT_ONE_TO_ZERO_CSV_NAME = "_10_OnsetT.csv"
+OUTPUT_ONE_TO_ZERO_CSV_NAME_TS = "_10_OnsetT_ts.csv"
+OUTPUT_ONE_TO_ZERO_UN_CSV_NAME = "_10_unspecified.csv"
+OUTPUT_ONE_TO_ZERO_UN_CSV_NAME_TS = "_10_unspecified_ts.csv"
 
 # Parameters column
 PARAM_TS_CRITERIA = "Criteria_Timestamp_In_Sec"
@@ -92,6 +93,7 @@ def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
 
 # Split the dataframe based on whether it is a [0->1] or [1->0] transitions
 # and output to respective files.
+# Timestamps file should have the header
 def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero,
                         out_file_zero_to_one_ts, out_file_one_to_zero_ts):
     if out_df.empty:
@@ -106,14 +108,15 @@ def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero,
     out_one_to_zero_ts_df = out_one_to_zero_df.loc[:, OUTPUT_COL0_TS]
     out_zero_to_one_df.to_csv(out_file_zero_to_one, index=False)
     out_zero_to_one_ts_df.to_csv(
-        out_file_zero_to_one_ts, index=False, header=False)
+        out_file_zero_to_one_ts, index=False, header=True)
     out_one_to_zero_df.to_csv(out_file_one_to_zero, index=False)
     out_one_to_zero_ts_df.to_csv(
-        out_file_one_to_zero_ts, index=False, header=False)
+        out_file_one_to_zero_ts, index=False, header=True)
 
 
 # Format the output file names
 def format_out_file_names(input_file, output_folder):
+    global out_base
     global out_file_zero_to_one, out_file_zero_to_one_un
     global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
     global out_file_one_to_zero, out_file_one_to_zero_un
@@ -121,6 +124,9 @@ def format_out_file_names(input_file, output_folder):
 
     input_file_name = os.path.basename(input_file)
     input_file_without_ext = os.path.splitext(input_file_name)[0]
+    out_base = os.path.join(
+        output_folder, input_file_without_ext + OUTPUT_BASE
+    )
     out_file_zero_to_one = os.path.join(
         output_folder, input_file_without_ext + OUTPUT_ZERO_TO_ONE_CSV_NAME
     )
@@ -217,7 +223,6 @@ def parse_param_file():
 
         param_start_timestamp_series = param_df[PARAM_TIME_WINDOW_START_LIST]
         param_start_timestamp_series.sort_values(ascending=True)
-        #  print(param_start_timestamp_series)
 
     set_min_time_duration_box_value()
     set_time_window_duration_box_value()
@@ -235,7 +240,8 @@ def print_df(msg, df):
 
 
 # Main logic routine to parse the input and spit out the output
-def parse_input_workbook(input_file, output_folder, param_file):
+def parse_input_file(input_file, output_folder, param_file):
+    global out_base
     global out_file_zero_to_one, out_file_zero_to_one_un
     global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
     global out_file_one_to_zero, out_file_one_to_zero_un
@@ -256,24 +262,30 @@ def parse_input_workbook(input_file, output_folder, param_file):
     sum = 0
     itr = 0
     prev_idx = 0
-    prev_freeze = 0
+    # p.s - start with a freeze value of 1 as that will make the very first row
+    #        with freeze value of 0 look like a transition to avoid special
+    #        case handle for row 0.
+    prev_freeze = 1
     out_df = pd.DataFrame(columns=out_col_names)
+    freeze_0_ts = 0
+    freeze_0_mi = 0
 
     # Iterate over all the rows
     for (idx, row) in df.iterrows():
-        # Take the freeze value from the first row as the starting freeze
-        if idx == 0:
-            prev_freeze = row.values[2]
-
         # All row's with freeze value of '0' are valuable and need to
         # be summed up (until a transition)
         if row.values[2] == 0:
             sum += row.values[1]
             itr += 1
 
+        # On transition from [1->0], record the row values which will
+        # be later used for output
+        if row.values[2] != prev_freeze and row.values[2] == 0:
+            freeze_0_ts = row.values[0]
+            freeze_0_mi = row.values[1]
+
         # For output, we only care about rows where there is a transition
         # of freeze value from [0->1]
-        # No action is needed on transition from [1->0]
         if row.values[2] != prev_freeze and row.values[2] == 1:
             # Divide by zero exceptional condition. Capture the details
             # for troubleshooting.
@@ -281,16 +293,17 @@ def parse_input_workbook(input_file, output_folder, param_file):
                 logging.error("Current index: %s", str(idx + 4))
                 logging.error("Row value: %s", row.to_string())
                 logging.error("Previous index: %s", str(prev_idx + 4))
+                return False
 
             # On transition from [0->1], we need to capture two entries:
-            # One for the row which has the freeze value of 0 (idx - 1)
+            # One for the row which has the freeze value of 0 (that was previously captured)
             # and for the row with the freeze value of 1 (current idx)
             df_o = pd.DataFrame(
                 {
-                    OUTPUT_COL0_TS: [df.loc[idx - 1].values[0]],
-                    OUTPUT_COL1_MI: [df.loc[idx - 1].values[1]],
+                    OUTPUT_COL0_TS: freeze_0_ts,
+                    OUTPUT_COL1_MI: freeze_0_mi,
                     OUTPUT_COL2_MI_AVG: [sum / itr],
-                    OUTPUT_COL3_FREEZE_TP: [ZERO_TO_ONE],
+                    OUTPUT_COL3_FREEZE_TP: [ONE_TO_ZERO],
                 }
             )
             out_df = pd.concat([out_df, df_o], ignore_index=True, sort=False)
@@ -299,7 +312,7 @@ def parse_input_workbook(input_file, output_folder, param_file):
                     OUTPUT_COL0_TS: [row.values[0]],
                     OUTPUT_COL1_MI: [row.values[1]],
                     OUTPUT_COL2_MI_AVG: [sum / itr],
-                    OUTPUT_COL3_FREEZE_TP: [ONE_TO_ZERO],
+                    OUTPUT_COL3_FREEZE_TP: [ZERO_TO_ONE],
                 }
             )
             out_df = pd.concat([out_df, df_o], ignore_index=True, sort=False)
@@ -308,6 +321,8 @@ def parse_input_workbook(input_file, output_folder, param_file):
             sum = 0
             itr = 0
             prev_idx = idx
+            freeze_0_ts = 0
+            freeze_0_mi = 0
 
         prev_freeze = row.values[2]
 
@@ -315,6 +330,7 @@ def parse_input_workbook(input_file, output_folder, param_file):
         return
 
     print_df("After initial parsing (without any criteria or filter)", out_df)
+    out_df.to_csv(out_base, index=False)
 
     # Apply any minimum time duration criteria
     if param_min_time_duration > 0:
@@ -338,6 +354,8 @@ def parse_input_workbook(input_file, output_folder, param_file):
     split_df_and_output(out_unspecified_df,
                         out_file_zero_to_one_un, out_file_one_to_zero_un,
                         out_file_zero_to_one_un_ts, out_file_one_to_zero_un_ts)
+
+    return True
 
 
 # Print help
@@ -414,7 +432,8 @@ def main(argv, input_folder_or_file):
     if not output_folder:
         output_folder = os.path.dirname(input_folder_or_file)
         base_name = os.path.basename(input_folder_or_file)
-        output_folder = os.path.join(output_folder, base_name + OUTPUT_DIR_NAME)
+        output_folder = os.path.join(
+            output_folder, base_name + OUTPUT_DIR_NAME)
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
 
@@ -424,10 +443,16 @@ def main(argv, input_folder_or_file):
     print("\nInput folder: ", input_folder)
     print("Parameters file: ", param_file)
     print("Output folder: ", output_folder)
+    successfully_parsed_files = []
+    unsuccessfully_parsed_files = []
     for input_file in input_files:
-        parse_input_workbook(input_file, output_folder, param_file)
+        parsed = parse_input_file(input_file, output_folder, param_file)
+        if parsed:
+            successfully_parsed_files.append(input_file)
+        else:
+            unsuccessfully_parsed_files.append(input_file)
 
-    return output_folder
+    return output_folder, successfully_parsed_files, unsuccessfully_parsed_files
 
 # ------------------------------------------------------------
 # UI related stuff
@@ -455,7 +480,7 @@ def open_output_folder():
     global output_dir
     if not output_dir:
         app.warn(
-            "Uh oh!", "Output folder can be browsed once input is processed. Select input folder and process first!")
+            "Uh oh!", "Output folder dose not exist! Select input folder and process first.")
         return
 
     subprocess.Popen(f'explorer /select,{output_dir}')
@@ -477,6 +502,12 @@ def open_params_file():
     parse_param_file()
 
 
+def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_files):
+    result_success_list_box.clear()
+    for val in successfully_parsed_files:
+        result_success_list_box.append(val)
+
+
 def process():
     global output_dir
     if not input_dir_box.value:
@@ -485,8 +516,12 @@ def process():
         return
 
     print("param_min_time_duration is : ", min_time_duration_box.value)
-    output_dir = main(sys.argv[1:], input_dir_box.value)
+    output_dir, successfully_parsed_files, unsuccessfully_parsed_files = main(
+        sys.argv[1:], input_dir_box.value)
     output_folder_textbox.value = ("Output folder: " + output_dir)
+    refresh_result_text_box(successfully_parsed_files,
+                            unsuccessfully_parsed_files)
+    # result_window.show()
 
 
 def refresh_ts_list_box(ts_series):
@@ -541,4 +576,9 @@ if __name__ == "__main__":
         app, command=open_output_folder, text="Browse output folder")
     browse_output_folder_button.tk.config(font=("Verdana bold", 10))
     line()
+    result_window = Window(app, title="Result Window",
+                           height=500, width=500, visible=False)
+    result_text_box = Text(result_window, text="")
+    result_success_list_box = ListBox(result_window, [], scrollbar=True)
+    result_window.hide()
     app.display()
