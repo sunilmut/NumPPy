@@ -69,6 +69,7 @@ param_min_time_duration = 0
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
 param_file = ""
+input_folder = ""
 
 
 def apply_duration_criteria(ts_series, param_min_time_duration):
@@ -202,10 +203,15 @@ def parse_input_file_into_df(input_file):
 
 # Parse the paramter file
 def parse_param_file():
-    global param_file, param_min_time_duration, param_window_duration, param_start_timestamp_series
+    global param_file, param_min_time_duration
+    global param_window_duration, param_start_timestamp_series
+    global input_folder
     param_min_time_duration = 0
     param_window_duration = 0
     param_start_timestamp_series = pd.Series(dtype=np.float64)
+    # Get the parameters folder, which is:
+    # '<input folder>\parameters'
+    param_file = os.path.join(input_folder, PARAMETERS_DIR_NAME)
     if os.path.isfile(param_file):
         param_df = pd.read_csv(
             param_file, names=param_col_names, header=None, skiprows=1)
@@ -240,7 +246,7 @@ def print_df(msg, df):
 
 
 # Main logic routine to parse the input and spit out the output
-def parse_input_file(input_file, output_folder, param_file):
+def process_input_file(input_file, output_folder):
     global out_base
     global out_file_zero_to_one, out_file_zero_to_one_un
     global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
@@ -384,7 +390,7 @@ def print_help():
 
 
 def main(argv, input_folder_or_file):
-    global param_file
+    global input_folder
     input_files = []
     output_folder = ""
 
@@ -413,7 +419,6 @@ def main(argv, input_folder_or_file):
         input_folder_or_file = input(
             "Provide an input folder or .csv file name: ")
 
-    input_folder = ""
     if os.path.isdir(input_folder_or_file):
         input_folder = input_folder_or_file
         search_path = input_folder_or_file + "\*.csv"
@@ -437,16 +442,13 @@ def main(argv, input_folder_or_file):
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
 
-    # Get the parameters folder, which is:
-    # '<input folder>\parameters'
-    param_file = os.path.join(input_folder, PARAMETERS_DIR_NAME)
     print("\nInput folder: ", input_folder)
     print("Parameters file: ", param_file)
     print("Output folder: ", output_folder)
     successfully_parsed_files = []
     unsuccessfully_parsed_files = []
     for input_file in input_files:
-        parsed = parse_input_file(input_file, output_folder, param_file)
+        parsed = process_input_file(input_file, output_folder)
         if parsed:
             successfully_parsed_files.append(input_file)
         else:
@@ -463,16 +465,14 @@ def line():
     Text(app, "------------------------------------------------------------------------------")
 
 
-def get_folder():
-    global param_file
+def select_input_folder():
+    global input_folder
     input_dir_box.value = app.select_folder()
     output_folder_textbox.value = ""
     if not input_dir_box.value:
         return
 
-    # Get the parameters folder, which is:
-    # '<input folder>\parameters'
-    param_file = os.path.join(input_dir_box.value, PARAMETERS_DIR_NAME)
+    input_folder = input_dir_box.value
     parse_param_file()
 
 
@@ -552,7 +552,7 @@ if __name__ == "__main__":
     Text(app, "Select Input Folder and then process", font="Verdana bold")
     line()
     input_folder_button = PushButton(
-        app, command=get_folder, text="Input Folder")
+        app, command=select_input_folder, text="Input Folder")
     input_folder_button.tk.config(font=("Verdana bold", 16))
     input_dir_box = Text(app)
     line()
