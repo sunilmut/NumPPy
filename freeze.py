@@ -71,11 +71,15 @@ param_start_timestamp_series = pd.Series(dtype=np.float64)
 param_file = ""
 input_dir = ""
 
-# Arrays to store the parameters
-# List of name of parameters
+# Arrays to store the parameter names and its value as a dataframe
+# There is a dataframe value for each parameter and the indexes
+# for these two arrays should be kept in sync.
+# Parameter names
 param_name_list = []
-# Parameter values as a dataframe
-param_list_df = []
+# Parameter values as dataframe. There is one dataframe for each parameter
+param_df_list = []
+# Currently selected parameter name
+cur_selected_param = None
 
 
 def apply_duration_criteria(ts_series, param_min_time_duration):
@@ -98,11 +102,13 @@ def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
                 break
 
 
-# Split the dataframe based on whether it is a [0->1] or [1->0] transitions
-# and output to respective files.
-# Timestamps file should have the header
 def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero,
                         out_file_zero_to_one_ts, out_file_one_to_zero_ts):
+    """
+    Split the dataframe based on whether it is a [0->1] or [1->0] transitions
+    and output to respective files.
+    Timestamps file should have the header
+    """
     if out_df.empty:
         return
     out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
@@ -121,8 +127,10 @@ def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero,
         out_file_one_to_zero_ts, index=False, header=True)
 
 
-# Format the output file names
 def format_out_file_names(input_file, output_folder):
+    """
+    Format the output file names
+    """
     global out_base
     global out_file_zero_to_one, out_file_zero_to_one_un
     global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
@@ -174,13 +182,14 @@ def format_out_file_names(input_file, output_folder):
     print("\tunspeified [1->0] TimeStamps Only:: ",
           os.path.basename(out_file_one_to_zero_un_ts))
 
-# Parse the input file
-# returns bool, dataframe
-# bool - True if parsing was successful, FALSE otherwise
-# dataframe - Parsed dataframe
-
 
 def parse_input_file_into_df(input_file):
+    """
+    Parse the input file
+    returns bool, dataframe
+    bool - True if parsing was successful; False otherwise
+    dataframe - Parsed dataframe
+    """
     in_col_names = [INPUT_COL0, INPUT_COL1, INPUT_COL2]
     df = pd.read_csv(input_file, names=in_col_names,
                      skiprows=NUM_INITIAL_ROWS_TO_SKIP)
@@ -206,12 +215,13 @@ def parse_input_file_into_df(input_file):
 
     return True, df
 
-# Parse parameter folder and create a list of parameter dataframe(s)
-# out of it.
-
 
 def parse_param_folder():
-    global input_dir, param_name_list, param_list_df
+    """
+    Parse parameter folder and create a list of parameter dataframe(s)
+    out of it.
+    """
+    global input_dir, param_name_list, param_df_list
 
     param_folder = os.path.join(input_dir, "parameters")
     if not os.path.isdir(param_folder):
@@ -220,9 +230,8 @@ def parse_param_folder():
     search_path = param_folder + "\*.csv"
 
     param_name_list.clear()
-    param_list_df.clear()
+    param_df_list.clear()
     for param_file in glob.glob(search_path):
-        print(param_file)
         if not os.path.isfile(param_file):
             continue
 
@@ -231,18 +240,18 @@ def parse_param_folder():
         param_name_list.append(param_file_name_without_ext)
         param_df = pd.read_csv(
             param_file, names=param_col_names, header=None, skiprows=1)
-        param_list_df.append(param_df)
+        param_df_list.append(param_df)
 
     print(param_name_list)
-    print(param_list_df)
+    print(param_df_list)
 
     return True, ""
 
 
 def parse_all_param_dfs():
-    global param_list_df
+    global param_df_list
 
-    for df in param_list_df:
+    for df in param_df_list:
         t_duration, w_duration, ts_series = parse_param_df(df)
 
 
@@ -262,10 +271,11 @@ def parse_param_df(df):
 
     return t_duration, w_duration, ts_series
 
-# Parse the paramter file
-
 
 def parse_param_file():
+    """
+    Parse the paramter file
+    """
     global param_file, param_min_time_duration
     global param_window_duration, param_start_timestamp_series
     global input_dir
@@ -282,14 +292,13 @@ def parse_param_file():
         param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
             param_df)
 
-    set_min_time_duration_box_value()
-    set_time_window_duration_box_value()
-    refresh_ts_list_box(param_start_timestamp_series)
-
-# Print a dataframe with the message
+    refresh_param_values(param_start_timestamp_series)
 
 
 def print_df(msg, df):
+    """
+    Print a dataframe with the message
+    """
     if df.empty:
         return
 
@@ -297,8 +306,10 @@ def print_df(msg, df):
     logging.debug(df)
 
 
-# Main logic routine to parse the input and spit out the output
 def process_input_file(input_file, output_folder):
+    """
+    Main logic routine to parse the input and spit out the output
+    """
     global out_base
     global out_file_zero_to_one, out_file_zero_to_one_un
     global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
@@ -416,8 +427,10 @@ def process_input_file(input_file, output_folder):
     return True
 
 
-# Print help
 def print_help():
+    """
+    Display help
+    """
     print("\nHelp/Usage:\n")
     print(
         "python freeze.py -i <input folder or .csv file> -d <output_directory> -v -h\n"
@@ -509,9 +522,12 @@ def main(argv, input_folder_or_file):
 
     return output_folder, successfully_parsed_files, unsuccessfully_parsed_files
 
-# ------------------------------------------------------------
-# UI related stuff
-# ------------------------------------------------------------
+
+"""
+------------------------------------------------------------
+                UI related stuff
+------------------------------------------------------------
+"""
 
 
 def line():
@@ -554,7 +570,6 @@ def open_params_file():
         return
 
     os.startfile(param_file)
-    parse_param_file()
 
 
 def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_files):
@@ -578,12 +593,39 @@ def process():
     # result_window.show()
 
 
+def select_param(selected_param_value):
+    global cur_selected_param
+
+    if not selected_param_value:
+        return
+
+    cur_selected_param = selected_param_value
+    try:
+        param_index = param_name_list.index(cur_selected_param)
+    except ValueError:
+        logging.error("Parameter value: %s is out of index",
+                      cur_selected_param)
+        return
+
+    df = param_df_list[param_index]
+    param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
+        df)
+
+    refresh_param_values(param_start_timestamp_series)
+
+
 def refresh_param_names_combo_box(param_name_list):
     param_names_combo_box.clear()
     for param_name in param_name_list:
         param_names_combo_box.append(param_name)
 
     param_names_combo_box.show()
+
+
+def refresh_param_values(param_start_timestamp_series):
+    set_min_time_duration_box_value()
+    set_time_window_duration_box_value()
+    refresh_ts_list_box(param_start_timestamp_series)
 
 
 def refresh_ts_list_box(ts_series):
@@ -602,8 +644,10 @@ def set_time_window_duration_box_value():
     time_window_duration_box.value = param_window_duration
 
 
-# main entry point
 if __name__ == "__main__":
+    """
+    Main entry point
+    """
     # Main app
     app = App("",  height=750, width=800)
 
@@ -630,8 +674,11 @@ if __name__ == "__main__":
     param_title_box = TitleBox(param_box, text="", grid=[0, cnt])
     param_title = Text(param_title_box, text="Parameters",
                        size=10, font="Arial Bold", align="left", color="orange")
-    # Parameter combo box
-    param_names_combo_box = Combo(param_box, options=[], grid=[10, cnt])
+
+    # Parameter names combo box (grid high to keep it on the right side)
+    param_names_combo_box = Combo(
+        param_box, options=[], grid=[10, cnt], command=select_param)
+    param_names_combo_box.clear()
     # param_names_combo_box.hide()
     cnt += 1
 
@@ -659,10 +706,10 @@ if __name__ == "__main__":
     # Open & update parameters file button
     center_box = Box(app, layout="grid")
     open_params_button = PushButton(center_box, command=open_params_file,
-                                    text="Open parameters file", grid=[0, 1], width=20)
+                                    text="Open parameters file", grid=[0, 1], width=17, align="left")
     open_params_button.tk.config(font=("Verdana bold", 10))
     update_params_button = PushButton(center_box, text="Update parameters",
-                                      command=parse_param_file, grid=[1, 1], width=20)
+                                      command=parse_param_file, grid=[1, 1], width=17, align="left")
     update_params_button.tk.config(font=("Verdana bold", 10))
     line()
 
@@ -683,4 +730,6 @@ if __name__ == "__main__":
     result_text_box = Text(result_window, text="")
     result_success_list_box = ListBox(result_window, [], scrollbar=True)
     result_window.hide()
+
+    # Display the app
     app.display()
