@@ -8,7 +8,7 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import glob
 import guizero
-from guizero import App, Box, ListBox, PushButton, Text, TitleBox, Window
+from guizero import App, Box, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
 import subprocess
 import numpy as np
 
@@ -49,7 +49,7 @@ PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
 PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
 PARAM_UI_TIME_WINDOW_START_TIMES = "Time window start (secs):"
 PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT = "Min time duration criteria (secs): "
-PARAM_UI_TIME_WINDOW_DURATION = "Time window duration (secs): "
+PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
 
 # globals
 output_dir = ""
@@ -69,7 +69,13 @@ param_min_time_duration = 0
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
 param_file = ""
-input_folder = ""
+input_dir = ""
+
+# Arrays to store the parameters
+# List of name of parameters
+param_name_list = []
+# Parameter values as a dataframe
+param_list_df = []
 
 
 def apply_duration_criteria(ts_series, param_min_time_duration):
@@ -200,35 +206,81 @@ def parse_input_file_into_df(input_file):
 
     return True, df
 
+# Parse parameter folder and create a list of parameter dataframe(s)
+# out of it.
+
+
+def parse_param_folder():
+    global input_dir, param_name_list, param_list_df
+
+    param_folder = os.path.join(input_dir, "parameters")
+    if not os.path.isdir(param_folder):
+        return False, ("Parameter folder " + param_folder + " does not exist!")
+
+    search_path = param_folder + "\*.csv"
+
+    param_name_list.clear()
+    param_list_df.clear()
+    for param_file in glob.glob(search_path):
+        print(param_file)
+        if not os.path.isfile(param_file):
+            continue
+
+        param_file_name_without_ext = os.path.splitext(
+            os.path.basename(param_file))[0]
+        param_name_list.append(param_file_name_without_ext)
+        param_df = pd.read_csv(
+            param_file, names=param_col_names, header=None, skiprows=1)
+        param_list_df.append(param_df)
+
+    print(param_name_list)
+    print(param_list_df)
+
+    return True, ""
+
+
+def parse_all_param_dfs():
+    global param_list_df
+
+    for df in param_list_df:
+        t_duration, w_duration, ts_series = parse_param_df(df)
+
+
+def parse_param_df(df):
+    value = df[PARAM_TS_CRITERIA].iat[0]
+    if not pd.isnull(value):
+        t_duration = value
+        print("Parameter - time duration: ", t_duration)
+
+    value = df[PARAM_TIME_WINDOW_DURATION].iat[0]
+    if not pd.isnull(value):
+        w_duration = value
+        print("Parameter - window duration: ", w_duration)
+
+    ts_series = df[PARAM_TIME_WINDOW_START_LIST]
+    ts_series.sort_values(ascending=True)
+
+    return t_duration, w_duration, ts_series
 
 # Parse the paramter file
+
+
 def parse_param_file():
     global param_file, param_min_time_duration
     global param_window_duration, param_start_timestamp_series
-    global input_folder
+    global input_dir
+
     param_min_time_duration = 0
     param_window_duration = 0
     param_start_timestamp_series = pd.Series(dtype=np.float64)
     # Get the parameters folder, which is:
     # '<input folder>\parameters'
-    param_file = os.path.join(input_folder, PARAMETERS_DIR_NAME)
+    param_file = os.path.join(input_dir, PARAMETERS_DIR_NAME)
     if os.path.isfile(param_file):
         param_df = pd.read_csv(
             param_file, names=param_col_names, header=None, skiprows=1)
-
-        value = param_df[PARAM_TS_CRITERIA].iat[0]
-        if not pd.isnull(value):
-            param_min_time_duration = value
-            print("Parameter - time duration: ",
-                  param_min_time_duration)
-
-        value = param_df[PARAM_TIME_WINDOW_DURATION].iat[0]
-        if not pd.isnull(value):
-            param_window_duration = value
-            print("Parameter - window duration: ", param_window_duration)
-
-        param_start_timestamp_series = param_df[PARAM_TIME_WINDOW_START_LIST]
-        param_start_timestamp_series.sort_values(ascending=True)
+        param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
+            param_df)
 
     set_min_time_duration_box_value()
     set_time_window_duration_box_value()
@@ -390,7 +442,8 @@ def print_help():
 
 
 def main(argv, input_folder_or_file):
-    global input_folder
+    global input_dir
+
     input_files = []
     output_folder = ""
 
@@ -420,12 +473,12 @@ def main(argv, input_folder_or_file):
             "Provide an input folder or .csv file name: ")
 
     if os.path.isdir(input_folder_or_file):
-        input_folder = input_folder_or_file
+        input_dir = input_folder_or_file
         search_path = input_folder_or_file + "\*.csv"
         for file in glob.glob(search_path):
             input_files.append(file)
     elif os.path.isfile(input_folder_or_file):
-        input_folder = os.path.dirname(input_folder_or_file)
+        input_dir = os.path.dirname(input_folder_or_file)
         input_files.append(input_folder_or_file)
     else:
         print("The input path is not a valid directory or file: ",
@@ -442,7 +495,7 @@ def main(argv, input_folder_or_file):
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
 
-    print("\nInput folder: ", input_folder)
+    print("\nInput folder: ", input_dir)
     print("Parameters file: ", param_file)
     print("Output folder: ", output_folder)
     successfully_parsed_files = []
@@ -462,18 +515,20 @@ def main(argv, input_folder_or_file):
 
 
 def line():
-    Text(app, "------------------------------------------------------------------------------")
+    Text(app, "------------------------------------------------------------------------------------------------------")
 
 
 def select_input_folder():
-    global input_folder
-    input_dir_box.value = app.select_folder()
-    output_folder_textbox.value = ""
-    if not input_dir_box.value:
+    global input_dir, param_name_list
+
+    input_dir_temp = app.select_folder()
+    if not input_dir_temp:
         return
 
-    input_folder = input_dir_box.value
+    input_dir = input_dir_temp
     parse_param_file()
+    parse_param_folder()
+    refresh_param_names_combo_box(param_name_list)
 
 
 def open_output_folder():
@@ -510,18 +565,25 @@ def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_fil
 
 def process():
     global output_dir
-    if not input_dir_box.value:
+    if not input_dir:
         app.warn(
             "Uh oh!", "No input folder specified. Please select an input folder and run again!")
         return
 
     print("param_min_time_duration is : ", min_time_duration_box.value)
     output_dir, successfully_parsed_files, unsuccessfully_parsed_files = main(
-        sys.argv[1:], input_dir_box.value)
-    output_folder_textbox.value = ("Output folder: " + output_dir)
+        sys.argv[1:], input_dir)
     refresh_result_text_box(successfully_parsed_files,
                             unsuccessfully_parsed_files)
     # result_window.show()
+
+
+def refresh_param_names_combo_box(param_name_list):
+    param_names_combo_box.clear()
+    for param_name in param_name_list:
+        param_names_combo_box.append(param_name)
+
+    param_names_combo_box.show()
 
 
 def refresh_ts_list_box(ts_series):
@@ -532,53 +594,90 @@ def refresh_ts_list_box(ts_series):
 
 def set_min_time_duration_box_value():
     global param_min_time_duration
-    min_time_duration_box.value = (
-        PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT + str(param_min_time_duration))
+    min_time_duration_box.value = param_min_time_duration
 
 
 def set_time_window_duration_box_value():
     global param_window_duration
-    time_window_duration_box.value = (
-        PARAM_UI_TIME_WINDOW_DURATION + str(param_window_duration))
+    time_window_duration_box.value = param_window_duration
 
 
 # main entry point
 if __name__ == "__main__":
+    # Main app
     app = App("",  height=750, width=800)
+
+    # Title box
     titlebox = TitleBox(app, "")
-    title = Text(titlebox, text="Freeze Data Processing App",
-                 size=14, font="Arial")
+    titlebox.bg = "white"
+    title = Text(app, text="Freeze Data Processing App",
+                 size=16, font="Arial Bold", width=25)
+    title.bg = "white"
     line()
-    Text(app, "Select Input Folder and then process", font="Verdana bold")
+
+    # Select input folder button
+    Text(app, "Select Input Folder --> Check Parameters --> Process",
+         font="Verdana bold")
     line()
     input_folder_button = PushButton(
-        app, command=select_input_folder, text="Input Folder")
-    input_folder_button.tk.config(font=("Verdana bold", 16))
-    input_dir_box = Text(app)
+        app, command=select_input_folder, text="Input Folder", width=26)
+    input_folder_button.tk.config(font=("Verdana bold", 14))
     line()
-    min_time_duration_box = Text(app, text="")
+
+    # Master parameter box
+    param_box = Box(app, layout="grid")
+    cnt = 0
+    param_title_box = TitleBox(param_box, text="", grid=[0, cnt])
+    param_title = Text(param_title_box, text="Parameters",
+                       size=10, font="Arial Bold", align="left", color="orange")
+    # Parameter combo box
+    param_names_combo_box = Combo(param_box, options=[], grid=[10, cnt])
+    # param_names_combo_box.hide()
+    cnt += 1
+
+    # Boxes related to showing parameters
+    min_time_duration_label_box = Text(
+        param_box, text=PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT, grid=[0, cnt], align="left")
+    min_time_duration_box = TextBox(
+        param_box, text="", grid=[1, cnt], align="left")
     set_min_time_duration_box_value()
-    time_window_duration_box = Text(app, text="")
+    cnt += 1
+
+    time_window_duration_label_box = Text(
+        param_box, text=PARAM_UI_TIME_WINDOW_DURATION_TEXT, grid=[0, cnt], align="left")
+    time_window_duration_box = TextBox(
+        param_box, text="", grid=[1, cnt], align="left")
     set_time_window_duration_box_value()
-    Text(app, text=PARAM_UI_TIME_WINDOW_START_TIMES)
+    cnt += 1
+
+    ts_series_list_label_box = Text(param_box, text=PARAM_UI_TIME_WINDOW_START_TIMES,
+                                    grid=[0, cnt], align="left")
     ts_series_list_box = ListBox(
-        app, param_start_timestamp_series, scrollbar=True)
+        param_box, param_start_timestamp_series, scrollbar=True, grid=[1, cnt], align="left")
+    cnt += 1
+
+    # Open & update parameters file button
     center_box = Box(app, layout="grid")
     open_params_button = PushButton(center_box, command=open_params_file,
-                                    text="Open parameters file", grid=[0, 1])
+                                    text="Open parameters file", grid=[0, 1], width=20)
     open_params_button.tk.config(font=("Verdana bold", 10))
     update_params_button = PushButton(center_box, text="Update parameters",
-                                      command=parse_param_file, grid=[1, 1])
+                                      command=parse_param_file, grid=[1, 1], width=20)
     update_params_button.tk.config(font=("Verdana bold", 10))
     line()
-    process_button = PushButton(app, text="Process", command=process)
-    process_button.tk.config(font=("Verdana bold", 10))
+
+    # Process input button
+    process_button = PushButton(app, text="Process", command=process, width=26)
+    process_button.tk.config(font=("Verdana bold", 14))
     line()
-    output_folder_textbox = Text(app, text="", color="green")
+
+    # Browse output folder button
     browse_output_folder_button = PushButton(
-        app, command=open_output_folder, text="Browse output folder")
+        app, command=open_output_folder, text="Browse output folder", width=20)
     browse_output_folder_button.tk.config(font=("Verdana bold", 10))
     line()
+
+    # New Result window
     result_window = Window(app, title="Result Window",
                            height=500, width=500, visible=False)
     result_text_box = Text(result_window, text="")
