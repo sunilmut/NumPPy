@@ -35,14 +35,15 @@ OUTPUT_DIR_NAME = "_output"
 PARAMETERS_DIR_NAME = "parameters"
 OUTPUT_BASE = "_output_base.csv"
 CSV = ".csv"
+UNDERSCORE = "_"
 OUTPUT_ZERO_TO_ONE_CSV_NAME = "_01_OnsetT"
 OUTPUT_ZERO_TO_ONE_CSV_NAME_TS = "_01_OnsetT_ts"
-OUTPUT_ZERO_TO_ONE_UN_CSV_NAME = "_01_NOp"
-OUTPUT_ZERO_TO_ONE_UN_CSV_NAME_TS = "_01_NOp_ts"
+OUTPUT_ZERO_TO_ONE_NOP_CSV_NAME = "_01_NOp"
+OUTPUT_ZERO_TO_ONE_NOP_CSV_NAME_TS = "_01_NOp_ts"
 OUTPUT_ONE_TO_ZERO_CSV_NAME = "_10_OnsetT"
 OUTPUT_ONE_TO_ZERO_CSV_NAME_TS = "_10_OnsetT_ts"
-OUTPUT_ONE_TO_ZERO_UN_CSV_NAME = "_10_NOp"
-OUTPUT_ONE_TO_ZERO_UN_CSV_NAME_TS = "_10_NOp_ts"
+OUTPUT_ONE_TO_ZERO_NOP_CSV_NAME = "_10_NOp"
+OUTPUT_ONE_TO_ZERO_NOP_CSV_NAME_TS = "_10_NOp_ts"
 
 # Parameters column
 PARAM_TS_CRITERIA = "Criteria_Timestamp_In_Sec"
@@ -134,14 +135,47 @@ def out_base(input_file, output_folder):
     )
 
 
+def format_out_nop_file_name(input_file, param_names, output_folder):
+    """
+    Format the 'NOp' output file name
+    """
+    global out_file_zero_to_one_un, out_file_zero_to_one_un_ts
+    global out_file_one_to_zero_un, out_file_one_to_zero_un_ts
+
+    input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
+    out_file_zero_to_one_un = os.path.join(
+        output_folder, input_file_without_ext +
+        OUTPUT_ZERO_TO_ONE_NOP_CSV_NAME + param_names + CSV
+    )
+    out_file_zero_to_one_un_ts = os.path.join(
+        output_folder, input_file_without_ext +
+        OUTPUT_ZERO_TO_ONE_NOP_CSV_NAME_TS + param_names + CSV
+    )
+    out_file_one_to_zero_un = os.path.join(
+        output_folder, input_file_without_ext +
+        OUTPUT_ONE_TO_ZERO_NOP_CSV_NAME + param_names + CSV
+    )
+    out_file_one_to_zero_un_ts = os.path.join(
+        output_folder, input_file_without_ext +
+        OUTPUT_ONE_TO_ZERO_NOP_CSV_NAME_TS + param_names + CSV
+    )
+
+    print("\nInput file: ", os.path.basename(os.path.basename(input_file)))
+    print("Output file:")
+    print("\tNOp [0->1]: ", os.path.basename(out_file_zero_to_one_un))
+    print("\tNOp [1->0]: ", os.path.basename(out_file_one_to_zero_un))
+    print("\tNOp [0->1] TimeStamps Only:: ",
+          os.path.basename(out_file_zero_to_one_un_ts))
+    print("\tNOp [1->0] TimeStamps Only:: ",
+          os.path.basename(out_file_one_to_zero_un_ts))
+
+
 def format_out_file_names(input_file, param_name, output_folder):
     """
     Format the output file names
     """
-    global out_file_zero_to_one, out_file_zero_to_one_un
-    global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
-    global out_file_one_to_zero, out_file_one_to_zero_un
-    global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
+    global out_file_zero_to_one, out_file_zero_to_one_ts
+    global out_file_one_to_zero, out_file_one_to_zero_ts
 
     param_ext = ""
     if param_name:
@@ -156,14 +190,6 @@ def format_out_file_names(input_file, param_name, output_folder):
         output_folder, input_file_without_ext +
         OUTPUT_ZERO_TO_ONE_CSV_NAME_TS + param_ext + CSV
     )
-    out_file_zero_to_one_un = os.path.join(
-        output_folder, input_file_without_ext +
-        OUTPUT_ZERO_TO_ONE_UN_CSV_NAME + param_ext + CSV
-    )
-    out_file_zero_to_one_un_ts = os.path.join(
-        output_folder, input_file_without_ext +
-        OUTPUT_ZERO_TO_ONE_UN_CSV_NAME_TS + param_ext + CSV
-    )
     out_file_one_to_zero = os.path.join(
         output_folder, input_file_without_ext +
         OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + CSV
@@ -171,14 +197,6 @@ def format_out_file_names(input_file, param_name, output_folder):
     out_file_one_to_zero_ts = os.path.join(
         output_folder, input_file_without_ext +
         OUTPUT_ONE_TO_ZERO_CSV_NAME_TS + param_ext + CSV
-    )
-    out_file_one_to_zero_un = os.path.join(
-        output_folder, input_file_without_ext +
-        OUTPUT_ONE_TO_ZERO_UN_CSV_NAME + param_ext + CSV
-    )
-    out_file_one_to_zero_un_ts = os.path.join(
-        output_folder, input_file_without_ext +
-        OUTPUT_ONE_TO_ZERO_UN_CSV_NAME_TS + param_ext + CSV
     )
 
     print("\nInput file: ", os.path.basename(os.path.basename(input_file)))
@@ -189,12 +207,6 @@ def format_out_file_names(input_file, param_name, output_folder):
           os.path.basename(out_file_zero_to_one_ts))
     print("\t[1->0] TimeStamps Only: ",
           os.path.basename(out_file_one_to_zero_ts))
-    print("\tunspecified [0->1]: ", os.path.basename(out_file_zero_to_one_un))
-    print("\tunspeified [1->0]: ", os.path.basename(out_file_one_to_zero_un))
-    print("\tunspecified [0->1] TimeStamps Only:: ",
-          os.path.basename(out_file_zero_to_one_un_ts))
-    print("\tunspeified [1->0] TimeStamps Only:: ",
-          os.path.basename(out_file_one_to_zero_un_ts))
 
 
 def parse_input_file_into_df(input_file):
@@ -433,10 +445,12 @@ def process_input_file(input_file, output_folder):
     # the original set and as each parameter gets process the set
     # gets subtracted by that.
     nop_df = out_df
+    params_name = ""
 
     # Iterate through the parameters and apply each one of them
     for idx, param_name in enumerate(param_name_list):
         temp_out_df = out_df
+        params_name += UNDERSCORE + param_name
         param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
             param_df_list[idx])
 
@@ -465,9 +479,11 @@ def process_input_file(input_file, output_folder):
         print("After processing param" + param_name)
         print(nop_df)
 
-    split_df_and_output(nop_df,
-                        out_file_zero_to_one_un, out_file_one_to_zero_un,
-                        out_file_zero_to_one_un_ts, out_file_one_to_zero_un_ts)
+    if not nop_df.empty:
+        format_out_nop_file_name(input_file, params_name, output_folder)
+        split_df_and_output(nop_df,
+                            out_file_zero_to_one_un, out_file_one_to_zero_un,
+                            out_file_zero_to_one_un_ts, out_file_one_to_zero_un_ts)
 
     return True
 
@@ -702,7 +718,7 @@ if __name__ == "__main__":
     # Title box
     titlebox = TitleBox(app, "")
     titlebox.bg = "white"
-    title = Text(app, text="Freeze Data Processing App",
+    title = Text(app, text="Motion Data Processing App",
                  size=16, font="Arial Bold", width=25)
     title.bg = "white"
     line()
