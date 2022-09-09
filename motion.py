@@ -633,7 +633,8 @@ def open_output_folder():
             "Uh oh!", "Output folder dose not exist! Select input folder and process first.")
         return
 
-    subprocess.Popen(f'explorer /select,{output_dir}')
+    # Normalize the path to deal with backslash/frontslash
+    subprocess.Popen(f'explorer /open,{os.path.normpath(output_dir)}')
 
 
 def open_params_file():
