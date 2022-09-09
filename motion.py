@@ -8,7 +8,7 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import glob
 import guizero
-from guizero import App, Box, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
+from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
 import subprocess
 import numpy as np
 
@@ -82,6 +82,10 @@ param_name_list = []
 param_df_list = []
 # Currently selected parameter name
 cur_selected_param = None
+
+# When set to True, only the currently selected parameter is processed instead
+# of all the parameters. Default is to process all parameters.
+only_process_cur_param = False
 
 
 def apply_duration_criteria(ts_series, param_min_time_duration):
@@ -300,6 +304,8 @@ def parse_param_df(df):
 
 
 def get_param_file_from_name(param_name):
+    global input_dir
+
     param_file = os.path.join(input_dir, PARAMETERS_DIR_NAME)
     param_file = os.path.join(param_file, param_name)
 
@@ -314,7 +320,7 @@ def parse_param(cur_selected_param):
     """
     Parse the paramter file
     """
-    global param_file, param_min_time_duration
+    global param_min_time_duration
     global param_window_duration, param_start_timestamp_series
     global input_dir
 
@@ -450,6 +456,9 @@ def process_input_file(input_file, output_folder):
 
     # Iterate through the parameters and apply each one of them
     for idx, param_name in enumerate(param_name_list):
+        if only_process_cur_param and param_name != cur_selected_param:
+            continue
+
         temp_out_df = out_df
         params_name += UNDERSCORE + param_name
         param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
@@ -541,12 +550,15 @@ def main(argv, input_folder_or_file):
     # strip the quotes at the start and end, else
     # paths with white spaces won't work.
     input_folder_or_file = input_folder_or_file.strip('"')
+    print(input_folder_or_file)
 
     # get the input file if one is not provided.
-    if input_folder_or_file == "":
+    if not input_folder_or_file:
         input_folder_or_file = input(
             "Provide an input folder or .csv file name: ")
 
+    # Normalize the path to deal with backslash/frontslash
+    input_folder_or_file = os.path.normpath(input_folder_or_file)
     if os.path.isdir(input_folder_or_file):
         input_dir = input_folder_or_file
         search_path = input_folder_or_file + "\*.csv"
@@ -644,7 +656,8 @@ def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_fil
 
 
 def process():
-    global output_dir
+    global input_dir, output_dir
+
     if not input_dir:
         app.warn(
             "Uh oh!", "No input folder specified. Please select an input folder and run again!")
@@ -710,6 +723,15 @@ def set_min_time_duration_box_value():
 def set_time_window_duration_box_value():
     global param_window_duration
     time_window_duration_box.value = param_window_duration
+
+
+def only_process_sel_param():
+    global only_process_cur_param
+
+    if only_process_cur_param_box.value == 1:
+        only_process_cur_param = True
+    else:
+        only_process_cur_param = False
 
 
 if __name__ == "__main__":
@@ -795,6 +817,8 @@ if __name__ == "__main__":
     # Process input button
     process_button = PushButton(app, text="Process", command=process, width=26)
     process_button.tk.config(font=("Verdana bold", 14))
+    only_process_cur_param_box = CheckBox(
+        app, text="Only process the selected parameter", command=only_process_sel_param)
     line()
 
     # Browse output folder button
