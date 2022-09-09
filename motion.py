@@ -45,7 +45,8 @@ OUTPUT_ONE_TO_ZERO_CSV_NAME_TS = "_10_OnsetT_ts"
 OUTPUT_ONE_TO_ZERO_NOP_CSV_NAME = "_10_NOp"
 OUTPUT_ONE_TO_ZERO_NOP_CSV_NAME_TS = "_10_NOp_ts"
 
-# Parameters column
+# UI related constants
+INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
 PARAM_TS_CRITERIA = "Criteria_Timestamp_In_Sec"
 PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
 PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
@@ -494,7 +495,7 @@ def print_help():
     """
     print("\nHelp/Usage:\n")
     print(
-        "python freeze.py -i <input folder or .csv file> -d <output_directory> -v -h\n"
+        "python motion.py -i <input folder or .csv file> -d <output_directory> -v -h\n"
     )
     print("where:")
     print("-i (required): input folder or .csv file.")
@@ -503,13 +504,13 @@ def print_help():
     print("-h (optional): print this help")
     print("\nExamples:\n")
     print("\nProcess input file:")
-    print("\tpython freeze.py -i input.csv")
+    print("\tpython motion.py -i input.csv")
     print("\nProcess all the csv files from the input folder:")
-    print("\tpython freeze.py -i c:\\data\\input")
+    print("\tpython motion.py -i c:\\data\\input")
     print(
         "\nProcess all the csv files from the input folder and use the output folder:"
     )
-    print("\tpython freeze.py -i c:\\data\\input -d c:\\data\\output")
+    print("\tpython motion.py -i c:\\data\\input -d c:\\data\\output")
     print("\nNotes:")
     print("\tClose the output file prior to running.")
     sys.exit()
@@ -602,6 +603,9 @@ def select_input_folder():
         return
 
     input_dir = input_dir_temp
+    input_folder_text_box.value = os.path.basename(input_dir)
+    input_folder_text_box.width = min(
+        len(input_folder_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
     parse_param_folder()
     refresh_param_names_combo_box(param_name_list)
     if len(param_name_list):
@@ -730,6 +734,14 @@ if __name__ == "__main__":
     input_folder_button = PushButton(
         app, command=select_input_folder, text="Input Folder", width=26)
     input_folder_button.tk.config(font=("Verdana bold", 14))
+
+    line()
+    input_folder_text_box = TextBox(app)
+    # Non editable
+    input_folder_text_box.disable()
+    input_folder_text_box.width = INPUT_FOLDER_NAME_BOX_MAX_WIDTH
+    input_folder_text_box.font = "Verdana bold"
+    input_folder_text_box.text_size = 14
     line()
 
     # Master parameter box
