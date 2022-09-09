@@ -32,16 +32,17 @@ OUTPUT_COL3_FREEZE_TP = "Freezing TurnPoints"
 
 # output directory and file names
 OUTPUT_DIR_NAME = "_output"
-PARAMETERS_DIR_NAME = "parameters\param.csv"
+PARAMETERS_DIR_NAME = "parameters"
 OUTPUT_BASE = "_output_base.csv"
-OUTPUT_ZERO_TO_ONE_CSV_NAME = "_01_OnsetT.csv"
-OUTPUT_ZERO_TO_ONE_CSV_NAME_TS = "_01_OnsetT_ts.csv"
-OUTPUT_ZERO_TO_ONE_UN_CSV_NAME = "_01_unspecified.csv"
-OUTPUT_ZERO_TO_ONE_UN_CSV_NAME_TS = "_01_unspecified_ts.csv"
-OUTPUT_ONE_TO_ZERO_CSV_NAME = "_10_OnsetT.csv"
-OUTPUT_ONE_TO_ZERO_CSV_NAME_TS = "_10_OnsetT_ts.csv"
-OUTPUT_ONE_TO_ZERO_UN_CSV_NAME = "_10_unspecified.csv"
-OUTPUT_ONE_TO_ZERO_UN_CSV_NAME_TS = "_10_unspecified_ts.csv"
+CSV = ".csv"
+OUTPUT_ZERO_TO_ONE_CSV_NAME = "_01_OnsetT"
+OUTPUT_ZERO_TO_ONE_CSV_NAME_TS = "_01_OnsetT_ts"
+OUTPUT_ZERO_TO_ONE_UN_CSV_NAME = "_01_NOp"
+OUTPUT_ZERO_TO_ONE_UN_CSV_NAME_TS = "_01_NOp_ts"
+OUTPUT_ONE_TO_ZERO_CSV_NAME = "_10_OnsetT"
+OUTPUT_ONE_TO_ZERO_CSV_NAME_TS = "_10_OnsetT_ts"
+OUTPUT_ONE_TO_ZERO_UN_CSV_NAME = "_10_NOp"
+OUTPUT_ONE_TO_ZERO_UN_CSV_NAME_TS = "_10_NOp_ts"
 
 # Parameters column
 PARAM_TS_CRITERIA = "Criteria_Timestamp_In_Sec"
@@ -68,7 +69,6 @@ param_col_names = [PARAM_TS_CRITERIA,
 param_min_time_duration = 0
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
-param_file = ""
 input_dir = ""
 
 # Arrays to store the parameter names and its value as a dataframe
@@ -127,47 +127,61 @@ def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero,
         out_file_one_to_zero_ts, index=False, header=True)
 
 
-def format_out_file_names(input_file, output_folder):
+def out_base(input_file, output_folder):
+    input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
+    return os.path.join(
+        output_folder, input_file_without_ext + OUTPUT_BASE
+    )
+
+
+def format_out_file_names(input_file, param_name, output_folder):
     """
     Format the output file names
     """
-    global out_base
     global out_file_zero_to_one, out_file_zero_to_one_un
     global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
     global out_file_one_to_zero, out_file_one_to_zero_un
     global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
 
-    input_file_name = os.path.basename(input_file)
-    input_file_without_ext = os.path.splitext(input_file_name)[0]
-    out_base = os.path.join(
-        output_folder, input_file_without_ext + OUTPUT_BASE
-    )
+    param_ext = ""
+    if param_name:
+        param_ext = "_" + param_name
+
+    input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
     out_file_zero_to_one = os.path.join(
-        output_folder, input_file_without_ext + OUTPUT_ZERO_TO_ONE_CSV_NAME
+        output_folder, input_file_without_ext +
+        OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + CSV
     )
     out_file_zero_to_one_ts = os.path.join(
-        output_folder, input_file_without_ext + OUTPUT_ZERO_TO_ONE_CSV_NAME_TS
+        output_folder, input_file_without_ext +
+        OUTPUT_ZERO_TO_ONE_CSV_NAME_TS + param_ext + CSV
     )
     out_file_zero_to_one_un = os.path.join(
-        output_folder, input_file_without_ext + OUTPUT_ZERO_TO_ONE_UN_CSV_NAME
+        output_folder, input_file_without_ext +
+        OUTPUT_ZERO_TO_ONE_UN_CSV_NAME + param_ext + CSV
     )
     out_file_zero_to_one_un_ts = os.path.join(
-        output_folder, input_file_without_ext + OUTPUT_ZERO_TO_ONE_UN_CSV_NAME_TS
+        output_folder, input_file_without_ext +
+        OUTPUT_ZERO_TO_ONE_UN_CSV_NAME_TS + param_ext + CSV
     )
     out_file_one_to_zero = os.path.join(
-        output_folder, input_file_without_ext + OUTPUT_ONE_TO_ZERO_CSV_NAME
+        output_folder, input_file_without_ext +
+        OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + CSV
     )
     out_file_one_to_zero_ts = os.path.join(
-        output_folder, input_file_without_ext + OUTPUT_ONE_TO_ZERO_CSV_NAME_TS
+        output_folder, input_file_without_ext +
+        OUTPUT_ONE_TO_ZERO_CSV_NAME_TS + param_ext + CSV
     )
     out_file_one_to_zero_un = os.path.join(
-        output_folder, input_file_without_ext + OUTPUT_ONE_TO_ZERO_UN_CSV_NAME
+        output_folder, input_file_without_ext +
+        OUTPUT_ONE_TO_ZERO_UN_CSV_NAME + param_ext + CSV
     )
     out_file_one_to_zero_un_ts = os.path.join(
-        output_folder, input_file_without_ext + OUTPUT_ONE_TO_ZERO_UN_CSV_NAME_TS
+        output_folder, input_file_without_ext +
+        OUTPUT_ONE_TO_ZERO_UN_CSV_NAME_TS + param_ext + CSV
     )
 
-    print("\nInput file: ", os.path.basename(input_file_name))
+    print("\nInput file: ", os.path.basename(os.path.basename(input_file)))
     print("Output file:")
     print("\t[0->1]: ", os.path.basename(out_file_zero_to_one))
     print("\t[1->0]: ", os.path.basename(out_file_one_to_zero))
@@ -272,7 +286,18 @@ def parse_param_df(df):
     return t_duration, w_duration, ts_series
 
 
-def parse_param_file():
+def get_param_file_from_name(param_name):
+    param_file = os.path.join(input_dir, PARAMETERS_DIR_NAME)
+    param_file = os.path.join(param_file, param_name)
+
+    return param_file + CSV
+
+
+def parse_cur_param_file():
+    parse_param(cur_selected_param)
+
+
+def parse_param(cur_selected_param):
     """
     Parse the paramter file
     """
@@ -280,17 +305,23 @@ def parse_param_file():
     global param_window_duration, param_start_timestamp_series
     global input_dir
 
+    if not cur_selected_param:
+        return
+
     param_min_time_duration = 0
     param_window_duration = 0
     param_start_timestamp_series = pd.Series(dtype=np.float64)
-    # Get the parameters folder, which is:
-    # '<input folder>\parameters'
-    param_file = os.path.join(input_dir, PARAMETERS_DIR_NAME)
-    if os.path.isfile(param_file):
-        param_df = pd.read_csv(
-            param_file, names=param_col_names, header=None, skiprows=1)
-        param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
-            param_df)
+
+    try:
+        param_index = param_name_list.index(cur_selected_param)
+    except ValueError:
+        logging.error("Parameter value: %s is out of index",
+                      cur_selected_param)
+        return
+
+    param_df = param_df_list[param_index]
+    param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
+        param_df)
 
     refresh_param_values(param_start_timestamp_series)
 
@@ -310,7 +341,6 @@ def process_input_file(input_file, output_folder):
     """
     Main logic routine to parse the input and spit out the output
     """
-    global out_base
     global out_file_zero_to_one, out_file_zero_to_one_un
     global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
     global out_file_one_to_zero, out_file_one_to_zero_un
@@ -322,11 +352,8 @@ def process_input_file(input_file, output_folder):
     if not success:
         return
 
-    # Parse the parameters file.
-    parse_param_file()
-
-    # Format the file names of the output files
-    format_out_file_names(input_file, output_folder)
+    # Parse all the parameter files.
+    parse_param_folder()
 
     sum = 0
     itr = 0
@@ -399,28 +426,46 @@ def process_input_file(input_file, output_folder):
         return
 
     print_df("After initial parsing (without any criteria or filter)", out_df)
-    out_df.to_csv(out_base, index=False)
+    out_df.to_csv(out_base(input_file, output_folder), index=False)
 
-    # Apply any minimum time duration criteria
-    if param_min_time_duration > 0:
-        out_df = out_df.loc[list(apply_duration_criteria(
-            out_df.iloc[:, 0], param_min_time_duration))]
-        print_df("After applying min time duration criteria", out_df)
+    # 'NOp' -> no parameter. This is the left over of the original data
+    # after all the parameters have been processed. 'NOp' starts with
+    # the original set and as each parameter gets process the set
+    # gets subtracted by that.
+    nop_df = out_df
 
-    # Apply time window filter
-    out_unspecified_df = pd.DataFrame()
-    if not param_start_timestamp_series.empty:
-        filter_list = list(apply_timewindow_filter(
-            out_df.iloc[:, 0], param_start_timestamp_series, param_window_duration))
-        out_unspecified_df = out_df.loc[~out_df.index.isin(filter_list)]
-        out_df = out_df.loc[filter_list]
-        print_df("After applying timestamp filter", out_df)
-        print_df("unspecified entries after applying timestamp filter",
-                 out_unspecified_df)
+    # Iterate through the parameters and apply each one of them
+    for idx, param_name in enumerate(param_name_list):
+        temp_out_df = out_df
+        param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
+            param_df_list[idx])
 
-    split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero,
-                        out_file_zero_to_one_ts, out_file_one_to_zero_ts)
-    split_df_and_output(out_unspecified_df,
+        # Format the file names of the output files using the parameter name
+        format_out_file_names(input_file, param_name, output_folder)
+
+        # Apply any minimum time duration criteria
+        if param_min_time_duration > 0:
+            temp_out_df = temp_out_df.loc[list(apply_duration_criteria(
+                temp_out_df.iloc[:, 0], param_min_time_duration))]
+            print_df("After applying min time duration criteria", temp_out_df)
+
+        # Apply time window filter
+        if not param_start_timestamp_series.empty:
+            filter_list = list(apply_timewindow_filter(
+                temp_out_df.iloc[:, 0], param_start_timestamp_series, param_window_duration))
+            temp_out_df = temp_out_df.loc[filter_list]
+            print_df("After applying timestamp filter", temp_out_df)
+
+        split_df_and_output(temp_out_df, out_file_zero_to_one, out_file_one_to_zero,
+                            out_file_zero_to_one_ts, out_file_one_to_zero_ts)
+
+        nop_df = pd.merge(temp_out_df, nop_df, how='outer', indicator=True).query(
+            "_merge != 'both'").drop('_merge', axis=1).reset_index(drop=True)
+
+        print("After processing param" + param_name)
+        print(nop_df)
+
+    split_df_and_output(nop_df,
                         out_file_zero_to_one_un, out_file_one_to_zero_un,
                         out_file_zero_to_one_un_ts, out_file_one_to_zero_un_ts)
 
@@ -509,7 +554,6 @@ def main(argv, input_folder_or_file):
             os.mkdir(output_folder)
 
     print("\nInput folder: ", input_dir)
-    print("Parameters file: ", param_file)
     print("Output folder: ", output_folder)
     successfully_parsed_files = []
     unsuccessfully_parsed_files = []
@@ -535,16 +579,19 @@ def line():
 
 
 def select_input_folder():
-    global input_dir, param_name_list
+    global input_dir, param_name_list, cur_selected_param
 
     input_dir_temp = app.select_folder()
     if not input_dir_temp:
         return
 
     input_dir = input_dir_temp
-    parse_param_file()
     parse_param_folder()
     refresh_param_names_combo_box(param_name_list)
+    if len(param_name_list):
+        print("parsing parameter: " + param_name_list[0])
+        cur_selected_param = param_name_list[0]
+        parse_param(cur_selected_param)
 
 
 def open_output_folder():
@@ -558,12 +605,10 @@ def open_output_folder():
 
 
 def open_params_file():
-    global param_file
-    if not param_file:
-        app.warn(
-            "Uh oh!", "Parameters file does not exist. Please create a parmeters file called 'params.csv' in the <input folder>\parameters folder and try again!")
+    if not cur_selected_param:
         return
 
+    param_file = get_param_file_from_name(cur_selected_param)
     if not os.path.isfile(param_file):
         app.warn(
             "Uh oh!", "Parameters file " + param_file + " is not a file!")
@@ -585,7 +630,6 @@ def process():
             "Uh oh!", "No input folder specified. Please select an input folder and run again!")
         return
 
-    print("param_min_time_duration is : ", min_time_duration_box.value)
     output_dir, successfully_parsed_files, unsuccessfully_parsed_files = main(
         sys.argv[1:], input_dir)
     refresh_result_text_box(successfully_parsed_files,
@@ -594,6 +638,10 @@ def process():
 
 
 def select_param(selected_param_value):
+    """
+    This method is called when the user selects a parameter from the parameter
+    name drop down box.
+    """
     global cur_selected_param
 
     if not selected_param_value:
@@ -679,6 +727,7 @@ if __name__ == "__main__":
     param_names_combo_box = Combo(
         param_box, options=[], grid=[10, cnt], command=select_param)
     param_names_combo_box.clear()
+    param_names_combo_box.text_color = "orange"
     # param_names_combo_box.hide()
     cnt += 1
 
@@ -687,14 +736,16 @@ if __name__ == "__main__":
         param_box, text=PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT, grid=[0, cnt], align="left")
     min_time_duration_box = TextBox(
         param_box, text="", grid=[1, cnt], align="left")
-    set_min_time_duration_box_value()
+    # Non editable
+    min_time_duration_box.disable()
     cnt += 1
 
     time_window_duration_label_box = Text(
         param_box, text=PARAM_UI_TIME_WINDOW_DURATION_TEXT, grid=[0, cnt], align="left")
     time_window_duration_box = TextBox(
         param_box, text="", grid=[1, cnt], align="left")
-    set_time_window_duration_box_value()
+    # Non editable
+    time_window_duration_box.disable()
     cnt += 1
 
     ts_series_list_label_box = Text(param_box, text=PARAM_UI_TIME_WINDOW_START_TIMES,
@@ -708,8 +759,8 @@ if __name__ == "__main__":
     open_params_button = PushButton(center_box, command=open_params_file,
                                     text="Open parameters file", grid=[0, 1], width=17, align="left")
     open_params_button.tk.config(font=("Verdana bold", 10))
-    update_params_button = PushButton(center_box, text="Update parameters",
-                                      command=parse_param_file, grid=[1, 1], width=17, align="left")
+    update_params_button = PushButton(center_box, text="Refresh",
+                                      command=parse_cur_param_file, grid=[1, 1], width=17, align="left")
     update_params_button.tk.config(font=("Verdana bold", 10))
     line()
 
