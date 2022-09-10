@@ -11,6 +11,8 @@ import guizero
 from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
 import subprocess
 import numpy as np
+import csv
+from csv import reader
 
 # Constants:
 # Number of initial rows to skip.
@@ -87,6 +89,9 @@ cur_selected_param = None
 # of all the parameters. Default is to process all parameters.
 only_process_cur_param = False
 
+# Timeshift header in the input
+TIMESHIFT_HEADER = "timeshift"
+
 
 def apply_duration_criteria(ts_series, param_min_time_duration):
     it = ts_series.iteritems()
@@ -108,7 +113,7 @@ def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
                 break
 
 
-def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero,
+def split_df_and_output(out_df, timeshift_val, out_file_zero_to_one, out_file_one_to_zero,
                         out_file_zero_to_one_ts, out_file_one_to_zero_ts):
     """
     Split the dataframe based on whether it is a [0->1] or [1->0] transitions
@@ -117,13 +122,16 @@ def split_df_and_output(out_df, out_file_zero_to_one, out_file_one_to_zero,
     """
     if out_df.empty:
         return
+
+    output_df = out_df[:]
+    output_df[OUTPUT_COL0_TS] = output_df[OUTPUT_COL0_TS] + timeshift_val
     out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
     out_one_to_zero_df = pd.DataFrame(columns=out_col_names)
-    out_zero_to_one_df = out_df.loc[out_df[OUTPUT_COL3_FREEZE_TP]
-                                    == ZERO_TO_ONE]
+    out_zero_to_one_df = output_df.loc[output_df[OUTPUT_COL3_FREEZE_TP]
+                                       == ZERO_TO_ONE]
     out_zero_to_one_ts_df = out_zero_to_one_df.loc[:, OUTPUT_COL0_TS]
-    out_one_to_zero_df = out_df.loc[out_df[OUTPUT_COL3_FREEZE_TP]
-                                    == ONE_TO_ZERO]
+    out_one_to_zero_df = output_df.loc[output_df[OUTPUT_COL3_FREEZE_TP]
+                                       == ONE_TO_ZERO]
     out_one_to_zero_ts_df = out_one_to_zero_df.loc[:, OUTPUT_COL0_TS]
     out_zero_to_one_df.to_csv(out_file_zero_to_one, index=False)
     out_zero_to_one_ts_df.to_csv(
@@ -214,7 +222,7 @@ def format_out_file_names(input_file, param_name, output_folder):
           os.path.basename(out_file_one_to_zero_ts))
 
 
-def parse_input_file_into_df(input_file):
+def parse_input_file_into_df(input_file, skip_num_initial_rows):
     """
     Parse the input file
     returns bool, dataframe
@@ -223,7 +231,7 @@ def parse_input_file_into_df(input_file):
     """
     in_col_names = [INPUT_COL0, INPUT_COL1, INPUT_COL2]
     df = pd.read_csv(input_file, names=in_col_names,
-                     skiprows=NUM_INITIAL_ROWS_TO_SKIP)
+                     skiprows=skip_num_initial_rows)
 
     # Do some basic format checking. All input fields are expected
     # to be numeric in nature.
@@ -366,8 +374,18 @@ def process_input_file(input_file, output_folder):
     global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
     global param_min_time_duration, param_window_duration, param_start_timestamp_series
 
+    timeshift_val, num_rows_processed = get_timeshift_from_input_file(
+        input_file)
+
+    if timeshift_val:
+        print("Applying a timeshift value of " +
+              str(timeshift_val) + " on input file " + input_file)
+    else:
+        timeshift_val = 0
+
     # Parse the input file
-    success, df = parse_input_file_into_df(input_file)
+    success, df = parse_input_file_into_df(
+        input_file, NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
     if not success:
         return
 
@@ -451,7 +469,8 @@ def process_input_file(input_file, output_folder):
     # after all the parameters have been processed. 'NOp' starts with
     # the original set and as each parameter gets process the set
     # gets subtracted by that.
-    nop_df = out_df
+    # Make a copy of out dataframe 'by value'
+    nop_df = out_df[:]
     params_name = ""
 
     # Iterate through the parameters and apply each one of them
@@ -459,7 +478,8 @@ def process_input_file(input_file, output_folder):
         if only_process_cur_param and param_name != cur_selected_param:
             continue
 
-        temp_out_df = out_df
+        # Make a copy by value
+        temp_out_df = out_df[:]
         params_name += UNDERSCORE + param_name
         param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
             param_df_list[idx])
@@ -480,18 +500,18 @@ def process_input_file(input_file, output_folder):
             temp_out_df = temp_out_df.loc[filter_list]
             print_df("After applying timestamp filter", temp_out_df)
 
-        split_df_and_output(temp_out_df, out_file_zero_to_one, out_file_one_to_zero,
-                            out_file_zero_to_one_ts, out_file_one_to_zero_ts)
-
         nop_df = pd.merge(temp_out_df, nop_df, how='outer', indicator=True).query(
             "_merge != 'both'").drop('_merge', axis=1).reset_index(drop=True)
+
+        split_df_and_output(temp_out_df, timeshift_val, out_file_zero_to_one, out_file_one_to_zero,
+                            out_file_zero_to_one_ts, out_file_one_to_zero_ts)
 
         print("After processing param" + param_name)
         print(nop_df)
 
     if not nop_df.empty:
         format_out_nop_file_name(input_file, params_name, output_folder)
-        split_df_and_output(nop_df,
+        split_df_and_output(nop_df, timeshift_val,
                             out_file_zero_to_one_un, out_file_one_to_zero_un,
                             out_file_zero_to_one_un_ts, out_file_one_to_zero_un_ts)
 
@@ -523,6 +543,18 @@ def print_help():
     print("\nNotes:")
     print("\tClose the output file prior to running.")
     sys.exit()
+
+
+def get_inpput_files(input_dir):
+    input_files = []
+
+    # Normalize the path to deal with backslash/frontslash
+    input_folder_or_file = os.path.normpath(input_dir)
+    search_path = os.path.join(input_folder_or_file, "*.csv")
+    for file in glob.glob(search_path):
+        input_files.append(file)
+
+    return input_files
 
 
 def main(argv, input_folder_or_file):
@@ -557,13 +589,9 @@ def main(argv, input_folder_or_file):
         input_folder_or_file = input(
             "Provide an input folder or .csv file name: ")
 
-    # Normalize the path to deal with backslash/frontslash
-    input_folder_or_file = os.path.normpath(input_folder_or_file)
     if os.path.isdir(input_folder_or_file):
         input_dir = input_folder_or_file
-        search_path = input_folder_or_file + "\*.csv"
-        for file in glob.glob(search_path):
-            input_files.append(file)
+        input_files = get_inpput_files(input_dir)
     elif os.path.isfile(input_folder_or_file):
         input_dir = os.path.dirname(input_folder_or_file)
         input_files.append(input_folder_or_file)
@@ -596,11 +624,38 @@ def main(argv, input_folder_or_file):
     return output_folder, successfully_parsed_files, unsuccessfully_parsed_files
 
 
+def get_timeshift_from_input_file(input_file):
+    timeshift_val = None
+    num_rows_processed = 0
+    with open(input_file, 'r') as read_obj:
+        csv_reader = reader(read_obj)
+        row1 = next(csv_reader)
+        if row1 and len(row1) > 2 and row1[0] == TIMESHIFT_HEADER:
+            num_rows_processed += 1
+            try:
+                timeshift_val = int(row1[1])
+                print("timeshift val is " + str(timeshift_val))
+            except ValueError:
+                print("timeshift value is not an integer in file" + input_file)
+
+    return timeshift_val, num_rows_processed
+
+
 """
 ------------------------------------------------------------
                 UI related stuff
 ------------------------------------------------------------
 """
+
+
+def parse_input_file_for_timeshift(input_dir):
+    input_files = get_inpput_files(input_dir)
+    for input_file in input_files:
+        timeshift_val = get_timeshift_from_input_file(
+            input_file)[0]
+        if not timeshift_val:
+            app.warn(
+                "Uh oh!", "Input file " + input_file + " does not has a timeshift value or a timeshift value that is not an integer")
 
 
 def line():
@@ -615,6 +670,7 @@ def select_input_folder():
         return
 
     input_dir = input_dir_temp
+    parse_input_file_for_timeshift(input_dir)
     input_folder_text_box.value = os.path.basename(input_dir)
     input_folder_text_box.width = min(
         len(input_folder_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
