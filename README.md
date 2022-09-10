@@ -64,5 +64,5 @@ parse_xls.py -i <inputfile> -o <outputfile>'
 ```
 
 **Note**
-> Only works with xls files for input for now.
-> Close the output file prior to running.
+Only works with xls files for input for now.<br/>
+Close the output file prior to running.
