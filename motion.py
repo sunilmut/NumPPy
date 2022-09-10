@@ -707,7 +707,7 @@ def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_fil
         str(len(unsuccessfully_parsed_files)) + "\n"
     result_text_box.value = result_box_str
 
-    for val in successfully_parsed_files:
+    for val in unsuccessfully_parsed_files:
         result_unsuccess_list_box.append(os.path.basename(val))
 
 
@@ -894,15 +894,19 @@ if __name__ == "__main__":
 
     # Title box
     cnt = 0
+    hbase = 40
     rwin_title = Text(rwin, text="Results",
-                      size=16, font="Arial Bold", width=25, grid=[10, cnt])
+                      size=16, font="Arial Bold", width=25, grid=[hbase, cnt])
     rwin_title.bg = "white"
     cnt += 1
 
-    result_text_box = Text(rwin, text="", grid=[10, cnt])
+    result_text_box = Text(rwin, text="", grid=[hbase, cnt])
+    cnt += 1
+    rwin_unsuccess_title = Text(
+        rwin, text="Unsuccessful files:", grid=[hbase, cnt])
     cnt += 1
     result_unsuccess_list_box = ListBox(
-        rwin, [], scrollbar=True, grid=[10, cnt])
+        rwin, [], scrollbar=True, grid=[hbase, cnt])
     # result_unsuccess_list_box.height = 50
     # result_unsuccess_list_box.width = 150
     rwin.hide()
