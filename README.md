@@ -1,7 +1,8 @@
 # Setup:
 ## Install git for windows:
-In a browser go [here](https://git-scm.com/download/win), download and run the "64-bit Git for Windows Setup"
-or
+In a browser go [here](https://git-scm.com/download/win), download and<br/>
+run the "64-bit Git for Windows Setup"<br/>
+or<br/>
 Open a administrator command prompt and run:
 
 ```
@@ -18,7 +19,7 @@ cd NumPPy
 
 ## Install python
 Windows:
-Follow the instructions [here](https://docs.microsoft.com/en-us/windows/python/scripting) to install python
+Follow the instructions [here](https://docs.microsoft.com/en-us/windows/python/scripting) to install python<br/>
 on your system
 
 # For running the freeze.py script:
@@ -30,8 +31,8 @@ pip3 install guizero numpy pandas
 ```
 
 ## Update the code:
-If you have to update the code, for example to pull in a fix or an update. This
-assumes that you have already done the setup.
+If you have to update the code, for example to pull in a fix or an update. This<br/>
+assumes that you have already done the setup.<br/>
 Open a command prompt:
 ```
 cd NumPPy
@@ -51,10 +52,9 @@ python freeze.py -v
 ```
 
 ## XLS (Excel) process app
-Parses formatted xls data based on the color code of the columns
-and outputs an xls file that is differentiated based on the color
-code.
-It can parse and combine color codes up to 100 different sheets
+Parses formatted xls data based on the color code of the columns<br/>
+and outputs an xls file that is differentiated based on the color code.<br/>
+It can parse and combine color codes up to 100 different sheets<br/>
 within a xls workbook.
 
 Usage:
@@ -62,5 +62,6 @@ Usage:
 parse_xls.py -i <inputfile> -o <outputfile>'
 ```
 
-only works with xls files for input for now.
-close the output file prior to running.
+**Note**
+Only works with xls files for input for now.
+Close the output file prior to running.
