@@ -12,8 +12,8 @@ winget install --id Git.Git -e --source winget
 Open a new command prompt and run:
 
 ```
-git clone https://github.com/sunilmut/xls_format_parser.git
-cd xls_format_parser
+git clone https://github.com/sunilmut/NumPPy.git
+cd NumPPy
 ```
 
 ## Install python
@@ -41,7 +41,7 @@ If you have to update the code, for example to pull in a fix or an update. This
 assumes that you have already done the setup.
 Open a command prompt:
 ```
-cd xls_format_parser
+cd NumPPy
 git pull
 ```
 
