@@ -91,6 +91,7 @@ only_process_cur_param = False
 
 # Timeshift header in the input
 TIMESHIFT_HEADER = "timeshift"
+TIMESHIFT_HEADER_ALT = "shift"
 
 
 def apply_duration_criteria(ts_series, param_min_time_duration):
@@ -630,7 +631,7 @@ def get_timeshift_from_input_file(input_file):
     with open(input_file, 'r') as read_obj:
         csv_reader = reader(read_obj)
         row1 = next(csv_reader)
-        if row1 and len(row1) > 2 and row1[0] == TIMESHIFT_HEADER:
+        if row1 and len(row1) > 2 and (row1[0] == TIMESHIFT_HEADER or row1[0] == TIMESHIFT_HEADER_ALT):
             num_rows_processed += 1
             try:
                 timeshift_val = int(row1[1])
