@@ -22,7 +22,6 @@ Windows:
 Follow the instructions [here](https://docs.microsoft.com/en-us/windows/python/scripting) to install python
 on your system
 
-# For running the freeze.py script:
 ## Install the necessary python modules:
 In the opened command prompt, run:
 
@@ -42,7 +41,7 @@ git pull
 ```
 
 # Projects:
-## Motion processing
+## Run Motion processing app
 In the opened command prompt (or open a command prompt), run:
 ```
 python freeze.py
@@ -53,7 +52,7 @@ To run the app in verbose mode (to get more logs), run:
 python freeze.py -v
 ```
 
-## XLS (Excel) process app
+## Run XLS (Excel) process app
 Parses formatted xls data based on the color code of the columns
 and outputs an xls file that is differentiated based on the color code.<br/>
 It can parse and combine color codes up to 100 different sheets
@@ -65,5 +64,5 @@ parse_xls.py -i <inputfile> -o <outputfile>'
 ```
 
 **Note**
-Only works with xls files for input for now.
-Close the output file prior to running.
+> Only works with xls files for input for now.
+> Close the output file prior to running.
