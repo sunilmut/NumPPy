@@ -29,13 +29,6 @@ In the opened command prompt, run:
 pip3 install guizero numpy pandas
 ```
 
-## Run the code:
-In the opened command prompt, run:
-
-```
-python freeze.py
-```
-
 ## Update the code:
 If you have to update the code, for example to pull in a fix or an update. This
 assumes that you have already done the setup.
@@ -45,7 +38,19 @@ cd NumPPy
 git pull
 ```
 
-# xls_format_parser
+# Projects:
+## Motion processing
+In the opened command prompt (or open a command prompt), run:
+```
+python freeze.py
+```
+
+To run the app in verbose mode (to get more logs), run:
+```
+python freeze.py -v
+```
+
+## XLS (Excel) process app
 Parses formatted xls data based on the color code of the columns
 and outputs an xls file that is differentiated based on the color
 code.
