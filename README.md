@@ -44,12 +44,12 @@ git pull
 ## Run Motion processing app
 In the opened command prompt (or open a command prompt), run:
 ```
-python freeze.py
+python motion.py
 ```
 
 To run the app in verbose mode (to get more logs), run:
 ```
-python freeze.py -v
+python motion.py -v
 ```
 
 ## Run XLS (Excel) process app
