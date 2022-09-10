@@ -92,6 +92,7 @@ only_process_cur_param = False
 # Timeshift header in the input
 TIMESHIFT_HEADER = "timeshift"
 TIMESHIFT_HEADER_ALT = "shift"
+files_without_timeshift = []
 
 
 def apply_duration_criteria(ts_series, param_min_time_duration):
@@ -288,13 +289,6 @@ def parse_param_folder():
     return True, ""
 
 
-def parse_all_param_dfs():
-    global param_df_list
-
-    for df in param_df_list:
-        t_duration, w_duration, ts_series = parse_param_df(df)
-
-
 def parse_param_df(df):
     value = df[PARAM_TS_CRITERIA].iat[0]
     if not pd.isnull(value):
@@ -374,6 +368,7 @@ def process_input_file(input_file, output_folder):
     global out_file_one_to_zero, out_file_one_to_zero_un
     global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
     global param_min_time_duration, param_window_duration, param_start_timestamp_series
+    global files_without_timeshift
 
     timeshift_val, num_rows_processed = get_timeshift_from_input_file(
         input_file)
@@ -383,6 +378,7 @@ def process_input_file(input_file, output_folder):
               str(timeshift_val) + " on input file " + input_file)
     else:
         timeshift_val = 0
+        files_without_timeshift.append(input_file)
 
     # Parse the input file
     success, df = parse_input_file_into_df(
@@ -650,7 +646,17 @@ def get_timeshift_from_input_file(input_file):
 
 
 def line():
+    """
+    Line for the main app
+    """
     Text(app, "------------------------------------------------------------------------------------------------------")
+
+
+def line_r(rwin):
+    """
+    Line for results window
+    """
+    Text(rwin, "-------------------------------------------------------------------------------------")
 
 
 def select_input_folder():
@@ -696,7 +702,13 @@ def open_params_file():
 
 
 def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_files):
+    """
+    This function will refresh the result window with the updated results.
+    """
+    global files_without_timeshift
+    result_success_list_box.clear()
     result_unsuccess_list_box.clear()
+    result_withoutshift_list_box.clear()
     total_files_processed = len(
         successfully_parsed_files) + len(unsuccessfully_parsed_files)
     result_box_str = "Total input files processed: " + \
@@ -705,10 +717,18 @@ def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_fil
         str(len(successfully_parsed_files)) + "\n"
     result_box_str += "Number of files failed to process: " + \
         str(len(unsuccessfully_parsed_files)) + "\n"
+    result_box_str += "Number of files without shift values: " + \
+        str(len(files_without_timeshift))
     result_text_box.value = result_box_str
+
+    for val in successfully_parsed_files:
+        result_success_list_box.append(os.path.basename(val))
 
     for val in unsuccessfully_parsed_files:
         result_unsuccess_list_box.append(os.path.basename(val))
+
+    for val in files_without_timeshift:
+        result_withoutshift_list_box.append(os.path.basename(val))
 
 
 def process():
@@ -723,6 +743,7 @@ def process():
         sys.argv[1:], input_dir)
     refresh_result_text_box(successfully_parsed_files,
                             unsuccessfully_parsed_files)
+
     rwin.show()
 
 
@@ -731,7 +752,7 @@ def select_param(selected_param_value):
     This method is called when the user selects a parameter from the parameter
     name drop down box.
     """
-    global cur_selected_param
+    global cur_selected_param, param_min_time_duration, param_window_duration
 
     if not selected_param_value:
         return
@@ -839,6 +860,7 @@ if __name__ == "__main__":
         param_box, options=[], grid=[10, cnt], command=select_param)
     param_names_combo_box.clear()
     param_names_combo_box.text_color = "orange"
+    param_names_combo_box.font = "Arial Bold"
     # param_names_combo_box.hide()
     cnt += 1
 
@@ -890,25 +912,36 @@ if __name__ == "__main__":
 
     # New Result window
     rwin = Window(app, title="Result Window",
-                  height=500, width=500, visible=False, layout="grid")
+                  visible=False, height=500, width=500)
 
     # Title box
-    cnt = 0
-    hbase = 40
     rwin_title = Text(rwin, text="Results",
-                      size=16, font="Arial Bold", width=25, grid=[hbase, cnt])
+                      size=16, font="Arial Bold", width=25)
     rwin_title.bg = "white"
-    cnt += 1
+    line_r(rwin)
+    result_text_box = Text(rwin, text="")
+    line_r(rwin)
 
-    result_text_box = Text(rwin, text="", grid=[hbase, cnt])
-    cnt += 1
+    # Grid to hold the various lists
+    rlist_box = Box(rwin, layout="grid")
+    cnt = 0
+    rwin_success_title = Text(
+        rlist_box, text="Successful files:", grid=[0, cnt])
     rwin_unsuccess_title = Text(
-        rwin, text="Unsuccessful files:", grid=[hbase, cnt])
+        rlist_box, text="Unsuccessful files:", grid=[5, cnt])
+    rwin_without_shift = Text(
+        rlist_box, text="Files without shift:", grid=[10, cnt])
     cnt += 1
+    result_success_list_box = ListBox(
+        rlist_box, [], scrollbar=True, grid=[0, cnt])
     result_unsuccess_list_box = ListBox(
-        rwin, [], scrollbar=True, grid=[hbase, cnt])
-    # result_unsuccess_list_box.height = 50
-    # result_unsuccess_list_box.width = 150
+        rlist_box, [], scrollbar=True, grid=[5, cnt])
+    result_withoutshift_list_box = ListBox(
+        rlist_box, [], scrollbar=True, grid=[10, cnt])
+    cnt += 1
+    line_r(rwin)
+
+    # Results window will be showed once files have been processed
     rwin.hide()
 
     # Display the app
