@@ -36,6 +36,15 @@ In the opened command prompt, run:
 python freeze.py
 ```
 
+## Update the code:
+If you have to update the code, for example to pull in a fix or an update. This
+assumes that you have already done the setup.
+Open a command prompt:
+```
+cd xls_format_parser
+git pull
+```
+
 # xls_format_parser
 Parses formatted xls data based on the color code of the columns
 and outputs an xls file that is differentiated based on the color

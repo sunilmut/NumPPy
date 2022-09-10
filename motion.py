@@ -648,16 +648,6 @@ def get_timeshift_from_input_file(input_file):
 """
 
 
-def parse_input_file_for_timeshift(input_dir):
-    input_files = get_inpput_files(input_dir)
-    for input_file in input_files:
-        timeshift_val = get_timeshift_from_input_file(
-            input_file)[0]
-        if not timeshift_val:
-            app.warn(
-                "Uh oh!", "Input file " + input_file + " does not has a timeshift value or a timeshift value that is not an integer")
-
-
 def line():
     Text(app, "------------------------------------------------------------------------------------------------------")
 
@@ -670,14 +660,12 @@ def select_input_folder():
         return
 
     input_dir = input_dir_temp
-    parse_input_file_for_timeshift(input_dir)
     input_folder_text_box.value = os.path.basename(input_dir)
     input_folder_text_box.width = min(
         len(input_folder_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
     parse_param_folder()
     refresh_param_names_combo_box(param_name_list)
     if len(param_name_list):
-        print("parsing parameter: " + param_name_list[0])
         cur_selected_param = param_name_list[0]
         parse_param(cur_selected_param)
 
@@ -707,9 +695,19 @@ def open_params_file():
 
 
 def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_files):
-    result_success_list_box.clear()
+    result_unsuccess_list_box.clear()
+    total_files_processed = len(
+        successfully_parsed_files) + len(unsuccessfully_parsed_files)
+    result_box_str = "Total input files processed: " + \
+        str(total_files_processed) + "\n"
+    result_box_str += "Number of files successfully processed: " + \
+        str(len(successfully_parsed_files)) + "\n"
+    result_box_str += "Number of files failed to process: " + \
+        str(len(unsuccessfully_parsed_files)) + "\n"
+    result_text_box.value = result_box_str
+
     for val in successfully_parsed_files:
-        result_success_list_box.append(val)
+        result_unsuccess_list_box.append(os.path.basename(val))
 
 
 def process():
@@ -724,7 +722,7 @@ def process():
         sys.argv[1:], input_dir)
     refresh_result_text_box(successfully_parsed_files,
                             unsuccessfully_parsed_files)
-    # result_window.show()
+    rwin.show()
 
 
 def select_param(selected_param_value):
@@ -796,11 +794,9 @@ if __name__ == "__main__":
     Main entry point
     """
     # Main app
-    app = App("",  height=750, width=800)
+    app = App("",  height=800, width=800)
 
-    # Title box
-    titlebox = TitleBox(app, "")
-    titlebox.bg = "white"
+    # App name box
     title = Text(app, text="Motion Data Processing App",
                  size=16, font="Arial Bold", width=25)
     title.bg = "white"
@@ -814,6 +810,7 @@ if __name__ == "__main__":
         app, command=select_input_folder, text="Input Folder", width=26)
     input_folder_button.tk.config(font=("Verdana bold", 14))
 
+    # Box to display the input folder
     line()
     input_folder_text_box = TextBox(app)
     # Non editable
@@ -821,6 +818,12 @@ if __name__ == "__main__":
     input_folder_text_box.width = INPUT_FOLDER_NAME_BOX_MAX_WIDTH
     input_folder_text_box.font = "Verdana bold"
     input_folder_text_box.text_size = 14
+    line()
+
+    # Box to display the the timesfhit message
+    timeshift_msg_box = Text(app)
+    timeshift_msg_box.value = "Specify timeshift value in the input files, if applies"
+    timeshift_msg_box.text_color = "Red"
     line()
 
     # Master parameter box
@@ -885,11 +888,23 @@ if __name__ == "__main__":
     line()
 
     # New Result window
-    result_window = Window(app, title="Result Window",
-                           height=500, width=500, visible=False)
-    result_text_box = Text(result_window, text="")
-    result_success_list_box = ListBox(result_window, [], scrollbar=True)
-    result_window.hide()
+    rwin = Window(app, title="Result Window",
+                  height=500, width=500, visible=False, layout="grid")
+
+    # Title box
+    cnt = 0
+    rwin_title = Text(rwin, text="Results",
+                      size=16, font="Arial Bold", width=25, grid=[10, cnt])
+    rwin_title.bg = "white"
+    cnt += 1
+
+    result_text_box = Text(rwin, text="", grid=[10, cnt])
+    cnt += 1
+    result_unsuccess_list_box = ListBox(
+        rwin, [], scrollbar=True, grid=[10, cnt])
+    # result_unsuccess_list_box.height = 50
+    # result_unsuccess_list_box.width = 150
+    rwin.hide()
 
     # Display the app
     app.display()
