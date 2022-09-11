@@ -725,7 +725,10 @@ def line_r(rwin):
 def select_input_folder():
     global input_dir, param_name_list, cur_selected_param
 
-    input_dir_temp = app.select_folder()
+    open_folder = "."
+    if input_dir:
+        open_folder = os.path.dirname(input_dir)
+    input_dir_temp = app.select_folder(folder=open_folder)
     if not input_dir_temp:
         return
 
