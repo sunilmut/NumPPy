@@ -587,7 +587,7 @@ class loghandler(logging.StreamHandler):
 
 
 def main(argv, input_folder_or_file):
-    global input_dir
+    global input_dir, output_dir
 
     input_files = []
     output_folder = ""
@@ -638,18 +638,24 @@ def main(argv, input_folder_or_file):
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
 
+    output_dir = output_folder
     logger.debug("Input folder: %s", os.path.normpath(input_dir))
     logger.debug("Output folder: %s", os.path.normpath(output_folder))
     successfully_parsed_files = []
     unsuccessfully_parsed_files = []
     for input_file in input_files:
+        # Create a different output folder for each input file
+        output_folder = os.path.join(
+            output_folder, os.path.splitext(os.path.basename(input_file))[0])
+        if not os.path.isdir(output_folder):
+            os.mkdir(output_folder)
         parsed = process_input_file(input_file, output_folder)
         if parsed:
             successfully_parsed_files.append(input_file)
         else:
             unsuccessfully_parsed_files.append(input_file)
 
-    return output_folder, successfully_parsed_files, unsuccessfully_parsed_files
+    return successfully_parsed_files, unsuccessfully_parsed_files
 
 
 def get_timeshift_from_input_file(input_file):
@@ -712,6 +718,7 @@ def select_input_folder():
 
 def open_output_folder():
     global output_dir
+
     if not output_dir:
         app.warn(
             "Uh oh!", "Output folder dose not exist! Select input folder and process first.")
@@ -780,7 +787,7 @@ def process():
     # Reset the result box before processing so that the new values of the
     # processing results can be shown.
     reset_result_box()
-    output_dir, successfully_parsed_files, unsuccessfully_parsed_files = main(
+    successfully_parsed_files, unsuccessfully_parsed_files = main(
         sys.argv[1:], input_dir)
     refresh_result_text_box(successfully_parsed_files,
                             unsuccessfully_parsed_files)
