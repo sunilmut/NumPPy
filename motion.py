@@ -73,11 +73,6 @@ out_file_one_to_zero = ""
 out_file_one_to_zero_ts = ""
 out_file_one_to_zero_un = ""
 out_file_one_to_zero_un_ts = ""
-param_col_names = [PARAM_TS_CRITERIA,
-                   PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
-param_min_time_duration = 0
-param_window_duration = 0
-param_start_timestamp_series = pd.Series(dtype=np.float64)
 input_dir = ""
 
 # Arrays to store the parameter names and its value as a dataframe
@@ -87,6 +82,13 @@ input_dir = ""
 param_name_list = []
 # Parameter values as dataframe. There is one dataframe for each parameter
 param_df_list = []
+# Currently selected parameter values
+param_col_names = [PARAM_TS_CRITERIA,
+                   PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
+param_min_time_duration = 0
+param_window_duration = 0
+param_start_timestamp_series = pd.Series(dtype=np.float64)
+
 # Currently selected parameter name
 cur_selected_param = None
 
@@ -290,9 +292,10 @@ def parse_param_folder():
     out of it.
     """
     global input_dir, param_name_list, param_df_list
+    global param_min_time_duration, param_window_duration, param_start_timestamp_series
 
-    param_name_list.clear()
-    param_df_list.clear()
+    reset_all_parameters()
+    refresh_param_values(param_start_timestamp_series)
 
     param_folder = os.path.join(input_dir, "parameters")
     if not os.path.isdir(param_folder):
@@ -338,6 +341,22 @@ def get_param_file_from_name(param_name):
     return param_file + CSV_EXT
 
 
+def reset_parameters():
+    global param_min_time_duration, param_window_duration, param_start_timestamp_series
+
+    param_min_time_duration = 0
+    param_window_duration = 0
+    param_start_timestamp_series = pd.Series(dtype=np.float64)
+
+
+def reset_all_parameters():
+    global param_name_list, param_df_list
+
+    param_name_list.clear()
+    param_df_list.clear()
+    reset_parameters()
+
+
 def parse_cur_param_file():
     parse_param(cur_selected_param)
 
@@ -353,10 +372,7 @@ def parse_param(cur_selected_param):
     if not cur_selected_param:
         return
 
-    param_min_time_duration = 0
-    param_window_duration = 0
-    param_start_timestamp_series = pd.Series(dtype=np.float64)
-
+    reset_parameters()
     try:
         param_index = param_name_list.index(cur_selected_param)
     except ValueError:
