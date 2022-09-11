@@ -38,16 +38,17 @@ PARAMETERS_DIR_NAME = "parameters"
 OUTPUT_BASE = "_output_base.csv"
 MIN_DURATION = "_min_duration.csv"
 TS_FILTER = "_ts_filter.csv"
-CSV = ".csv"
 UNDERSCORE = "_"
-OUTPUT_ZERO_TO_ONE_CSV_NAME = "_01_OnsetT"
-OUTPUT_ZERO_TO_ONE_CSV_NAME_TS = "_01_OnsetT_ts"
-OUTPUT_ZERO_TO_ONE_NOP_CSV_NAME = "_01_NOp"
-OUTPUT_ZERO_TO_ONE_NOP_CSV_NAME_TS = "_01_NOp_ts"
-OUTPUT_ONE_TO_ZERO_CSV_NAME = "_10_OnsetT"
-OUTPUT_ONE_TO_ZERO_CSV_NAME_TS = "_10_OnsetT_ts"
-OUTPUT_ONE_TO_ZERO_NOP_CSV_NAME = "_10_NOp"
-OUTPUT_ONE_TO_ZERO_NOP_CSV_NAME_TS = "_10_NOp_ts"
+
+# output file name formats:
+CSV_EXT = ".csv"
+# timestamp only
+OUTPUT_TSONLY = "_TsOnly"
+OUTPUT_NO_PARAMETERS = "_Not"
+OUTPUT_ZERO_TO_ONE_CSV_NAME = "_01"
+OUTPUT_ZERO_TO_ONE_CSV_NAME_TS = "_01_TsOnly"
+OUTPUT_ONE_TO_ZERO_CSV_NAME = "_10"
+OUTPUT_ONE_TO_ZERO_CSV_NAME_TS = "_10"
 OUTPUT_LOG_FILE = "output.txt"
 
 # UI related constants
@@ -176,22 +177,28 @@ def format_out_nop_file_name(input_file, param_names, output_folder):
     global out_file_one_to_zero_un, out_file_one_to_zero_un_ts
     global logger
 
+    output_no_parameter = ""
+    if param_names:
+        output_no_parameter = OUTPUT_NO_PARAMETERS
+
     input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
     out_file_zero_to_one_un = os.path.join(
         output_folder, input_file_without_ext +
-        OUTPUT_ZERO_TO_ONE_NOP_CSV_NAME + param_names + CSV
+        OUTPUT_ZERO_TO_ONE_CSV_NAME + output_no_parameter + param_names + CSV_EXT
     )
     out_file_zero_to_one_un_ts = os.path.join(
         output_folder, input_file_without_ext +
-        OUTPUT_ZERO_TO_ONE_NOP_CSV_NAME_TS + param_names + CSV
+        OUTPUT_ZERO_TO_ONE_CSV_NAME + output_no_parameter +
+        param_names + OUTPUT_TSONLY + CSV_EXT
     )
     out_file_one_to_zero_un = os.path.join(
         output_folder, input_file_without_ext +
-        OUTPUT_ONE_TO_ZERO_NOP_CSV_NAME + param_names + CSV
+        OUTPUT_ONE_TO_ZERO_CSV_NAME + output_no_parameter + param_names + CSV_EXT
     )
     out_file_one_to_zero_un_ts = os.path.join(
         output_folder, input_file_without_ext +
-        OUTPUT_ONE_TO_ZERO_NOP_CSV_NAME_TS + param_names + CSV
+        OUTPUT_ONE_TO_ZERO_CSV_NAME + output_no_parameter +
+        param_names + OUTPUT_TSONLY + CSV_EXT
     )
 
     logger.debug("\tOutput files:")
@@ -220,19 +227,19 @@ def format_out_file_names(input_file, param_name, output_folder):
     input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
     out_file_zero_to_one = os.path.join(
         output_folder, input_file_without_ext +
-        OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + CSV
+        OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + CSV_EXT
     )
     out_file_zero_to_one_ts = os.path.join(
         output_folder, input_file_without_ext +
-        OUTPUT_ZERO_TO_ONE_CSV_NAME_TS + param_ext + CSV
+        OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + OUTPUT_TSONLY + CSV_EXT
     )
     out_file_one_to_zero = os.path.join(
         output_folder, input_file_without_ext +
-        OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + CSV
+        OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + CSV_EXT
     )
     out_file_one_to_zero_ts = os.path.join(
         output_folder, input_file_without_ext +
-        OUTPUT_ONE_TO_ZERO_CSV_NAME_TS + param_ext + CSV
+        OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + OUTPUT_TSONLY + CSV_EXT
     )
 
     logger.debug("\tOutput files:")
@@ -284,14 +291,15 @@ def parse_param_folder():
     """
     global input_dir, param_name_list, param_df_list
 
+    param_name_list.clear()
+    param_df_list.clear()
+
     param_folder = os.path.join(input_dir, "parameters")
     if not os.path.isdir(param_folder):
         return False, ("Parameter folder " + param_folder + " does not exist!")
 
     search_path = param_folder + "\*.csv"
 
-    param_name_list.clear()
-    param_df_list.clear()
     for param_file in glob.glob(search_path):
         if not os.path.isfile(param_file):
             continue
@@ -327,7 +335,7 @@ def get_param_file_from_name(param_name):
     param_file = os.path.join(input_dir, PARAMETERS_DIR_NAME)
     param_file = os.path.join(param_file, param_name)
 
-    return param_file + CSV
+    return param_file + CSV_EXT
 
 
 def parse_cur_param_file():
