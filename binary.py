@@ -600,6 +600,10 @@ class loghandler(logging.StreamHandler):
         stdout and the UI result text box
         """
         try:
+            # TODO: Have different log format for input depending on whether
+            # it is the file output or anything else. And, also based on the
+            # log level. Ex: error logs can be prepend with some string like
+            # "ERROR:: "
             msg = self.format(record)
             r_log_box.value += msg
             print(msg)
