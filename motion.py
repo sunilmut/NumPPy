@@ -174,6 +174,7 @@ def format_out_nop_file_name(input_file, param_names, output_folder):
     """
     global out_file_zero_to_one_un, out_file_zero_to_one_un_ts
     global out_file_one_to_zero_un, out_file_one_to_zero_un_ts
+    global logger
 
     input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
     out_file_zero_to_one_un = os.path.join(
@@ -193,14 +194,15 @@ def format_out_nop_file_name(input_file, param_names, output_folder):
         OUTPUT_ONE_TO_ZERO_NOP_CSV_NAME_TS + param_names + CSV
     )
 
-    print("\nInput file: ", os.path.basename(os.path.basename(input_file)))
-    print("Output file:")
-    print("\tNOp [0->1]: ", os.path.basename(out_file_zero_to_one_un))
-    print("\tNOp [1->0]: ", os.path.basename(out_file_one_to_zero_un))
-    print("\tNOp [0->1] TimeStamps Only:: ",
-          os.path.basename(out_file_zero_to_one_un_ts))
-    print("\tNOp [1->0] TimeStamps Only:: ",
-          os.path.basename(out_file_one_to_zero_un_ts))
+    logger.debug("\tOutput files:")
+    logger.debug("\t\tNOp [0->1]: %s",
+                 os.path.basename(out_file_zero_to_one_un))
+    logger.debug("\t\tNOp [1->0]: %s",
+                 os.path.basename(out_file_one_to_zero_un))
+    logger.debug("\t\tNOp [0->1] TimeStamps Only: %s",
+                 os.path.basename(out_file_zero_to_one_un_ts))
+    logger.debug("\t\tNOp [1->0] TimeStamps Only: %s",
+                 os.path.basename(out_file_one_to_zero_un_ts))
 
 
 def format_out_file_names(input_file, param_name, output_folder):
@@ -575,10 +577,8 @@ class loghandler(logging.StreamHandler):
         """
         try:
             msg = self.format(record)
-            stream = self.stream
-            stream.write(msg)
-            print(msg)
             r_log_box.value += msg
+            print(msg)
             self.flush()
         except (KeyboardInterrupt, SystemExit):
             raise
