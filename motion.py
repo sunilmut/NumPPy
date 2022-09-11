@@ -646,7 +646,7 @@ def main(argv, input_folder_or_file):
     for input_file in input_files:
         # Create a different output folder for each input file
         output_folder = os.path.join(
-            output_folder, os.path.splitext(os.path.basename(input_file))[0])
+            output_dir, os.path.splitext(os.path.basename(input_file))[0])
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
         parsed = process_input_file(input_file, output_folder)
