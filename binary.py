@@ -902,7 +902,7 @@ if __name__ == "__main__":
 
     # App name box
     title = Text(app, text="FreezeFrame Data Processing App",
-                 size=16, font="Arial Bold", width=25)
+                 size=16, font="Arial Bold", width=30)
     title.bg = "white"
     line()
 
