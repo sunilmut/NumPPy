@@ -556,7 +556,7 @@ def print_help():
     """
     print("\nHelp/Usage:\n")
     print(
-        "python motion.py -i <input folder or .csv file> -d <output_directory> -v -h\n"
+        "python binary.py -i <input folder or .csv file> -d <output_directory> -v -h\n"
     )
     print("where:")
     print("-i (required): input folder or .csv file.")
@@ -565,13 +565,13 @@ def print_help():
     print("-h (optional): print this help")
     print("\nExamples:\n")
     print("\nProcess input file:")
-    print("\tpython motion.py -i input.csv")
+    print("\tpython binary.py -i input.csv")
     print("\nProcess all the csv files from the input folder:")
-    print("\tpython motion.py -i c:\\data\\input")
+    print("\tpython binary.py -i c:\\data\\input")
     print(
         "\nProcess all the csv files from the input folder and use the output folder:"
     )
-    print("\tpython motion.py -i c:\\data\\input -d c:\\data\\output")
+    print("\tpython binary.py -i c:\\data\\input -d c:\\data\\output")
     print("\nNotes:")
     print("\tClose the output file prior to running.")
     sys.exit()

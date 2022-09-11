@@ -44,12 +44,12 @@ git pull
 ## Run Motion processing app
 In the opened command prompt (or open a command prompt), run:
 ```
-python motion.py
+python binary.py
 ```
 
 To run the app in verbose mode (to get more logs), run:
 ```
-python motion.py -v
+python binary.py -v
 ```
 
 ## Run XLS (Excel) process app
