@@ -516,6 +516,8 @@ def process_input_file(input_file, output_folder):
     if out_df.empty:
         return
 
+    # Round up to two decimals
+    out_df[OUTPUT_COL0_TS] = out_df[OUTPUT_COL0_TS].round(decimals=2)
     out_base_file = out_base(input_file, output_folder)
     logger.debug(
         "\tAfter initial parsing (without any criteria or filter): %s", os.path.basename(out_base_file))
@@ -731,6 +733,8 @@ def get_timeshift_from_input_file(input_file):
             num_rows_processed += 1
             try:
                 timeshift_val = float(row1[1])
+                # Round up to two decimals
+                timeshift_val = round(timeshift_val, 2)
             except ValueError:
                 logger.error(
                     "Timeshift value (%s) is not numerical, ignoring it!", row1[1])
