@@ -35,7 +35,8 @@ OUTPUT_COL3_FREEZE_TP = "Freezing TurnPoints"
 # output directory and file names
 OUTPUT_DIR_NAME = "_output"
 PARAMETERS_DIR_NAME = "parameters"
-OUTPUT_BASE = "_output_base.csv"
+TIME_DURATION_PARAMETER_FILE = "min_time.txt"
+OUTPUT_BASE = "_base.csv"
 MIN_DURATION = "_min_duration.csv"
 TS_FILTER = "_ts_filter.csv"
 UNDERSCORE = "_"
@@ -53,7 +54,6 @@ OUTPUT_LOG_FILE = "output.txt"
 
 # UI related constants
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
-PARAM_TS_CRITERIA = "Criteria_Timestamp_In_Sec"
 PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
 PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
 PARAM_UI_TIME_WINDOW_START_TIMES = "Time window start (secs):"
@@ -83,9 +83,8 @@ param_name_list = []
 # Parameter values as dataframe. There is one dataframe for each parameter
 param_df_list = []
 # Currently selected parameter values
-param_col_names = [PARAM_TS_CRITERIA,
-                   PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
-param_min_time_duration = 0
+param_col_names = [PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
+param_min_time_duration = 1
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
 
@@ -173,7 +172,7 @@ def out_ts_filter_file(input_file, output_folder):
 
 def format_out_nop_file_name(input_file, param_names, output_folder):
     """
-    Format the 'NOp' output file name
+    Format the 'no parameter' output file name
     """
     global out_file_zero_to_one_un, out_file_zero_to_one_un_ts
     global out_file_one_to_zero_un, out_file_one_to_zero_un_ts
@@ -292,10 +291,6 @@ def parse_param_folder():
     out of it.
     """
     global input_dir, param_name_list, param_df_list
-    global param_min_time_duration, param_window_duration, param_start_timestamp_series
-
-    reset_all_parameters()
-    refresh_param_values(param_start_timestamp_series)
 
     param_folder = os.path.join(input_dir, "parameters")
     if not os.path.isdir(param_folder):
@@ -317,11 +312,42 @@ def parse_param_folder():
     return True, ""
 
 
-def parse_param_df(df):
-    value = df[PARAM_TS_CRITERIA].iat[0]
-    if not pd.isnull(value):
-        t_duration = value
+def get_parameter_min_t_file():
+    global input_dir
 
+    min_t_file = os.path.join(
+        input_dir, PARAMETERS_DIR_NAME, TIME_DURATION_PARAMETER_FILE)
+
+    return min_t_file
+
+
+def get_param_min_time_duration():
+    """
+    Returns the value of the min parameter time duration value.
+    """
+    global logger
+
+    t_duration = 1
+    param_min_t_file = get_parameter_min_t_file()
+    try:
+        with open(param_min_t_file) as min_t_file:
+            line = min_t_file.readline().rstrip()
+            try:
+                t_duration = float(line)
+            except ValueError:
+                logger.error(
+                    "Min time duration(%s) from file(%s) cannot be converted to a "
+                    "number. Using default of %d", line, param_min_t_file, t_duration)
+            min_t_file.close()
+    except IOError:
+        logger.debug(
+            "Min time duration file(%s) does not exist. One will be created.", param_min_t_file)
+        pass
+
+    return t_duration
+
+
+def parse_param_df(df):
     value = df[PARAM_TIME_WINDOW_DURATION].iat[0]
     if not pd.isnull(value):
         w_duration = value
@@ -329,14 +355,14 @@ def parse_param_df(df):
     ts_series = df[PARAM_TIME_WINDOW_START_LIST]
     ts_series.sort_values(ascending=True)
 
-    return t_duration, w_duration, ts_series
+    return w_duration, ts_series
 
 
 def get_param_file_from_name(param_name):
     global input_dir
 
-    param_file = os.path.join(input_dir, PARAMETERS_DIR_NAME)
-    param_file = os.path.join(param_file, param_name)
+    param_file = os.path.join(input_dir, PARAMETERS_DIR_NAME, param_name)
+    #param_file = os.path.join(param_file, param_name)
 
     return param_file + CSV_EXT
 
@@ -344,7 +370,7 @@ def get_param_file_from_name(param_name):
 def reset_parameters():
     global param_min_time_duration, param_window_duration, param_start_timestamp_series
 
-    param_min_time_duration = 0
+    param_min_time_duration = 1
     param_window_duration = 0
     param_start_timestamp_series = pd.Series(dtype=np.float64)
 
@@ -381,10 +407,11 @@ def parse_param(cur_selected_param):
         return
 
     param_df = param_df_list[param_index]
-    param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
+    param_min_time_duration = get_param_min_time_duration()
+    param_window_duration, param_start_timestamp_series = parse_param_df(
         param_df)
 
-    refresh_param_values(param_start_timestamp_series)
+    refresh_param_values_ui(param_start_timestamp_series)
 
 
 def process_input_file(input_file, output_folder):
@@ -416,6 +443,7 @@ def process_input_file(input_file, output_folder):
         return
 
     # Parse all the parameter files.
+    reset_all_parameters()
     parse_param_folder()
 
     sum = 0
@@ -493,37 +521,42 @@ def process_input_file(input_file, output_folder):
         "\tAfter initial parsing (without any criteria or filter): %s", os.path.basename(out_base_file))
     out_df.to_csv(out_base_file, index=False)
 
-    # 'NOp' -> no parameter. This is the left over of the original data
-    # after all the parameters have been processed. 'NOp' starts with
-    # the original set and as each parameter gets process the set
-    # gets subtracted by that.
+    param_min_time_duration = get_param_min_time_duration()
+    logger.debug("\tUsing min time duration (secs): %s",
+                 str(param_min_time_duration))
+
+    # Apply any minimum time duration criteria
+    if param_min_time_duration > 0:
+        out_df = out_df.loc[list(apply_duration_criteria(
+            out_df.iloc[:, 0], param_min_time_duration))]
+        min_duration_file = out_min_duration_file(input_file, output_folder)
+        logger.debug("\tAfter applying min time duration "
+                     "criteria: %s", os.path.basename(min_duration_file))
+        out_df.to_csv(min_duration_file, index=False)
+
+    # 'nop' -> no parameter. This is the left over of the original data
+    # after all the parameters have been processed. 'no' starts with
+    # the original set (after the min time duration) and as each parameter
+    # gets process the set gets subtracted by that.
     # Make a copy of out dataframe 'by value'
     nop_df = out_df[:]
     params_name = ""
 
+    print(param_name_list)
     # Iterate through the parameters and apply each one of them
     for idx, param_name in enumerate(param_name_list):
+        logger.debug("\tProcessing parameter: %s", param_name)
         if only_process_cur_param and param_name != cur_selected_param:
             continue
 
         # Make a copy by value
         temp_out_df = out_df[:]
         params_name += UNDERSCORE + param_name
-        param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
+        param_window_duration, param_start_timestamp_series = parse_param_df(
             param_df_list[idx])
 
         # Format the file names of the output files using the parameter name
         format_out_file_names(input_file, param_name, output_folder)
-
-        # Apply any minimum time duration criteria
-        if param_min_time_duration > 0:
-            temp_out_df = temp_out_df.loc[list(apply_duration_criteria(
-                temp_out_df.iloc[:, 0], param_min_time_duration))]
-            min_duration_file = out_min_duration_file(
-                input_file, output_folder)
-            logger.debug(
-                "\tAfter applying min time duration criteria: %s", os.path.basename(min_duration_file))
-            temp_out_df.to_csv(min_duration_file, index=False)
 
         # Apply time window filter
         if not param_start_timestamp_series.empty:
@@ -740,6 +773,13 @@ def select_input_folder():
     input_folder_text_box.value = os.path.basename(input_dir)
     input_folder_text_box.width = min(
         len(input_folder_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
+
+    # Reset all current values of the parameters and refresh the parameter
+    # UI section with the reset values (this will ensure the UI will show
+    # the default values even in cases when there are no parameters specified
+    # in the input folder).
+    reset_all_parameters()
+    refresh_param_values_ui(param_start_timestamp_series)
     parse_param_folder()
     refresh_param_names_combo_box(param_name_list)
     if len(param_name_list):
@@ -807,6 +847,16 @@ def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_fil
         result_withoutshift_list_box.append(os.path.basename(val))
 
 
+def update_min_t_in_file(min_t_val):
+    """
+    Will read the min time duration value from the UI and update the
+    min time duration file with that value.
+    """
+    f = open(get_parameter_min_t_file(), "w")
+    f.write(min_t_val)
+    f.close()
+
+
 def process():
     global input_dir, output_dir
 
@@ -818,6 +868,12 @@ def process():
     # Reset the result box before processing so that the new values of the
     # processing results can be shown.
     reset_result_box()
+
+    # Update the min time duration value in the file with the value
+    # from the UI so that it sticks.
+    # p.s: The main process loop will read this value from the file. So
+    #      the update should be done prior to processing the files.
+    update_min_t_in_file(min_time_duration_box.value)
     successfully_parsed_files, unsuccessfully_parsed_files = main(
         sys.argv[1:], input_dir)
     refresh_result_text_box(successfully_parsed_files,
@@ -845,10 +901,9 @@ def select_param(selected_param_value):
         return
 
     df = param_df_list[param_index]
-    param_min_time_duration, param_window_duration, param_start_timestamp_series = parse_param_df(
-        df)
-
-    refresh_param_values(param_start_timestamp_series)
+    param_min_time_duration = get_param_min_time_duration()
+    param_window_duration, param_start_timestamp_series = parse_param_df(df)
+    refresh_param_values_ui(param_start_timestamp_series)
 
 
 def refresh_param_names_combo_box(param_name_list):
@@ -859,7 +914,7 @@ def refresh_param_names_combo_box(param_name_list):
     param_names_combo_box.show()
 
 
-def refresh_param_values(param_start_timestamp_series):
+def refresh_param_values_ui(param_start_timestamp_series):
     set_min_time_duration_box_value()
     set_time_window_duration_box_value()
     refresh_ts_list_box(param_start_timestamp_series)
@@ -955,8 +1010,6 @@ if __name__ == "__main__":
         param_box, text=PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT, grid=[0, cnt], align="left")
     min_time_duration_box = TextBox(
         param_box, text="", grid=[1, cnt], align="left")
-    # Non editable
-    min_time_duration_box.disable()
     cnt += 1
 
     time_window_duration_label_box = Text(
