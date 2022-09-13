@@ -43,13 +43,9 @@ UNDERSCORE = "_"
 
 # output file name formats:
 CSV_EXT = ".csv"
-# timestamp only
-OUTPUT_TSONLY = "_TsOnly"
 OUTPUT_NO_PARAMETERS = "_Not"
-OUTPUT_ZERO_TO_ONE_CSV_NAME = "_01"
-OUTPUT_ZERO_TO_ONE_CSV_NAME_TS = "_01_TsOnly"
-OUTPUT_ONE_TO_ZERO_CSV_NAME = "_10"
-OUTPUT_ONE_TO_ZERO_CSV_NAME_TS = "_10"
+OUTPUT_ZERO_TO_ONE_CSV_NAME = "01"
+OUTPUT_ONE_TO_ZERO_CSV_NAME = "10"
 OUTPUT_LOG_FILE = "output.txt"
 
 # UI related constants
@@ -191,22 +187,20 @@ def format_out_nop_file_name(input_file, param_names, output_folder):
 
     input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
     out_file_zero_to_one_un = os.path.join(
-        output_folder, input_file_without_ext +
+        output_folder, input_file_without_ext + UNDERSCORE +
         OUTPUT_ZERO_TO_ONE_CSV_NAME + output_no_parameter + param_names + CSV_EXT
     )
     out_file_zero_to_one_un_ts = os.path.join(
-        output_folder, input_file_without_ext +
-        OUTPUT_ZERO_TO_ONE_CSV_NAME + output_no_parameter +
-        param_names + OUTPUT_TSONLY + CSV_EXT
+        output_folder,  OUTPUT_ZERO_TO_ONE_CSV_NAME + output_no_parameter +
+        param_names + CSV_EXT
     )
     out_file_one_to_zero_un = os.path.join(
-        output_folder, input_file_without_ext +
+        output_folder, input_file_without_ext + UNDERSCORE +
         OUTPUT_ONE_TO_ZERO_CSV_NAME + output_no_parameter + param_names + CSV_EXT
     )
     out_file_one_to_zero_un_ts = os.path.join(
-        output_folder, input_file_without_ext +
-        OUTPUT_ONE_TO_ZERO_CSV_NAME + output_no_parameter +
-        param_names + OUTPUT_TSONLY + CSV_EXT
+        output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME + output_no_parameter +
+        param_names + CSV_EXT
     )
 
     logger.debug("\tOutput files:")
@@ -234,20 +228,18 @@ def format_out_file_names(input_file, param_name, output_folder):
 
     input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
     out_file_zero_to_one = os.path.join(
-        output_folder, input_file_without_ext +
+        output_folder, input_file_without_ext + UNDERSCORE +
         OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + CSV_EXT
     )
     out_file_zero_to_one_ts = os.path.join(
-        output_folder, input_file_without_ext +
-        OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + OUTPUT_TSONLY + CSV_EXT
+        output_folder, OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + CSV_EXT
     )
     out_file_one_to_zero = os.path.join(
-        output_folder, input_file_without_ext +
+        output_folder, input_file_without_ext + UNDERSCORE +
         OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + CSV_EXT
     )
     out_file_one_to_zero_ts = os.path.join(
-        output_folder, input_file_without_ext +
-        OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + OUTPUT_TSONLY + CSV_EXT
+        output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + CSV_EXT
     )
 
     logger.debug("\tOutput files:")
