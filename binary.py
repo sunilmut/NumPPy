@@ -38,7 +38,7 @@ PARAMETERS_DIR_NAME = "parameters"
 TIME_DURATION_PARAMETER_FILE = "min_time.txt"
 OUTPUT_BASE = "_base.csv"
 MIN_DURATION = "_min_duration.csv"
-TS_FILTER = "_ts_filter.csv"
+TS_FILTER = "_tw_filter.csv"
 UNDERSCORE = "_"
 
 # output file name formats:
@@ -170,10 +170,10 @@ def out_min_duration_file(input_file, output_folder):
     )
 
 
-def out_ts_filter_file(input_file, output_folder):
+def out_tw_filter_file(input_file, param_name, output_folder):
     input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
     return os.path.join(
-        output_folder, input_file_without_ext + TS_FILTER
+        output_folder, input_file_without_ext + UNDERSCORE + param_name + TS_FILTER
     )
 
 
@@ -391,6 +391,7 @@ def reset_all_parameters():
 
 
 def parse_cur_param_file():
+    update_min_t_in_file(min_time_duration_box.value)
     parse_param(cur_selected_param)
 
 
@@ -400,12 +401,13 @@ def parse_param(cur_selected_param):
     """
     global param_min_time_duration
     global param_window_duration, param_start_timestamp_series
-    global input_dir
+    global input_dir, param_df_list, param_name_list
 
     if not cur_selected_param:
         return
 
-    reset_parameters()
+    reset_all_parameters()
+    parse_param_folder()
     try:
         param_index = param_name_list.index(cur_selected_param)
     except ValueError:
@@ -536,10 +538,11 @@ def process_input_file(input_file, output_folder):
     if param_min_time_duration > 0:
         out_df = out_df.loc[list(apply_duration_criteria(
             out_df.iloc[:, 0], param_min_time_duration))]
-        min_duration_file = out_min_duration_file(input_file, output_folder)
-        logger.debug("\tAfter applying min time duration "
-                     "criteria: %s", os.path.basename(min_duration_file))
-        out_df.to_csv(min_duration_file, index=False)
+
+    min_duration_file = out_min_duration_file(input_file, output_folder)
+    logger.debug("\tAfter applying min time duration "
+                 "criteria: %s", os.path.basename(min_duration_file))
+    out_df.to_csv(min_duration_file, index=False)
 
     # 'nop' -> no parameter. This is the left over of the original data
     # after all the parameters have been processed. 'no' starts with
@@ -549,7 +552,6 @@ def process_input_file(input_file, output_folder):
     nop_df = out_df[:]
     params_name = ""
 
-    print(param_name_list)
     # Iterate through the parameters and apply each one of them
     for idx, param_name in enumerate(param_name_list):
         logger.debug("\tProcessing parameter: %s", param_name)
@@ -570,10 +572,11 @@ def process_input_file(input_file, output_folder):
             filter_list = list(apply_timewindow_filter(
                 temp_out_df.iloc[:, 0], param_start_timestamp_series, param_window_duration))
             temp_out_df = temp_out_df.loc[filter_list]
-            ts_filter_file = out_ts_filter_file(input_file, output_folder)
+            tw_filter_file = out_tw_filter_file(
+                input_file, param_name, output_folder)
             logger.debug(
-                "\tAfter applying timestamp filter: %s", os.path.basename(ts_filter_file))
-            temp_out_df.to_csv(ts_filter_file, index=False)
+                "\tAfter applying time window duration filter: %s", os.path.basename(tw_filter_file))
+            temp_out_df.to_csv(tw_filter_file, index=False)
 
         nop_df = pd.merge(temp_out_df, nop_df, how='outer', indicator=True).query(
             "_merge != 'both'").drop('_merge', axis=1).reset_index(drop=True)
@@ -807,6 +810,7 @@ def open_output_folder():
 
 
 def open_params_file():
+    update_min_t_in_file(min_time_duration_box.value)
     if not cur_selected_param:
         return
 
@@ -857,11 +861,15 @@ def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_fil
 def update_min_t_in_file(min_t_val):
     """
     Will read the min time duration value from the UI and update the
-    min time duration file with that value.
+    min time duration value, both the global one and the one in the
+    file.
     """
+    global param_min_time_duration
+
     f = open(get_parameter_min_t_file(), "w")
     f.write(min_t_val)
     f.close()
+    param_min_time_duration = min_t_val
 
 
 def process():
@@ -896,6 +904,8 @@ def select_param(selected_param_value):
     """
     global cur_selected_param, param_min_time_duration, param_window_duration
 
+    # First thing is to apply any update to the min time duration box value.
+    update_min_t_in_file(min_time_duration_box.value)
     if not selected_param_value:
         return
 
