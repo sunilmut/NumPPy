@@ -38,8 +38,9 @@ PARAMETERS_DIR_NAME = "parameters"
 TIME_DURATION_PARAMETER_FILE = "min_time.txt"
 OUTPUT_BASE = "_base.csv"
 MIN_DURATION = "_min_duration.csv"
-TS_FILTER = "_tw_filter.csv"
+TW_FILTER = "_tw_filter.csv"
 UNDERSCORE = "_"
+EMPTY = "_EMPTY"
 
 # output file name formats:
 CSV_EXT = ".csv"
@@ -117,6 +118,22 @@ def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
                 break
 
 
+def apply_special_emtpy_ts_logic(file_name_with_path, df):
+    """
+    This function will generate a new name for the file if the supplied
+    dataframe is empty
+    """
+
+    if df.empty:
+        dir_namm = os.path.dirname(file_name_with_path)
+        file_name_without_ext, ext = os.path.splitext(
+            os.path.basename(file_name_with_path))
+
+        return os.path.join(dir_namm, file_name_without_ext + EMPTY + ext)
+
+    return file_name_with_path
+
+
 def split_df_and_output(out_df, timeshift_val, out_file_zero_to_one, out_file_one_to_zero,
                         out_file_zero_to_one_ts, out_file_one_to_zero_ts):
     """
@@ -124,8 +141,8 @@ def split_df_and_output(out_df, timeshift_val, out_file_zero_to_one, out_file_on
     and output to respective files.
     Timestamps file should have the header
     """
-    if out_df.empty:
-        return
+
+    global logger
 
     # Create a copy of the dataframe so that the original is not affected
     output_df = out_df[:]
@@ -133,6 +150,7 @@ def split_df_and_output(out_df, timeshift_val, out_file_zero_to_one, out_file_on
     output_df[OUTPUT_COL0_TS] = output_df[OUTPUT_COL0_TS] + timeshift_val
     # Round up to two decimals
     output_df[OUTPUT_COL0_TS] = output_df[OUTPUT_COL0_TS].round(decimals=2)
+    logger.debug("Removing all entries with timestamp < 10 secs")
     # Remove all entries with timeseconds less than 10 seconds
     output_df = output_df[output_df[OUTPUT_COL0_TS] > 10]
 
@@ -145,9 +163,13 @@ def split_df_and_output(out_df, timeshift_val, out_file_zero_to_one, out_file_on
                                        == ONE_TO_ZERO]
     out_one_to_zero_ts_df = out_one_to_zero_df.loc[:, OUTPUT_COL0_TS]
     out_zero_to_one_df.to_csv(out_file_zero_to_one, index=False)
+    out_file_zero_to_one_ts = apply_special_emtpy_ts_logic(
+        out_file_zero_to_one_ts, out_zero_to_one_ts_df)
     out_zero_to_one_ts_df.to_csv(
         out_file_zero_to_one_ts, index=False, header=True)
     out_one_to_zero_df.to_csv(out_file_one_to_zero, index=False)
+    out_file_one_to_zero_ts = apply_special_emtpy_ts_logic(
+        out_file_one_to_zero_ts, out_one_to_zero_ts_df)
     out_one_to_zero_ts_df.to_csv(
         out_file_one_to_zero_ts, index=False, header=True)
 
@@ -169,7 +191,7 @@ def out_min_duration_file(input_file, output_folder):
 def out_tw_filter_file(input_file, param_name, output_folder):
     input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
     return os.path.join(
-        output_folder, input_file_without_ext + UNDERSCORE + param_name + TS_FILTER
+        output_folder, input_file_without_ext + UNDERSCORE + param_name + TW_FILTER
     )
 
 
@@ -431,7 +453,7 @@ def process_input_file(input_file, output_folder):
         input_file)
 
     if timeshift_val:
-        logger.debug("\tApplying timeshift value of: %s", str(timeshift_val))
+        logger.debug("\tUsing timeshift value of: %s", str(timeshift_val))
     else:
         timeshift_val = 0
         logger.debug("\tNo timeshift value specified")
@@ -570,17 +592,20 @@ def process_input_file(input_file, output_folder):
                 "\tAfter applying time window duration filter: %s", os.path.basename(tw_filter_file))
             temp_out_df.to_csv(tw_filter_file, index=False)
 
+        # Build a consolidated (for each parameter) 'not in parameter' dataframe
+        # after starting from original set and by removing entries that are in the parameter.
+        # This is done by doing an right outer join of the two dataframes where the right
+        # dataframe is 'not in parameter' dataframe.
         nop_df = pd.merge(temp_out_df, nop_df, how='outer', indicator=True).query(
-            "_merge != 'both'").drop('_merge', axis=1).reset_index(drop=True)
+            "_merge == 'right_only'").drop('_merge', axis=1).reset_index(drop=True)
 
         split_df_and_output(temp_out_df, timeshift_val, out_file_zero_to_one, out_file_one_to_zero,
                             out_file_zero_to_one_ts, out_file_one_to_zero_ts)
 
-    if not nop_df.empty:
-        format_out_nop_file_name(input_file, params_name, output_folder)
-        split_df_and_output(nop_df, timeshift_val,
-                            out_file_zero_to_one_un, out_file_one_to_zero_un,
-                            out_file_zero_to_one_un_ts, out_file_one_to_zero_un_ts)
+    format_out_nop_file_name(input_file, params_name, output_folder)
+    split_df_and_output(nop_df, timeshift_val,
+                        out_file_zero_to_one_un, out_file_one_to_zero_un,
+                        out_file_zero_to_one_un_ts, out_file_one_to_zero_un_ts)
 
     return True
 
@@ -819,6 +844,7 @@ def reset_result_box():
     result_success_list_box.clear()
     result_unsuccess_list_box.clear()
     result_withoutshift_list_box.clear()
+    files_without_timeshift.clear()
     r_log_box.clear()
 
 
