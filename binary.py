@@ -131,10 +131,15 @@ def split_df_and_output(out_df, timeshift_val, out_file_zero_to_one, out_file_on
     if out_df.empty:
         return
 
+    # Create a copy of the dataframe so that the original is not affected
     output_df = out_df[:]
+
     output_df[OUTPUT_COL0_TS] = output_df[OUTPUT_COL0_TS] + timeshift_val
     # Round up to two decimals
     output_df[OUTPUT_COL0_TS] = output_df[OUTPUT_COL0_TS].round(decimals=2)
+    # Remove all entries with timeseconds less than 10 seconds
+    output_df = output_df[output_df[OUTPUT_COL0_TS] > 10]
+
     out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
     out_one_to_zero_df = pd.DataFrame(columns=out_col_names)
     out_zero_to_one_df = output_df.loc[output_df[OUTPUT_COL3_FREEZE_TP]
