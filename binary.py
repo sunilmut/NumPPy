@@ -13,6 +13,7 @@ import subprocess
 import numpy as np
 import csv
 from csv import reader
+import unittest
 
 # Constants:
 # Number of initial rows to skip.
@@ -22,9 +23,9 @@ ZERO_TO_ONE = "0 to 1"
 ONE_TO_ZERO = "1 to 0"
 
 # input coloumns
-INPUT_COL0 = "timestamps"
-INPUT_COL1 = "Motion Index"
-INPUT_COL2 = "Freeze"
+INPUT_COL0_TS = "timestamps"
+INPUT_COL1_MI = "Motion Index"
+INPUT_COL2_FREEZE = "Freeze"
 
 # output columns
 OUTPUT_COL0_TS = "timestamps"
@@ -280,22 +281,22 @@ def parse_input_file_into_df(input_file, skip_num_initial_rows):
     bool - True if parsing was successful; False otherwise
     dataframe - Parsed dataframe
     """
-    in_col_names = [INPUT_COL0, INPUT_COL1, INPUT_COL2]
+    in_col_names = [INPUT_COL0_TS, INPUT_COL1_MI, INPUT_COL2_FREEZE]
     df = pd.read_csv(input_file, names=in_col_names,
                      skiprows=skip_num_initial_rows)
 
     # Do some basic format checking. All input fields are expected
     # to be numeric in nature.
     if not (
-        is_numeric_dtype(df[INPUT_COL0])
-        and is_numeric_dtype(df[INPUT_COL1])
-        and is_numeric_dtype(df[INPUT_COL2])
+        is_numeric_dtype(df[INPUT_COL0_TS])
+        and is_numeric_dtype(df[INPUT_COL1_MI])
+        and is_numeric_dtype(df[INPUT_COL2_FREEZE])
     ):
         print("Invalid input file format: " + input_file)
         return False, pd.DataFrame()
 
     # Freeze column is supposed to be binary (0 or 1)
-    if df[INPUT_COL2].min() < 0 or df[INPUT_COL2].max() > 1:
+    if df[INPUT_COL2_FREEZE].min() < 0 or df[INPUT_COL2_FREEZE].max() > 1:
         print(
             "Invalid input file format in "
             + input_file
@@ -383,7 +384,7 @@ def get_param_file_from_name(param_name):
     global input_dir
 
     param_file = os.path.join(input_dir, PARAMETERS_DIR_NAME, param_name)
-    #param_file = os.path.join(param_file, param_name)
+    # param_file = os.path.join(param_file, param_name)
 
     return param_file + CSV_EXT
 
@@ -437,37 +438,44 @@ def parse_param(cur_selected_param):
     refresh_param_values_ui(param_start_timestamp_series)
 
 
-def process_input_file(input_file, output_folder):
+def process_param(param_idx, out_df, nop_df):
     """
-    Main logic routine to parse the input and spit out the output
+    Processes the dataframe for the parameter name specified using
+    the parameter name.
+    Returns:
+    - dataframe after applying the time window criteria
+    - 'not in parameter' dataframe - i.e. everything in the input dataframe after removing
+      entries that were selected by the parameter criterias
     """
-    global out_file_zero_to_one, out_file_zero_to_one_un
-    global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
-    global out_file_one_to_zero, out_file_one_to_zero_un
-    global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
-    global param_min_time_duration, param_window_duration, param_start_timestamp_series
-    global files_without_timeshift
+    global param_df_list
 
-    logger.debug("Processing input file: %s", os.path.basename(input_file))
-    timeshift_val, num_rows_processed = get_timeshift_from_input_file(
-        input_file)
+    # Make a copy by value
+    temp_out_df = out_df[:]
+    param_window_duration, param_start_timestamp_series = parse_param_df(
+        param_df_list[param_idx])
 
-    if timeshift_val:
-        logger.debug("\tUsing timeshift value of: %s", str(timeshift_val))
-    else:
-        timeshift_val = 0
-        logger.debug("\tNo timeshift value specified")
-        files_without_timeshift.append(input_file)
+    # Apply time window filter
+    if not param_start_timestamp_series.empty:
+        filter_list = list(apply_timewindow_filter(
+            temp_out_df.iloc[:, 0], param_start_timestamp_series, param_window_duration))
+        temp_out_df = temp_out_df.loc[filter_list]
 
-    # Parse the input file
-    success, df = parse_input_file_into_df(
-        input_file, NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
-    if not success:
-        return
+    # Build a consolidated (for each parameter) 'not in parameter' dataframe
+    # after starting from original set and by removing entries that are in the parameter.
+    # This is done by doing an right outer join of the two dataframes where the right
+    # dataframe is 'not in parameter' dataframe.
+    nop_df = pd.merge(temp_out_df, nop_df, how='outer', indicator=True).query(
+        "_merge == 'right_only'").drop('_merge', axis=1).reset_index(drop=True)
 
-    # Parse all the parameter files.
-    reset_all_parameters()
-    parse_param_folder()
+    return temp_out_df, nop_df
+
+
+def process_input_df(input_df):
+    """
+    Process an input dataframe and return an output base dataframe (i.e. without
+    any of the criterias or parameters applied)
+    """
+    global logger
 
     sum = 0
     itr = 0
@@ -481,7 +489,7 @@ def process_input_file(input_file, output_folder):
     freeze_0_mi = 0
 
     # Iterate over all the rows
-    for (idx, row) in df.iterrows():
+    for (idx, row) in input_df.iterrows():
         # All row's with freeze value of '0' are valuable and need to
         # be summed up (until a transition)
         if row.values[2] == 0:
@@ -503,7 +511,7 @@ def process_input_file(input_file, output_folder):
                 logger.error("Current index: %s", str(idx + 4))
                 logger.error("Row value: %s", row.to_string())
                 logger.error("Previous index: %s", str(prev_idx + 4))
-                return False
+                return False, None
 
             # On transition from [0->1], we need to capture two entries:
             # One for the row which has the freeze value of 0 (that was previously captured)
@@ -536,12 +544,61 @@ def process_input_file(input_file, output_folder):
 
         prev_freeze = row.values[2]
 
-    if out_df.empty:
+    return True, out_df
+
+
+def apply_min_time_duration_criteria(min_t, df):
+    """
+    This will apply minimum time duration criteria on the provided
+    dataframe and return the dataframe.
+    """
+    if min_t > 0:
+        df = df.loc[list(apply_duration_criteria(df.iloc[:, 0], min_t))]
+
+    return df
+
+
+def process_input_file(input_file, output_folder):
+    """
+    Main logic routine to parse the input and spit out the output
+    """
+    global out_file_zero_to_one, out_file_zero_to_one_un
+    global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
+    global out_file_one_to_zero, out_file_one_to_zero_un
+    global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
+    global param_min_time_duration, param_window_duration, param_start_timestamp_series
+    global files_without_timeshift
+
+    logger.debug("Processing input file: %s", os.path.basename(input_file))
+    timeshift_val, num_rows_processed = get_timeshift_from_input_file(
+        input_file)
+
+    if timeshift_val:
+        logger.debug("\tUsing timeshift value of: %s", str(timeshift_val))
+    else:
+        timeshift_val = 0
+        logger.debug("\tNo timeshift value specified")
+        files_without_timeshift.append(input_file)
+
+    # Parse the input file
+    success, df = parse_input_file_into_df(
+        input_file, NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
+    if not success:
+        return
+
+    # Parse all the parameter files.
+    reset_all_parameters()
+    parse_param_folder()
+
+    # Get a base output dataframe without any criterias applied
+    result, out_df = process_input_df(df)
+    if result == False or out_df.empty:
         return
 
     out_base_file = out_base(input_file, output_folder)
     logger.debug(
-        "\tAfter initial parsing (without any criteria or filter): %s", os.path.basename(out_base_file))
+        "\tAfter initial parsing (without any criteria or filter): %s",
+        os.path.basename(out_base_file))
     out_df.to_csv(out_base_file, index=False)
 
     param_min_time_duration = get_param_min_time_duration()
@@ -549,20 +606,17 @@ def process_input_file(input_file, output_folder):
                  str(param_min_time_duration))
 
     # Apply any minimum time duration criteria
-    if param_min_time_duration > 0:
-        out_df = out_df.loc[list(apply_duration_criteria(
-            out_df.iloc[:, 0], param_min_time_duration))]
-
+    out_df = apply_min_time_duration_criteria(param_min_time_duration, out_df)
     min_duration_file = out_min_duration_file(input_file, output_folder)
     logger.debug("\tAfter applying min time duration "
                  "criteria: %s", os.path.basename(min_duration_file))
     out_df.to_csv(min_duration_file, index=False)
 
-    # 'nop' -> no parameter. This is the left over of the original data
+    # 'nop' -> not in parameter. This is the left over of the original data
     # after all the parameters have been processed. 'no' starts with
     # the original set (after the min time duration) and as each parameter
     # gets process the set gets subtracted by that.
-    # Make a copy of out dataframe 'by value'
+    # Make a copy of out dataframe 'by value' and not by reference.
     nop_df = out_df[:]
     params_name = ""
 
@@ -572,32 +626,19 @@ def process_input_file(input_file, output_folder):
         if only_process_cur_param and param_name != cur_selected_param:
             continue
 
-        # Make a copy by value
-        temp_out_df = out_df[:]
         params_name += UNDERSCORE + param_name
-        param_window_duration, param_start_timestamp_series = parse_param_df(
-            param_df_list[idx])
+
+        # process the dataframe for the parameter with the given index.
+        temp_out_df, nop_df = process_param(idx, out_df, nop_df)
 
         # Format the file names of the output files using the parameter name
         format_out_file_names(input_file, param_name, output_folder)
-
-        # Apply time window filter
-        if not param_start_timestamp_series.empty:
-            filter_list = list(apply_timewindow_filter(
-                temp_out_df.iloc[:, 0], param_start_timestamp_series, param_window_duration))
-            temp_out_df = temp_out_df.loc[filter_list]
-            tw_filter_file = out_tw_filter_file(
-                input_file, param_name, output_folder)
-            logger.debug(
-                "\tAfter applying time window duration filter: %s", os.path.basename(tw_filter_file))
-            temp_out_df.to_csv(tw_filter_file, index=False)
-
-        # Build a consolidated (for each parameter) 'not in parameter' dataframe
-        # after starting from original set and by removing entries that are in the parameter.
-        # This is done by doing an right outer join of the two dataframes where the right
-        # dataframe is 'not in parameter' dataframe.
-        nop_df = pd.merge(temp_out_df, nop_df, how='outer', indicator=True).query(
-            "_merge == 'right_only'").drop('_merge', axis=1).reset_index(drop=True)
+        tw_filter_file = out_tw_filter_file(
+            input_file, param_name, output_folder)
+        logger.debug(
+            "\tAfter applying time window duration filter: %s",
+            os.path.basename(tw_filter_file))
+        temp_out_df.to_csv(tw_filter_file, index=False)
 
         split_df_and_output(temp_out_df, timeshift_val, out_file_zero_to_one, out_file_one_to_zero,
                             out_file_zero_to_one_ts, out_file_one_to_zero_ts)
@@ -882,12 +923,20 @@ def update_min_t_in_file(min_t_val):
     min time duration value, both the global one and the one in the
     file.
     """
-    global param_min_time_duration
+    global param_min_time_duration, logger
 
-    f = open(get_parameter_min_t_file(), "w")
-    f.write(min_t_val)
-    f.close()
-    param_min_time_duration = min_t_val
+    param_min_t_file = get_parameter_min_t_file()
+
+    try:
+        # "w+" will create the file if not exist.
+        with open(param_min_t_file, "w+") as min_t_file:
+            min_t_file.write(min_t_val)
+            min_t_file.close()
+            param_min_time_duration = min_t_val
+    except IOError:
+        logger.error(
+            "Min time duration file(%s) cannot be created or written to.", param_min_t_file)
+        pass
 
 
 def process():
@@ -1129,3 +1178,50 @@ if __name__ == "__main__":
     app.display()
 
     logging.shutdown()
+
+
+"""
+------------------------------------------------------------
+                Unit Tests
+------------------------------------------------------------
+"""
+input_data1 = {
+    INPUT_COL0_TS:     [1, 2, 3, 4, 5, 10, 20,  30,  100, 200, 300, 310],
+    INPUT_COL1_MI:     [1, 2, 3, 4, 5, 6,  7.1, 8.2, 9.3, 10,  11,  20],
+    INPUT_COL2_FREEZE: [0, 0, 1, 0, 0, 1,  0,   0,   0,   0,   1,   0]
+}
+
+output_data1 = {
+    OUTPUT_COL0_TS:        [1.0,   3.0,   4.0,   10.0,  20.0,   300.0],
+    OUTPUT_COL1_MI:        [1,     3,     4,     6,     7.1,    11],
+    OUTPUT_COL2_MI_AVG:    [1.5,   1.5,   4.5,   4.5,   8.65,   8.65],
+    OUTPUT_COL3_FREEZE_TP: [ONE_TO_ZERO, ZERO_TO_ONE,
+                            ONE_TO_ZERO, ZERO_TO_ONE, ONE_TO_ZERO, ZERO_TO_ONE]
+}
+
+output_data1_min_t_5 = {
+    OUTPUT_COL0_TS:        [10.0,  20.0,   300.0],
+    OUTPUT_COL1_MI:        [6,     7.1,    11],
+    OUTPUT_COL2_MI_AVG:    [4.5,   8.65,   8.65],
+    OUTPUT_COL3_FREEZE_TP: [ZERO_TO_ONE, ONE_TO_ZERO, ZERO_TO_ONE]
+}
+
+
+class TestDataProcessing(unittest.TestCase):
+    def setUp(self):
+        self.input_df1 = pd.DataFrame(input_data1)
+
+    def validate_min_t(self, min_t, df, exp_out):
+        exp_out_df = pd.DataFrame(exp_out)
+        out_df = apply_min_time_duration_criteria(min_t, df)
+        out_df.reset_index(drop=True, inplace=True)
+        exp_out_df = pd.DataFrame(exp_out_df)
+        self.assertEqual(exp_out_df.equals(out_df), True)
+
+    def test_process_input_df(self):
+        exp_out_df = pd.DataFrame(output_data1)
+        result, out_df = process_input_df(self.input_df1)
+        self.assertEqual(result, True)
+        self.assertEqual(exp_out_df.equals(out_df), True)
+        self.validate_min_t(1, out_df, output_data1)
+        self.validate_min_t(5, out_df, output_data1_min_t_5)
