@@ -60,7 +60,7 @@ within a xls workbook.
 
 Usage:
 ```
-python xls_parse.py
+python colorsort.py
 ```
 
 **Note**
