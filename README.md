@@ -43,12 +43,12 @@ git pull
 # Projects:
 ## Run FreezeData processing app
 In the opened command prompt (or open a command prompt), run:
-```
+```python
 python binary.py
 ```
 
 To run the app in verbose mode (to get more logs), run:
-```
+```python
 python binary.py -v
 ```
 
@@ -59,6 +59,7 @@ It can parse and combine color codes up to 100 different sheets
 within a xls workbook.
 
 ### Example:
+#### Input:
 <figure>
     <img
     src="./colorsort_input1.png"
