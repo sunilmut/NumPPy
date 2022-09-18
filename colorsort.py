@@ -20,6 +20,7 @@ OUTPUT_LOG_FILE = "output.txt"
 output_file = ""
 input_folder = ""
 logger = None
+input_file = ""
 
 # dictionary to store the parsed input data
 # this is a 3 level nested dictionary such as:
@@ -130,6 +131,21 @@ def generate_output(out_wb, in_wb):
                     row += 1
 
 
+def write_output_file(out_wb):
+    while (True):
+        try:
+            out_wb.close()
+            break
+        except xlsxwriter.exceptions.FileCreateError:
+            s_continue = app.yesno(
+                "Permssion Denied", "Permission denied while writing to the output file. Please close the file if it is open in Excel.\nRetry? Click yes to retry or no to abort")
+
+            if s_continue != True:
+                return False
+
+    return True
+
+
 def sort(input_file, output_file, break_on_ws):
     global logger, color_to_sheet_num_map, input_dic_parsed, cur_column_per_color
 
@@ -160,7 +176,7 @@ def sort(input_file, output_file, break_on_ws):
 
     generate_output(out_wb, in_wb)
     logging.info('Output file written: %s' % output_file)
-    out_wb.close()
+    return write_output_file(out_wb)
 
 
 """
@@ -218,13 +234,16 @@ def open_output_file():
 def sort_cick():
     global input_file, output_file, break_on_white
 
+    open_output_file_button.enabled = False
     if not input_file:
         app.warn(
             "Uh oh!", "No input file selected to color sort. Please select an input excel file and try again.")
         return
 
-    sort(input_file, output_file, break_on_white)
-    open_output_file_button.enabled = True
+    if sort(input_file, output_file, break_on_white) == True:
+        open_output_file_button.enabled = True
+    else:
+        open_output_file_button.enabled = False
 
 
 if __name__ == "__main__":
@@ -266,7 +285,7 @@ if __name__ == "__main__":
     process_button = PushButton(
         app, text="Color Sort", command=sort_cick, width=26)
     process_button.tk.config(font=("Verdana bold", 14))
-    process_button.bg = "#660066"
+    process_button.bg = "#0099cc"
     process_button.text_color = "white"
     break_on_ws_checkbox = CheckBox(
         app, text="Break on whitespace into next column", command=break_on_whitespace_selection)
