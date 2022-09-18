@@ -44,6 +44,9 @@ cur_column_per_color = {}
 # By default break on whitespaces
 break_on_white = True
 
+# Open output file once sorted
+open_output_file_once_sorted = True
+
 
 def parse_input_workbook(in_wb, sheet, sheet_num, break_on_white):
     """
@@ -140,7 +143,7 @@ def write_output_file(out_wb):
             break
         except xlsxwriter.exceptions.FileCreateError:
             s_continue = app.yesno(
-                "Permssion Denied", "Permission denied while writing to the output file. Please close the file if it is open in Excel.\nRetry? Click yes to retry or no to abort")
+                "Permssion Denied", "Output file is open in Excel and cannot be edited. Please close the file in Excel.\nRetry after closing?\nClick yes to retry or no to abort operation")
 
             if s_continue != True:
                 return False
@@ -229,6 +232,15 @@ def break_on_whitespace_selection():
         break_on_white = False
 
 
+def set_open_output_file_after_sort():
+    global open_output_file_once_sorted
+
+    if open_output_file_after_sort_checkbox.value == 1:
+        open_output_file_once_sorted = True
+    else:
+        open_output_file_once_sorted = False
+
+
 def open_output_file():
     global output_file
 
@@ -251,8 +263,21 @@ def sort_cick():
 
     if sort(input_file, output_file, break_on_white) == True:
         open_output_file_button.enabled = True
+        if open_output_file_once_sorted:
+            os.startfile(output_file)
     else:
         open_output_file_button.enabled = False
+
+
+def print_help():
+    """
+    Display help
+    """
+    print("\nHelp/Usage:\n")
+    print("python colorsort.py -v -h\n")
+    print("where:")
+    print("-v Enable verbose logging.")
+    print("-h Display help.")
 
 
 if __name__ == "__main__":
@@ -260,12 +285,23 @@ if __name__ == "__main__":
     Main entry point
     """
 
+    log_level = logging.INFO
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "vh:")
+    except getopt.GetoptError:
+        print_help()
+    for opt, arg in opts:
+        if opt in ("-v"):
+            log_level = logging.DEBUG
+        else:
+            print_help()
+
     logging.basicConfig(filename=OUTPUT_LOG_FILE,
-                        level=logging.INFO, filemode='w+', format='')
+                        level=log_level, filemode='w+', format='')
     logger = logging.getLogger(__name__)
 
     # Main app
-    app = App("",  height=400, width=400)
+    app = App("",  height=450, width=400)
 
     # App name box
     title = Text(app, text="Excel color sort",
@@ -278,7 +314,7 @@ if __name__ == "__main__":
     line()
     input_file_button = PushButton(
         app, command=select_input_file, text="Select Excel File", width=26)
-    input_file_button.tk.config(font=("Verdana bold", 14))
+    input_file_button.tk.config(font=("Verdana bold", 10))
     input_file_button.bg = "#ff9933"
     input_file_button.text_color = "white"
 
@@ -301,6 +337,9 @@ if __name__ == "__main__":
     break_on_ws_checkbox = CheckBox(
         app, text="Break on whitespace into next column", command=break_on_whitespace_selection)
     break_on_ws_checkbox.value = break_on_white
+    open_output_file_after_sort_checkbox = CheckBox(
+        app, text="Automatically open output file", command=set_open_output_file_after_sort)
+    open_output_file_after_sort_checkbox.value = open_output_file_once_sorted
     line()
 
     # Browse output folder button
