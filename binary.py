@@ -371,6 +371,7 @@ def get_param_min_time_duration():
 
 def parse_param_df(df):
     value = df[PARAM_TIME_WINDOW_DURATION].iat[0]
+    w_duration = 0
     if not pd.isnull(value):
         w_duration = value
 
@@ -446,6 +447,7 @@ def process_param(param_idx, out_df, nop_df):
     - dataframe after applying the time window criteria
     - 'not in parameter' dataframe - i.e. everything in the input dataframe after removing
       entries that were selected by the parameter criterias
+      p.s - This parameter allows continuation from a previous 'nop_df'
     """
     global param_df_list
 
@@ -1206,17 +1208,43 @@ output_data1_min_t_5 = {
     OUTPUT_COL3_FREEZE_TP: [ZERO_TO_ONE, ONE_TO_ZERO, ZERO_TO_ONE]
 }
 
+test_p1 = {
+    PARAM_TIME_WINDOW_START_LIST: [1,  100.0,   300.0],
+    PARAM_TIME_WINDOW_DURATION:   [10, np.nan,  np.nan]
+}
+
+out_p1 = {
+    OUTPUT_COL0_TS:        [1.0,   3.0,   4.0,   10.0,  300.0],
+    OUTPUT_COL1_MI:        [1.0,   3.0,   4.0,   6.0,   11.0],
+    OUTPUT_COL2_MI_AVG:    [1.5,   1.5,   4.5,   4.5,   8.65],
+    OUTPUT_COL3_FREEZE_TP: [ONE_TO_ZERO, ZERO_TO_ONE,
+                            ONE_TO_ZERO, ZERO_TO_ONE, ZERO_TO_ONE]
+}
+
+out_p1_nop = {
+    OUTPUT_COL0_TS:        [20.0],
+    OUTPUT_COL1_MI:        [7.1],
+    OUTPUT_COL2_MI_AVG:    [8.65],
+    OUTPUT_COL3_FREEZE_TP: [ONE_TO_ZERO]
+}
+
 
 class TestDataProcessing(unittest.TestCase):
     def setUp(self):
+        global param_name_list, param_df_list
+
         self.input_df1 = pd.DataFrame(input_data1)
+        reset_all_parameters()
+        self.p1_df = pd.DataFrame(test_p1)
+
+    def validate_df(self, df, expected_data):
+        expected_df = pd.DataFrame(expected_data)
+        self.assertEqual(expected_df.equals(df), True)
 
     def validate_min_t(self, min_t, df, exp_out):
-        exp_out_df = pd.DataFrame(exp_out)
         out_df = apply_min_time_duration_criteria(min_t, df)
         out_df.reset_index(drop=True, inplace=True)
-        exp_out_df = pd.DataFrame(exp_out_df)
-        self.assertEqual(exp_out_df.equals(out_df), True)
+        self.validate_df(out_df, exp_out)
 
     def test_process_input_df(self):
         exp_out_df = pd.DataFrame(output_data1)
@@ -1225,3 +1253,13 @@ class TestDataProcessing(unittest.TestCase):
         self.assertEqual(exp_out_df.equals(out_df), True)
         self.validate_min_t(1, out_df, output_data1)
         self.validate_min_t(5, out_df, output_data1_min_t_5)
+
+    def test_param_processing(self):
+        param_name_list.append("test_p1")
+        param_df_list.append(self.p1_df)
+        out_df = process_input_df(self.input_df1)[1]
+        nop_df = out_df[:]
+        temp_out_df, nop_df = process_param(0, out_df, nop_df)
+        temp_out_df.reset_index(drop=True, inplace=True)
+        self.validate_df(temp_out_df, out_p1)
+        self.validate_df(nop_df, out_p1_nop)
