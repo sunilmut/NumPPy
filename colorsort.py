@@ -41,7 +41,8 @@ color_to_sheet_num_map = {}
 # to the same column in the output.
 cur_column_per_color = {}
 
-break_on_white = False
+# By default break on whitespaces
+break_on_white = True
 
 
 def parse_input_workbook(in_wb, sheet, sheet_num, break_on_white):
@@ -299,7 +300,7 @@ if __name__ == "__main__":
     process_button.text_color = "white"
     break_on_ws_checkbox = CheckBox(
         app, text="Break on whitespace into next column", command=break_on_whitespace_selection)
-    break_on_ws_checkbox.value = 1
+    break_on_ws_checkbox.value = break_on_white
     line()
 
     # Browse output folder button
