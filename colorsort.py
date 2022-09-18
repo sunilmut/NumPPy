@@ -11,7 +11,8 @@ from nested_dict import nested_dict
 import logging
 import sys
 import os
-from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
+from guizero import App, CheckBox, PushButton, Text, TextBox
+import matplotlib
 
 # constants
 OUTPUT_LOG_FILE = "output.txt"
@@ -95,7 +96,7 @@ def parse_input_workbook(in_wb, sheet, sheet_num, break_on_white):
             logging.debug('[%s,%s] cell_obj: [%s] [%s], column: %d' %
                           (row + 1, col + 1, cell_obj, bgx, column))
             input_dic_parsed[sheet_num][bgx][column].append(cell_obj.value)
-        #logging.debug('colors in this col %s', color_seen_in_this_col)
+        # logging.debug('colors in this col %s', color_seen_in_this_col)
         # for all the colors that were there in this column, increment
         # the column count, so that the next hit of this color can
         # go to the next output column.
@@ -108,7 +109,7 @@ def parse_input_workbook(in_wb, sheet, sheet_num, break_on_white):
 def generate_output(out_wb, in_wb):
     global cur_column_per_color, input_dic_parsed
 
-    #cur_column_per_color = {}
+    # cur_column_per_color = {}
     cell_format = out_wb.add_format()
     for sheet_num in input_dic_parsed:
         for color in list(input_dic_parsed[sheet_num]):
@@ -146,6 +147,11 @@ def write_output_file(out_wb):
     return True
 
 
+def bg_to_hex(rgb):
+    (r, g, b) = rgb
+    return ('#{:X}{:X}{:X}').format(r, g, b)
+
+
 def sort(input_file, output_file, break_on_ws):
     global logger, color_to_sheet_num_map, input_dic_parsed, cur_column_per_color
 
@@ -169,8 +175,10 @@ def sort(input_file, output_file, break_on_ws):
     for sheet_num in input_dic_parsed:
         for color in input_dic_parsed[sheet_num]:
             if color not in color_to_sheet_num_map.keys():
-                # print('color is:', color)
-                out_wb.add_worksheet()
+                ws = out_wb.add_worksheet()
+                (r, g, b) = in_wb.colour_map[color]
+                hex = matplotlib.colors.to_hex((r / 255, g / 255, b / 255))
+                ws.set_tab_color(hex)
                 color_to_sheet_num_map[color] = color_sheet_map_count
                 color_sheet_map_count += 1
 
@@ -270,6 +278,8 @@ if __name__ == "__main__":
     input_file_button = PushButton(
         app, command=select_input_file, text="Select Excel File", width=26)
     input_file_button.tk.config(font=("Verdana bold", 14))
+    input_file_button.bg = "#ff9933"
+    input_file_button.text_color = "white"
 
     # Box to display the input folder
     line()
