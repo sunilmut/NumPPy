@@ -49,7 +49,7 @@ python binary.py
 
 To run the app in verbose mode (to get more logs), run:
 ```
-python binary.py -v
+python binary.py
 ```
 
 ## Run XLS (Excel) process app
@@ -60,7 +60,7 @@ within a xls workbook.
 
 Usage:
 ```
-python xls_parse.py -i <inputfile> -o <outputfile>
+python xls_parse.py
 ```
 
 **Note**

@@ -7,7 +7,6 @@ import os
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import glob
-import guizero
 from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
 import subprocess
 import numpy as np
