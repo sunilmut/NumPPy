@@ -60,7 +60,7 @@ within a xls workbook.
 
 ### Example:
 Input file:
-![plot](./colorsort_input1.png)
+![plot](./colorsort_input1.png width="400" height="400")
 
 ### Usage:
 ```
