@@ -26,7 +26,7 @@ on your system
 In the opened command prompt, run:
 
 ```
-pip3 install guizero numpy pandas
+pip3 install guizero numpy pandas xlrd lsxwriter
 ```
 
 ## Update the code:
@@ -60,7 +60,7 @@ within a xls workbook.
 
 Usage:
 ```
-parse_xls.py -i <inputfile> -o <outputfile>'
+python xls_parse.py -i <inputfile> -o <outputfile>'
 ```
 
 **Note**
