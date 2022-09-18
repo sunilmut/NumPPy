@@ -65,8 +65,8 @@ Input file:
   alt="Alt text"
   title="Sample input file"
   style="display: inline-block; margin: 0 auto"
-  width="200"
-  height="200">
+  width="500"
+  height="400">
 
 ### Usage:
 ```
