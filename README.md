@@ -59,14 +59,16 @@ It can parse and combine color codes up to 100 different sheets
 within a xls workbook.
 
 ### Example:
-Input file:
-<img
-  src="./colorsort_input1.png"
-  alt="Alt text"
-  title="Sample input file"
-  style="display: inline-block; margin: 0 auto"
-  width="500"
-  height="400">
+<figure>
+    <img
+    src="./colorsort_input1.png"
+    alt="Alt text"
+    title="Sample input file"
+    style="display: inline-block; margin: 0 auto"
+    width="500"
+    height="400">
+    <figcaption>Sample input file</figcaption>
+</figure>
 
 ### Usage:
 ```
