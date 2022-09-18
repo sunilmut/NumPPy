@@ -41,7 +41,7 @@ git pull
 ```
 
 # Projects:
-## Run Motion processing app
+## Run FreezeData processing app
 In the opened command prompt (or open a command prompt), run:
 ```
 python binary.py
@@ -49,18 +49,26 @@ python binary.py
 
 To run the app in verbose mode (to get more logs), run:
 ```
-python binary.py
+python binary.py -v
 ```
 
-## Run XLS (Excel) process app
-Parses formatted xls data based on the color code of the columns
-and outputs an xls file that is differentiated based on the color code.<br/>
+## XLS (Excel) color sorter
+Sorts the various colors in a given input xls file and outputs
+them to a xlsx file.<br/>
 It can parse and combine color codes up to 100 different sheets
 within a xls workbook.
 
-Usage:
+### Example:
+Input file:
+![plot](./colorsort_input1.png)
+
+### Usage:
 ```
 python colorsort.py
+```
+To get verbose output log fie:
+```
+python colorsort.py -v
 ```
 
 **Note**
