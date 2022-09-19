@@ -53,10 +53,9 @@ python binary.py -v
 ```
 
 ## XLS (Excel) color sorter
-Sorts the various colors in a given input xls file and outputs
-them to a xlsx file.<br/>
-It can parse and combine color codes up to 100 different sheets
-within a xls workbook.
+Sorts the color coded data from a given .xls input file and outputs
+them to an .xlsx file.<br/>
+It can work with up to 100 different sheets in the input file.
 
 ### Example:
 <img
