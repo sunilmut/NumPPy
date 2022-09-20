@@ -26,7 +26,7 @@ on your system
 In the opened command prompt, run:
 
 ```
-pip3 install guizero numpy pandas xlrd xlsxwriter matplotlib
+pip3 install guizero numpy pandas xlrd xlsxwriter matplotlib openpyxl
 ```
 
 ## Update the code:
@@ -53,7 +53,7 @@ python binary.py -v
 ```
 
 ## XLS (Excel) color sorter
-Sorts the color coded data from a given .xls input file and outputs
+Sorts the color coded data from a given .xls(x) input file and outputs
 them to an .xlsx file.<br/>
 It can work with up to 100 different sheets in the input file.<br/>
 User can choose to extract the same colored values into either one continuous column or into separate columns in the output file.
@@ -77,5 +77,4 @@ python colorsort.py -v
 ```
 
 **Note**
-Only works with xls files for input for now.<br/>
 Close the output file prior to running.

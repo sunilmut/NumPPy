@@ -13,6 +13,9 @@ import sys
 import os
 from guizero import App, CheckBox, PushButton, Text, TextBox
 import matplotlib
+import openpyxl
+from enum import Enum
+#from openpyxl import styles
 
 # constants
 OUTPUT_LOG_FILE = "output.txt"
@@ -47,8 +50,111 @@ break_on_white = True
 # Open output file once sorted
 open_output_file_once_sorted = True
 
+"""
+------------------------------------------------------------
+At the moment, there is no single module that supports both
+.xls and .xlsx. xlrd doesn't support xlsx and openpyxl doesn't
+support .xls. The below section abstracts these module specific
+logic into helper routines so that the main logic can remain
+the same.
+Whether to use xlrd module or openpyxl is determined at runtime
+depending on the object type.
+------------------------------------------------------------
+"""
 
-def parse_input_workbook(in_wb, sheet, sheet_num, break_on_white):
+
+class Type(Enum):
+    XLRD = 1,
+    OPENPYXL = 2
+
+
+def wb_type(wb):
+    if isinstance(wb, xlrd.book.Book):
+        return Type.XLRD
+    elif isinstance(wb, openpyxl.workbook.workbook.Workbook):
+        return Type.OPENPYXL
+
+
+def sheet_type(sheet):
+    if isinstance(sheet, xlrd.sheet.Sheet):
+        return Type.XLRD
+    elif isinstance(sheet, openpyxl.worksheet.worksheet.Worksheet):
+        return Type.OPENPYXL
+
+
+def num_sheets(wb):
+    match wb_type(wb):
+        case Type.XLRD:
+            return wb.nsheets
+        case Type.OPENPYXL:
+            return len(wb.worksheets)
+
+
+def sheet_by_index(wb, idx):
+    match wb_type(wb):
+        case Type.XLRD:
+            sheet = wb.sheet_by_index(idx)
+            return sheet, sheet.name
+        case Type.OPENPYXL:
+            sheet = wb.worksheets[idx]
+            return sheet, sheet.title
+
+
+def hex_from_bgx(wb, bgx):
+    match wb_type(wb):
+        case Type.XLRD:
+            (r, g, b) = wb.colour_map[bgx]
+            hx = matplotlib.colors.to_hex((r / 255, g / 255, b / 255))
+            return hx
+        case Type.OPENPYXL:
+            #hx = hex(bgx)
+            #(r, g, b) = tuple(int(hx[i:i+2], 16) for i in (0, 2, 4))
+            #hx = matplotlib.colors.to_hex((r / 255, g / 255, b / 255))
+            #Colors = styles.colors.COLOR_INDEX
+            #result = str(Colors[hx])
+            # result = "#"+result[2:]
+            # TODO: Haven't yet figured out how to convert color index
+            #       to hex color. Just return 'white' for now.
+            return '#FFFFFF'
+
+
+def sheet_cols_rows(sheet):
+    match sheet_type(sheet):
+        case Type.XLRD:
+            return sheet.nrows, sheet.ncols
+        case Type.OPENPYXL:
+            return sheet.max_row, sheet.max_column
+
+
+def sheet_cell_details(sheet, wb, r, c):
+    """
+    Gets the sheet's cell[r][c] properties
+    """
+    match sheet_type(sheet):
+        case Type.XLRD:
+            col_type = sheet.cell_type(r, c)
+            cell_obj = sheet.cell(r, c)
+            xfx = sheet.cell_xf_index(r, c)
+            xf = wb.xf_list[xfx]
+            bgx = xf.background.pattern_colour_index
+            empty_or_ws = ((col_type == xlrd.XL_CELL_EMPTY)
+                           or (cell_obj == '') or bgx == 64)
+            return empty_or_ws, bgx, cell_obj.value
+        case Type.OPENPYXL:
+            cell = sheet.cell(r + 1, c + 1)
+            bgx = int(str(cell.fill.start_color.index), base=16)
+            empty_or_ws = (bgx == 0)
+            return empty_or_ws, bgx, cell.value
+
+
+"""
+------------------------------------------------------------
+                        Main logic
+------------------------------------------------------------
+"""
+
+
+def parse_input_workbook(in_wb, sheet_num, break_on_white):
     """
     Parse the given sheet from the input workbook and store
     the data in the parsed dictionary.
@@ -60,29 +166,24 @@ def parse_input_workbook(in_wb, sheet, sheet_num, break_on_white):
     """
     global input_dic_parsed, cur_column_per_color
 
-    from xlrd.sheet import ctype_text
+    sheet, name = sheet_by_index(in_wb, sheet_num)
+    logging.info('Processing sheet: %s' % name)
     # Get the total number of rows and columns in this sheet
-    rows, cols = sheet.nrows, sheet.ncols
-    # print "Number of rows: %s   number of cols: %s" % (rows, cols)
+    rows, cols = sheet_cols_rows(sheet)
+    logging.debug("Max Rows: %d, cols: %d", rows, cols)
     for col in range(0, cols):  # Iterate through columns in this sheet
         color_seen_in_this_col = {}
         # For each column, iterate through the rows in that column
         last_non_white_bgx = -1
         white_space_encountered = False
         for row in range(0, rows):
-            col_type = sheet.cell_type(row, col)
             # Get cell details of [row, col]
-            cell_obj = sheet.cell(row, col)
-            xfx = sheet.cell_xf_index(row, col)
-            xf = in_wb.xf_list[xfx]
-            bgx = xf.background.pattern_colour_index
-            if col_type is xlrd.XL_CELL_EMPTY or cell_obj == '' or bgx == 64:
+            empty_or_ws, bgx, value = sheet_cell_details(
+                sheet, in_wb, row, col)
+            if empty_or_ws:
                 logging.debug('[%d,%d] empty cell' % (row + 1, col + 1))
                 white_space_encountered = True
                 continue  # skip empty cells
-            # if bgx == 64:
-            #   logging.debug('[%d,%d] cell_obj: [%s] white cell, skipping...' % (row + 1, col + 1, cell_obj))
-            #   continue # skip white
             if break_on_white and white_space_encountered and last_non_white_bgx != -1:
                 logging.debug('breaking on white for color: %d' %
                               (last_non_white_bgx))
@@ -96,10 +197,8 @@ def parse_input_workbook(in_wb, sheet, sheet_num, break_on_white):
                 cur_column_per_color[bgx] = -1
             column = cur_column_per_color[bgx]
             column += 1
-            color_map = in_wb.colour_map[bgx]
-            logging.debug('[%s,%s] cell_obj: [%s] [%s], column: %d' %
-                          (row + 1, col + 1, cell_obj, bgx, column))
-            input_dic_parsed[sheet_num][bgx][column].append(cell_obj.value)
+            logging.debug('[%d ,%d] bgx: %d' % (row + 1, col + 1, bgx))
+            input_dic_parsed[sheet_num][bgx][column].append(value)
         # logging.debug('colors in this col %s', color_seen_in_this_col)
         # for all the colors that were there in this column, increment
         # the column count, so that the next hit of this color can
@@ -129,8 +228,8 @@ def generate_output(out_wb, in_wb):
                     sheet = out_wb.get_worksheet_by_name(sheet_name)
                     if (row == 0):
                         # first entry is the input sheet name
-                        input_sheet = in_wb.sheet_by_index(sheet_num)
-                        sheet.write(row, column, input_sheet.name, cell_format)
+                        name = sheet_by_index(in_wb, sheet_num)[1]
+                        sheet.write(row, column, name, cell_format)
                         row += 1
                     sheet.write(row, column, value, cell_format)
                     row += 1
@@ -166,12 +265,18 @@ def sort(input_file, output_file, break_on_ws):
                 input_file, break_on_ws)
 
     color_to_sheet_num_map.clear()
-    in_wb = xlrd.open_workbook(input_file, formatting_info=True)
-    nsheets = in_wb.nsheets
-    for sheet_num in range(0, nsheets):
-        sheet = in_wb.sheet_by_index(sheet_num)
-        logging.info('Processing sheet: %s' % sheet.name)
-        parse_input_workbook(in_wb, sheet, sheet_num, break_on_ws)
+    ext = os.path.splitext(os.path.basename(input_file))[1]
+    if ext == ".xls":
+        in_wb = xlrd.open_workbook(input_file, formatting_info=True)
+    elif ext == ".xlsx":
+        in_wb = openpyxl.load_workbook(input_file)
+    else:
+        logger.error(
+            "Unsupported extension (%s). Only .xls or xlsx supported.", ext)
+        return False
+
+    for sheet_num in range(0, num_sheets(in_wb)):
+        parse_input_workbook(in_wb, sheet_num, break_on_ws)
 
     out_wb = xlsxwriter.Workbook(output_file)
     logging.info('Total distinct sheets = %s', len(input_dic_parsed))
@@ -180,8 +285,7 @@ def sort(input_file, output_file, break_on_ws):
         for color in input_dic_parsed[sheet_num]:
             if color not in color_to_sheet_num_map.keys():
                 ws = out_wb.add_worksheet()
-                (r, g, b) = in_wb.colour_map[color]
-                hex = matplotlib.colors.to_hex((r / 255, g / 255, b / 255))
+                hex = hex_from_bgx(in_wb, color)
                 ws.set_tab_color(hex)
                 color_to_sheet_num_map[color] = color_sheet_map_count
                 color_sheet_map_count += 1
@@ -209,7 +313,8 @@ def select_input_file():
         open_folder = input_folder
     else:
         open_folder = "."
-    input_file = app.select_file(folder=open_folder)
+    input_file = app.select_file(folder=open_folder, filetypes=[
+                                 ("Excel files", ".xlsx .xls")])
     if not input_file:
         return
 
