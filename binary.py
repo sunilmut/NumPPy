@@ -54,7 +54,9 @@ INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
 PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
 PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
 PARAM_UI_TIME_WINDOW_START_TIMES = "Time window start (secs):"
-PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT = "Min time duration criteria (secs): "
+PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT = "Min time duration criteria (secs):"
+PARAM_UI_MIN_BEFORE_TIME_DURATION_CRITERIA_TEXT = "\t\t    before: "
+PARAM_UI_MIN_AFTER_TIME_DURATION_CRITERIA_TEXT = "after: "
 PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
 
 # globals
@@ -81,7 +83,8 @@ param_name_list = []
 param_df_list = []
 # Currently selected parameter values
 param_col_names = [PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
-param_min_time_duration = 1
+param_min_time_duration_before = 1
+param_min_time_duration_after = 0
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
 
@@ -98,13 +101,18 @@ TIMESHIFT_HEADER_ALT = "shift"
 files_without_timeshift = []
 
 
-def apply_duration_criteria(ts_series, param_min_time_duration):
+def apply_duration_criteria(ts_series, param_min_time_duration_before, param_min_time_duration_after):
     it = ts_series.iteritems()
     prev_ts = 0
-    for idx, val in it:
-        if (val - prev_ts >= param_min_time_duration):
+    for i, (idx, ts) in enumerate(it):
+        # Query the timestamp of the next element in the series.
+        # Default behavior is to drop the last element.
+        if i == ts_series.size - 1:
+            break
+        next_ts = ts_series.iat[i + 1]
+        if ((ts - prev_ts >= param_min_time_duration_before) and (next_ts - ts >= param_min_time_duration_after)):
             yield idx
-        prev_ts = val
+        prev_ts = ts
 
 
 def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
@@ -348,24 +356,35 @@ def get_param_min_time_duration():
     """
     global logger
 
-    t_duration = 1
+    t_duration_before = 1
+    t_duration_after = 0
+    itr = 0
     param_min_t_file = get_parameter_min_t_file()
     try:
         with open(param_min_t_file) as min_t_file:
-            line = min_t_file.readline().rstrip()
-            try:
-                t_duration = float(line)
-            except ValueError:
-                logger.error(
-                    "Min time duration(%s) from file(%s) cannot be converted to a "
-                    "number. Using default of %d", line, param_min_t_file, t_duration)
+            while True:
+                line = min_t_file.readline().rstrip()
+                if not line:
+                    break
+                try:
+                    t_duration = float(line)
+                    if itr == 0:
+                        t_duration_before = t_duration
+                        itr += 1
+                    else:
+                        t_duration_after = t_duration
+                        break
+                except ValueError:
+                    logger.error(
+                        "Min time duration(%s) from file(%s) cannot be converted to a "
+                        "number. Using default of %d", line, param_min_t_file, t_duration)
             min_t_file.close()
     except IOError:
         logger.debug(
             "Min time duration file(%s) does not exist. One will be created.", param_min_t_file)
         pass
 
-    return t_duration
+    return t_duration_before, t_duration_after
 
 
 def parse_param_df(df):
@@ -390,9 +409,9 @@ def get_param_file_from_name(param_name):
 
 
 def reset_parameters():
-    global param_min_time_duration, param_window_duration, param_start_timestamp_series
+    global param_min_time_duration_before, param_window_duration, param_start_timestamp_series
 
-    param_min_time_duration = 1
+    param_min_time_duration_before = 1
     param_window_duration = 0
     param_start_timestamp_series = pd.Series(dtype=np.float64)
 
@@ -406,7 +425,8 @@ def reset_all_parameters():
 
 
 def parse_cur_param_file():
-    update_min_t_in_file(min_time_duration_box.value)
+    update_min_t_in_file(min_time_duration_before_box.value,
+                         min_time_duration_after_box.value)
     parse_param(cur_selected_param)
 
 
@@ -414,7 +434,7 @@ def parse_param(cur_selected_param):
     """
     Parse the paramter file
     """
-    global param_min_time_duration
+    global param_min_time_duration_before, param_min_time_duration_after
     global param_window_duration, param_start_timestamp_series
     global input_dir, param_df_list, param_name_list
 
@@ -431,7 +451,7 @@ def parse_param(cur_selected_param):
         return
 
     param_df = param_df_list[param_index]
-    param_min_time_duration = get_param_min_time_duration()
+    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
     param_window_duration, param_start_timestamp_series = parse_param_df(
         param_df)
 
@@ -548,13 +568,14 @@ def process_input_df(input_df):
     return True, out_df
 
 
-def apply_min_time_duration_criteria(min_t, df):
+def apply_min_time_duration_criteria(min_t_before, min_t_after, df):
     """
     This will apply minimum time duration criteria on the provided
     dataframe and return the dataframe.
     """
-    if min_t > 0:
-        df = df.loc[list(apply_duration_criteria(df.iloc[:, 0], min_t))]
+    if min_t_before > 0 or min_t_after > 0:
+        df = df.loc[list(apply_duration_criteria(
+            df.iloc[:, 0], min_t_before, min_t_after))]
 
     return df
 
@@ -567,8 +588,8 @@ def process_input_file(input_file, output_folder):
     global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
     global out_file_one_to_zero, out_file_one_to_zero_un
     global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
-    global param_min_time_duration, param_window_duration, param_start_timestamp_series
-    global files_without_timeshift
+    global param_min_time_duration_before, param_window_duration, param_start_timestamp_series
+    global param_min_time_duration_after, files_without_timeshift
 
     logger.debug("Processing input file: %s", os.path.basename(input_file))
     timeshift_val, num_rows_processed = get_timeshift_from_input_file(
@@ -602,12 +623,13 @@ def process_input_file(input_file, output_folder):
         os.path.basename(out_base_file))
     out_df.to_csv(out_base_file, index=False)
 
-    param_min_time_duration = get_param_min_time_duration()
+    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
     logger.debug("\tUsing min time duration (secs): %s",
-                 str(param_min_time_duration))
+                 str(param_min_time_duration_before))
 
     # Apply any minimum time duration criteria
-    out_df = apply_min_time_duration_criteria(param_min_time_duration, out_df)
+    out_df = apply_min_time_duration_criteria(
+        param_min_time_duration_before, param_min_time_duration_after, out_df)
     min_duration_file = out_min_duration_file(input_file, output_folder)
     logger.debug("\tAfter applying min time duration "
                  "criteria: %s", os.path.basename(min_duration_file))
@@ -869,7 +891,8 @@ def open_output_folder():
 
 
 def open_params_file():
-    update_min_t_in_file(min_time_duration_box.value)
+    update_min_t_in_file(min_time_duration_before_box.value,
+                         min_time_duration_after_box.value)
     if not cur_selected_param:
         return
 
@@ -918,22 +941,25 @@ def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_fil
         result_withoutshift_list_box.append(os.path.basename(val))
 
 
-def update_min_t_in_file(min_t_val):
+def update_min_t_in_file(min_t_before_val, min_t_after_val):
     """
-    Will read the min time duration value from the UI and update the
-    min time duration value, both the global one and the one in the
+    Will read the min time duration value(s) from the UI and update the
+    min time duration value(s), both the global one and the one in the
     file.
     """
-    global param_min_time_duration, logger
+    global param_min_time_duration_before, param_min_time_duration_after, logger
 
     param_min_t_file = get_parameter_min_t_file()
 
     try:
         # "w+" will create the file if not exist.
         with open(param_min_t_file, "w+") as min_t_file:
-            min_t_file.write(min_t_val)
+            min_t_file.write(min_t_before_val)
+            min_t_file.write("\n")
+            min_t_file.write(min_t_after_val)
             min_t_file.close()
-            param_min_time_duration = min_t_val
+            param_min_time_duration_before = min_t_before_val
+            param_min_time_duration_after = min_t_after_val
     except IOError:
         logger.error(
             "Min time duration file(%s) cannot be created or written to.", param_min_t_file)
@@ -956,7 +982,8 @@ def process():
     # from the UI so that it sticks.
     # p.s: The main process loop will read this value from the file. So
     #      the update should be done prior to processing the files.
-    update_min_t_in_file(min_time_duration_box.value)
+    update_min_t_in_file(min_time_duration_before_box.value,
+                         min_time_duration_after_box.value)
     successfully_parsed_files, unsuccessfully_parsed_files = main(
         sys.argv[1:], input_dir)
     refresh_result_text_box(successfully_parsed_files,
@@ -970,10 +997,12 @@ def select_param(selected_param_value):
     This method is called when the user selects a parameter from the parameter
     name drop down box.
     """
-    global cur_selected_param, param_min_time_duration, param_window_duration
+    global cur_selected_param, param_min_time_duration_before
+    global param_min_time_duration_after, param_window_duration
 
     # First thing is to apply any update to the min time duration box value.
-    update_min_t_in_file(min_time_duration_box.value)
+    update_min_t_in_file(min_time_duration_before_box.value,
+                         min_time_duration_after_box.value)
     if not selected_param_value:
         return
 
@@ -986,7 +1015,7 @@ def select_param(selected_param_value):
         return
 
     df = param_df_list[param_index]
-    param_min_time_duration = get_param_min_time_duration()
+    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
     param_window_duration, param_start_timestamp_series = parse_param_df(df)
     refresh_param_values_ui(param_start_timestamp_series)
 
@@ -1012,8 +1041,9 @@ def refresh_ts_list_box(ts_series):
 
 
 def set_min_time_duration_box_value():
-    global param_min_time_duration
-    min_time_duration_box.value = param_min_time_duration
+    global param_min_time_duration_before, param_min_time_duration_after
+    min_time_duration_before_box.value = param_min_time_duration_before
+    min_time_duration_after_box.value = param_min_time_duration_after
 
 
 def set_time_window_duration_box_value():
@@ -1083,7 +1113,7 @@ if __name__ == "__main__":
 
     # Parameter names combo box (grid high to keep it on the right side)
     param_names_combo_box = Combo(
-        param_box, options=[], grid=[10, cnt], command=select_param)
+        param_box, options=[], grid=[5, cnt], command=select_param)
     param_names_combo_box.clear()
     param_names_combo_box.text_color = "orange"
     param_names_combo_box.font = "Arial Bold"
@@ -1093,8 +1123,17 @@ if __name__ == "__main__":
     # Boxes related to showing parameters
     min_time_duration_label_box = Text(
         param_box, text=PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT, grid=[0, cnt], align="left")
-    min_time_duration_box = TextBox(
+    cnt += 1
+
+    min_time_duration_before_label_box = Text(
+        param_box, text=PARAM_UI_MIN_BEFORE_TIME_DURATION_CRITERIA_TEXT, grid=[0, cnt], align="left")
+    min_time_duration_before_box = TextBox(
         param_box, text="", grid=[1, cnt], align="left")
+
+    min_time_duration_after_label_box = Text(
+        param_box, text=PARAM_UI_MIN_AFTER_TIME_DURATION_CRITERIA_TEXT, grid=[2, cnt], align="left")
+    min_time_duration_after_box = TextBox(
+        param_box, text="", grid=[3, cnt], align="left")
     cnt += 1
 
     time_window_duration_label_box = Text(
@@ -1108,7 +1147,7 @@ if __name__ == "__main__":
     ts_series_list_label_box = Text(param_box, text=PARAM_UI_TIME_WINDOW_START_TIMES,
                                     grid=[0, cnt], align="left")
     ts_series_list_box = ListBox(
-        param_box, param_start_timestamp_series, scrollbar=True, grid=[1, cnt], align="left")
+        param_box, param_start_timestamp_series, scrollbar=True, grid=[1, cnt], align="left", width=80, height=125)
     cnt += 1
 
     # Open & update parameters file button
@@ -1200,11 +1239,26 @@ output_data1 = {
                             ONE_TO_ZERO, ZERO_TO_ONE, ONE_TO_ZERO, ZERO_TO_ONE]
 }
 
-output_data1_min_t_5 = {
-    OUTPUT_COL0_TS:        [10.0,  20.0,   300.0],
-    OUTPUT_COL1_MI:        [6,     7.1,    11],
-    OUTPUT_COL2_MI_AVG:    [4.5,   8.65,   8.65],
-    OUTPUT_COL3_FREEZE_TP: [ZERO_TO_ONE, ONE_TO_ZERO, ZERO_TO_ONE]
+output_data1_min_t_1_before = {
+    OUTPUT_COL0_TS:        [1.0,   3.0,   4.0,   10.0,  20.0],
+    OUTPUT_COL1_MI:        [1,     3,     4,     6,     7.1],
+    OUTPUT_COL2_MI_AVG:    [1.5,   1.5,   4.5,   4.5,   8.65],
+    OUTPUT_COL3_FREEZE_TP: [ONE_TO_ZERO, ZERO_TO_ONE,
+                            ONE_TO_ZERO, ZERO_TO_ONE, ONE_TO_ZERO]
+}
+
+output_data1_min_t_4_after = {
+    OUTPUT_COL0_TS:        [4.0,   10.0,  20.0],
+    OUTPUT_COL1_MI:        [4,     6,     7.1],
+    OUTPUT_COL2_MI_AVG:    [4.5,   4.5,   8.65],
+    OUTPUT_COL3_FREEZE_TP: [ONE_TO_ZERO, ZERO_TO_ONE, ONE_TO_ZERO]
+}
+
+output_data1_min_t_5_before = {
+    OUTPUT_COL0_TS:        [10.0,  20.0],
+    OUTPUT_COL1_MI:        [6,     7.1],
+    OUTPUT_COL2_MI_AVG:    [4.5,   8.65],
+    OUTPUT_COL3_FREEZE_TP: [ZERO_TO_ONE, ONE_TO_ZERO]
 }
 
 test_p1 = {
@@ -1240,8 +1294,10 @@ class TestDataProcessing(unittest.TestCase):
         expected_df = pd.DataFrame(expected_data)
         self.assertEqual(expected_df.equals(df), True)
 
-    def validate_min_t(self, min_t, df, exp_out):
-        out_df = apply_min_time_duration_criteria(min_t, df)
+    def validate_min_t(self, min_t_before, min_t_after, df, exp_out):
+        out_df = apply_min_time_duration_criteria(
+            min_t_before, min_t_after, df)
+        # print(out_df)
         out_df.reset_index(drop=True, inplace=True)
         self.validate_df(out_df, exp_out)
 
@@ -1250,8 +1306,9 @@ class TestDataProcessing(unittest.TestCase):
         result, out_df = process_input_df(self.input_df1)
         self.assertEqual(result, True)
         self.assertEqual(exp_out_df.equals(out_df), True)
-        self.validate_min_t(1, out_df, output_data1)
-        self.validate_min_t(5, out_df, output_data1_min_t_5)
+        self.validate_min_t(1, 0, out_df, output_data1_min_t_1_before)
+        self.validate_min_t(5, 0, out_df, output_data1_min_t_5_before)
+        self.validate_min_t(0, 4, out_df, output_data1_min_t_4_after)
 
     def test_param_processing(self):
         param_name_list.append("test_p1")
