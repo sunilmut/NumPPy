@@ -203,7 +203,13 @@ def out_tw_filter_file(input_file, param_name, output_folder):
     )
 
 
-def format_out_nop_file_name(input_file, param_names, output_folder):
+def format_out_name_with_param_val(param_min_time_duration_before,
+                                   param_min_time_duration_after):
+    return UNDERSCORE + str(int(param_min_time_duration_before)) + "-" + str(int(param_min_time_duration_after)) + "s"
+
+
+def format_out_nop_file_name(input_file, param_names, param_min_time_duration_before,
+                             param_min_time_duration_after, output_folder):
     """
     Format the 'no parameter' output file name
     """
@@ -221,16 +227,18 @@ def format_out_nop_file_name(input_file, param_names, output_folder):
         OUTPUT_ZERO_TO_ONE_CSV_NAME + output_no_parameter + param_names + CSV_EXT
     )
     out_file_zero_to_one_un_ts = os.path.join(
-        output_folder,  OUTPUT_ZERO_TO_ONE_CSV_NAME + output_no_parameter +
-        param_names + CSV_EXT
+        output_folder,  OUTPUT_ZERO_TO_ONE_CSV_NAME +
+        format_out_name_with_param_val(param_min_time_duration_before, param_min_time_duration_after) +
+        output_no_parameter + param_names + CSV_EXT
     )
     out_file_one_to_zero_un = os.path.join(
         output_folder, input_file_without_ext + UNDERSCORE +
         OUTPUT_ONE_TO_ZERO_CSV_NAME + output_no_parameter + param_names + CSV_EXT
     )
     out_file_one_to_zero_un_ts = os.path.join(
-        output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME + output_no_parameter +
-        param_names + CSV_EXT
+        output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME +
+        format_out_name_with_param_val(param_min_time_duration_before, param_min_time_duration_after) +
+        output_no_parameter + param_names + CSV_EXT
     )
 
     logger.debug("\tOutput files:")
@@ -244,7 +252,8 @@ def format_out_nop_file_name(input_file, param_names, output_folder):
                  os.path.basename(out_file_one_to_zero_un_ts))
 
 
-def format_out_file_names(input_file, param_name, output_folder):
+def format_out_file_names(input_file, param_name,  param_min_time_duration_before,
+                          param_min_time_duration_after, output_folder):
     """
     Format the output file names
     """
@@ -262,14 +271,18 @@ def format_out_file_names(input_file, param_name, output_folder):
         OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + CSV_EXT
     )
     out_file_zero_to_one_ts = os.path.join(
-        output_folder, OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + CSV_EXT
+        output_folder, OUTPUT_ZERO_TO_ONE_CSV_NAME +
+        format_out_name_with_param_val(param_min_time_duration_before, param_min_time_duration_after) +
+        param_ext + CSV_EXT
     )
     out_file_one_to_zero = os.path.join(
         output_folder, input_file_without_ext + UNDERSCORE +
         OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + CSV_EXT
     )
     out_file_one_to_zero_ts = os.path.join(
-        output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + CSV_EXT
+        output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME +
+        format_out_name_with_param_val(param_min_time_duration_before, param_min_time_duration_after) +
+        param_ext + CSV_EXT
     )
 
     logger.debug("\tOutput files:")
@@ -655,7 +668,8 @@ def process_input_file(input_file, output_folder):
         temp_out_df, nop_df = process_param(idx, out_df, nop_df)
 
         # Format the file names of the output files using the parameter name
-        format_out_file_names(input_file, param_name, output_folder)
+        format_out_file_names(input_file, param_name,  param_min_time_duration_before,
+                              param_min_time_duration_after, output_folder)
         tw_filter_file = out_tw_filter_file(
             input_file, param_name, output_folder)
         logger.debug(
@@ -666,7 +680,8 @@ def process_input_file(input_file, output_folder):
         split_df_and_output(temp_out_df, timeshift_val, out_file_zero_to_one, out_file_one_to_zero,
                             out_file_zero_to_one_ts, out_file_one_to_zero_ts)
 
-    format_out_nop_file_name(input_file, params_name, output_folder)
+    format_out_nop_file_name(input_file, params_name, param_min_time_duration_before,
+                             param_min_time_duration_after, output_folder)
     split_df_and_output(nop_df, timeshift_val,
                         out_file_zero_to_one_un, out_file_one_to_zero_un,
                         out_file_zero_to_one_un_ts, out_file_one_to_zero_un_ts)
