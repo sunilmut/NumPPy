@@ -335,12 +335,13 @@ def parse_param_folder():
     global input_dir, param_name_list, param_df_list
 
     param_folder = os.path.join(input_dir, "parameters")
+    logger.debug("param folder is %s", param_folder)
     if not os.path.isdir(param_folder):
         return False, ("Parameter folder " + param_folder + " does not exist!")
 
-    search_path = param_folder + "\*.csv"
-
+    search_path = os.path.join(param_folder, "*.csv")
     for param_file in glob.glob(search_path):
+        logger.debug("param file: %s", param_file)
         if not os.path.isfile(param_file):
             continue
 
@@ -869,10 +870,12 @@ def select_input_folder():
     global input_dir, param_name_list, cur_selected_param
 
     open_folder = "."
+    logger.debug("input dir is: %s", input_dir)
     if input_dir:
         open_folder = os.path.dirname(input_dir)
     input_dir_temp = app.select_folder(folder=open_folder)
     if not input_dir_temp:
+        logger.debug("no input folder selected, skipping")
         return
 
     input_dir = input_dir_temp
@@ -902,8 +905,20 @@ def open_output_folder():
         return
 
     # Normalize the path to deal with backslash/frontslash
-    subprocess.Popen(f'explorer /open,{os.path.normpath(output_dir)}')
+    norm_path = os.path.normpath(output_dir)
+    if sys.platform == "win32":
+         subprocess.Popen(f'explorer /open,{norm_path}')
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", norm_path])
+    else:
+        subprocess.Popen(["xdg-open", norm_path])
 
+def open_file(filename):
+    if sys.platform == "win32":
+        os.startfile(filename)
+    else:
+        opener ="open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.call([opener, filename])
 
 def open_params_file():
     update_min_t_in_file(min_time_duration_before_box.value,
@@ -917,7 +932,7 @@ def open_params_file():
             "Uh oh!", "Parameters file " + param_file + " is not a file!")
         return
 
-    os.startfile(param_file)
+    open_file(param_file)
 
 
 def reset_result_box():
