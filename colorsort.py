@@ -16,6 +16,7 @@ import matplotlib
 import openpyxl
 from enum import Enum
 #from openpyxl import styles
+import subprocess
 
 # constants
 OUTPUT_LOG_FILE = "output.txt"
@@ -345,6 +346,12 @@ def set_open_output_file_after_sort():
     else:
         open_output_file_once_sorted = False
 
+def open_file(filename):
+    if sys.platform == "win32":
+        os.startfile(filename)
+    else:
+        opener ="open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.call([opener, filename])
 
 def open_output_file():
     global output_file
@@ -354,8 +361,7 @@ def open_output_file():
             "Uh oh!", "Output file does not exist yet. Please select an input file and sort to create an output file first!")
         return
 
-    os.startfile(output_file)
-
+    open_file(output_file)
 
 def sort_cick():
     global input_file, output_file, break_on_white
@@ -369,7 +375,7 @@ def sort_cick():
     if sort(input_file, output_file, break_on_white) == True:
         open_output_file_button.enabled = True
         if open_output_file_once_sorted:
-            os.startfile(output_file)
+            open_file(output_file)
     else:
         open_output_file_button.enabled = False
 
