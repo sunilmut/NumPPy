@@ -63,7 +63,6 @@ PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
 logger = None
 r_log_box = None
 output_dir = None
-separate_files = False
 out_col_names = [OUTPUT_COL0_TS, OUTPUT_COL1_MI,
                  OUTPUT_COL2_MI_AVG, OUTPUT_COL3_FREEZE_TP]
 out_file_zero_to_one = ""
@@ -762,8 +761,8 @@ class loghandler(logging.StreamHandler):
             self.handleError(record)
 
 
-def main(input_folder_or_file):
-    global input_dir, output_dir, separate_files
+def main(input_folder_or_file, separate_files):
+    global input_dir, output_dir
 
     input_files = []
     output_folder = ""
@@ -777,6 +776,7 @@ def main(input_folder_or_file):
         input_folder_or_file = input(
             "Provide an input folder or .csv file name: ")
 
+    input_folder_or_file = os.path.normpath(input_folder_or_file)
     if os.path.isdir(input_folder_or_file):
         input_dir = input_folder_or_file
         input_files = get_inpput_files(input_dir)
@@ -802,14 +802,14 @@ def main(input_folder_or_file):
                 os.mkdir(output_dir)
 
     logger.debug("Input folder: %s", os.path.normpath(input_dir))
-    logger.debug("Output folder: %s", os.path.normpath(output_dir))
+    output_dir = os.path.normpath(output_dir)
     successfully_parsed_files = []
     unsuccessfully_parsed_files = []
     for input_file in input_files:
         # Create a different output folder for each input file
         output_folder = os.path.join(
             output_dir, os.path.splitext(os.path.basename(input_file))[0])
-        logger.debug("output folder is %s", output_folder)
+        logger.debug("Output folder: %s", output_folder)
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
         if separate_files:
@@ -831,10 +831,6 @@ def separate_input_file(input_file, output_folder):
     """
 
     global files_without_timeshift
-
-    logger.debug("separating input file %s in output folder: %s",
-                 input_file, output_folder)
-
     timeshift_val, num_rows_processed = get_timeshift_from_input_file(
         input_file)
 
@@ -938,7 +934,7 @@ def select_input_folder():
         logger.debug("no input folder selected, skipping")
         return
 
-    input_dir = input_dir_temp
+    input_dir = os.path.normpath(input_dir_temp)
     input_folder_text_box.value = os.path.basename(input_dir)
     input_folder_text_box.width = min(
         len(input_folder_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
@@ -1059,7 +1055,7 @@ def update_min_t_in_file(min_t_before_val, min_t_after_val):
 
 
 def process():
-    global input_dir, output_dir
+    global input_dir
 
     if not input_dir:
         app.warn(
@@ -1076,7 +1072,27 @@ def process():
     #      the update should be done prior to processing the files.
     update_min_t_in_file(min_time_duration_before_box.value,
                          min_time_duration_after_box.value)
-    successfully_parsed_files, unsuccessfully_parsed_files = main(input_dir)
+    successfully_parsed_files, unsuccessfully_parsed_files = main(
+        input_dir, False)
+    refresh_result_text_box(successfully_parsed_files,
+                            unsuccessfully_parsed_files)
+
+    rwin.show()
+
+
+def process_separate_input():
+    global input_dir
+
+    if not input_dir:
+        app.warn(
+            "Uh oh!", "No input folder specified. Please select an input folder and run again!")
+        return
+
+    # Reset the result box before processing so that the new values of the
+    # processing results can be shown.
+    reset_result_box()
+    successfully_parsed_files, unsuccessfully_parsed_files = main(
+        input_dir, True)
     refresh_result_text_box(successfully_parsed_files,
                             unsuccessfully_parsed_files)
 
@@ -1163,6 +1179,7 @@ if __name__ == "__main__":
     logger.addHandler(progress)
     argv = sys.argv[1:]
     console_mode = False
+    separate_files = False
 
     try:
         opts, args = getopt.getopt(argv, "vhco:d:i:s")
@@ -1188,11 +1205,11 @@ if __name__ == "__main__":
             print_help()
 
     if console_mode:
-        main(input_dir)
+        main(input_dir, separate_files)
         sys.exit()
 
     # Main app
-    app = App("",  height=800, width=800)
+    app = App("", height=900, width=900)
 
     # App name box
     title = Text(app, text="FreezeFrame Data Processing App",
@@ -1203,11 +1220,11 @@ if __name__ == "__main__":
     # Select input folder button
     Text(app, "Select Input Folder --> Check Parameters --> Process",
          font="Verdana bold")
+
     line()
     input_folder_button = PushButton(
         app, command=select_input_folder, text="Input Folder", width=26)
     input_folder_button.tk.config(font=("Verdana bold", 14))
-
     # Box to display the input folder
     line()
     input_folder_text_box = TextBox(app)
@@ -1285,6 +1302,12 @@ if __name__ == "__main__":
     process_button.tk.config(font=("Verdana bold", 14))
     only_process_cur_param_box = CheckBox(
         app, text="Only process the selected parameter", command=only_process_sel_param)
+    line()
+
+    # Separate files from input folder
+    process_button = PushButton(
+        app, text="Separate files from input folder", command=process_separate_input, width=26)
+    process_button.tk.config(font=("Verdana bold", 14))
     line()
 
     # Browse output folder button
@@ -1402,6 +1425,7 @@ out_p1_nop = {
 }
 
 
+# Run these tests using `python -m unittest .\binary.py`
 class TestDataProcessing(unittest.TestCase):
     def setUp(self):
         global param_name_list, param_df_list
