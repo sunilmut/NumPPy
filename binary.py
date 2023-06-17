@@ -61,6 +61,7 @@ PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
 
 # globals
 logger = None
+r_log_box = None
 output_dir = ""
 out_col_names = [OUTPUT_COL0_TS, OUTPUT_COL1_MI,
                  OUTPUT_COL2_MI_AVG, OUTPUT_COL3_FREEZE_TP]
@@ -694,6 +695,7 @@ def print_help():
     """
     Display help
     """
+    traceback.print_stack()
     print("\nHelp/Usage:\n")
     print(
         "python binary.py -i <input folder or .csv file> -d <output_directory> -v -h\n"
@@ -703,6 +705,7 @@ def print_help():
     print("-d (optional): output folder.")
     print("-v (optional): run in verbose mode")
     print("-h (optional): print this help")
+    print("-c (optional): run in console (no UI) mode")
     print("\nExamples:\n")
     print("\nProcess input file:")
     print("\tpython binary.py -i input.csv")
@@ -745,7 +748,8 @@ class loghandler(logging.StreamHandler):
             # log level. Ex: error logs can be prepend with some string like
             # "ERROR:: "
             msg = self.format(record)
-            r_log_box.value += msg
+            if r_log_box is not None:
+                r_log_box.value += msg
             print(msg)
             self.flush()
         except (KeyboardInterrupt, SystemExit):
@@ -754,27 +758,12 @@ class loghandler(logging.StreamHandler):
             self.handleError(record)
 
 
-def main(argv, input_folder_or_file):
+def main(input_folder_or_file):
     global input_dir, output_dir
 
     input_files = []
     output_folder = ""
-
-    try:
-        opts, args = getopt.getopt(argv, "vhi:o:d:h:")
-    except getopt.GetoptError:
-        print_help()
-    for opt, arg in opts:
-        if opt == "-h":
-            print_help()
-        elif opt in ("-i"):
-            input_folder_or_file = arg
-        elif opt in ("-d"):
-            output_folder = arg
-        elif opt in ("-v"):
-            logging.basicConfig(level=logging.DEBUG)
-        else:
-            print_help()
+    separate_files = False
 
     # strip the quotes at the start and end, else
     # paths with white spaces won't work.
@@ -817,13 +806,21 @@ def main(argv, input_folder_or_file):
             output_dir, os.path.splitext(os.path.basename(input_file))[0])
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
-        parsed = process_input_file(input_file, output_folder)
+        if separate_files:
+            separate_input_file(input_file, output_folder)
+        else:
+            parsed = process_input_file(input_file, output_folder)
         if parsed:
             successfully_parsed_files.append(input_file)
         else:
             unsuccessfully_parsed_files.append(input_file)
 
     return successfully_parsed_files, unsuccessfully_parsed_files
+
+
+def separate_input_file(input_file, output_folder):
+    logger.debug("separating input file %s in output folder: %s",
+                 input_file, output_folder)
 
 
 def get_timeshift_from_input_file(input_file):
@@ -834,6 +831,7 @@ def get_timeshift_from_input_file(input_file):
     with open(input_file, 'r') as read_obj:
         csv_reader = reader(read_obj)
         row1 = next(csv_reader)
+        logger.debug("length %d, row1[0]: %s", len(row1), row1[0])
         if row1 and len(row1) > 2 and (row1[0] == TIMESHIFT_HEADER or row1[0] == TIMESHIFT_HEADER_ALT):
             num_rows_processed += 1
             try:
@@ -907,18 +905,20 @@ def open_output_folder():
     # Normalize the path to deal with backslash/frontslash
     norm_path = os.path.normpath(output_dir)
     if sys.platform == "win32":
-         subprocess.Popen(f'explorer /open,{norm_path}')
+        subprocess.Popen(f'explorer /open,{norm_path}')
     elif sys.platform == "darwin":
         subprocess.Popen(["open", norm_path])
     else:
         subprocess.Popen(["xdg-open", norm_path])
 
+
 def open_file(filename):
     if sys.platform == "win32":
         os.startfile(filename)
     else:
-        opener ="open" if sys.platform == "darwin" else "xdg-open"
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
         subprocess.call([opener, filename])
+
 
 def open_params_file():
     update_min_t_in_file(min_time_duration_before_box.value,
@@ -1014,8 +1014,7 @@ def process():
     #      the update should be done prior to processing the files.
     update_min_t_in_file(min_time_duration_before_box.value,
                          min_time_duration_after_box.value)
-    successfully_parsed_files, unsuccessfully_parsed_files = main(
-        sys.argv[1:], input_dir)
+    successfully_parsed_files, unsuccessfully_parsed_files = main(input_dir)
     refresh_result_text_box(successfully_parsed_files,
                             unsuccessfully_parsed_files)
 
@@ -1100,6 +1099,33 @@ if __name__ == "__main__":
                         level=logging.DEBUG, format='')
     logger = logging.getLogger(__name__)
     logger.addHandler(progress)
+    argv = sys.argv[1:]
+    console_mode = False
+
+    try:
+        opts, args = getopt.getopt(argv, "vhco:d:i:")
+    except getopt.GetoptError as e:
+        print(e)
+        print_help()
+    for opt, arg in opts:
+        if opt == "-h":
+            print_help()
+        elif opt in ("-i"):
+            input_dir = arg
+        elif opt in ("-d"):
+            output_folder = arg
+        elif opt in ("-v"):
+            logging.basicConfig(level=logging.DEBUG)
+        elif opt in ("-s"):
+            separate_files = True
+        elif opt in ("-c"):
+            console_mode = True
+        else:
+            print_help()
+
+    if console_mode:
+        main(input_dir)
+        sys.exit()
 
     # Main app
     app = App("",  height=800, width=800)
