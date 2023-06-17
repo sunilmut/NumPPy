@@ -62,7 +62,7 @@ PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
 # globals
 logger = None
 r_log_box = None
-output_dir = ""
+output_dir = None
 out_col_names = [OUTPUT_COL0_TS, OUTPUT_COL1_MI,
                  OUTPUT_COL2_MI_AVG, OUTPUT_COL3_FREEZE_TP]
 out_file_zero_to_one = ""
@@ -695,7 +695,7 @@ def print_help():
     """
     Display help
     """
-    traceback.print_stack()
+
     print("\nHelp/Usage:\n")
     print(
         "python binary.py -i <input folder or .csv file> -d <output_directory> -v -h\n"
@@ -781,23 +781,22 @@ def main(input_folder_or_file):
         input_dir = os.path.dirname(input_folder_or_file)
         input_files.append(input_folder_or_file)
     else:
-        print("The input path is not a valid directory or file: ",
-              input_folder_or_file)
+        logger.error("The input path is not a valid directory or file: %s",
+                     input_folder_or_file)
         print_help()
 
     # If an output folder is specified, use it.
     # Else, output folder is '<parent of input file or folder>\output', create it
-    if not output_folder:
-        output_folder = os.path.dirname(input_folder_or_file)
+    if not output_dir:
+        output_dir = os.path.dirname(input_folder_or_file)
         base_name = os.path.basename(input_folder_or_file)
-        output_folder = os.path.join(
-            output_folder, base_name + OUTPUT_DIR_NAME)
-        if not os.path.isdir(output_folder):
-            os.mkdir(output_folder)
+        output_dir = os.path.join(
+            output_dir, base_name + OUTPUT_DIR_NAME)
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
 
-    output_dir = output_folder
     logger.debug("Input folder: %s", os.path.normpath(input_dir))
-    logger.debug("Output folder: %s", os.path.normpath(output_folder))
+    logger.debug("Output folder: %s", os.path.normpath(output_dir))
     successfully_parsed_files = []
     unsuccessfully_parsed_files = []
     for input_file in input_files:
@@ -831,7 +830,6 @@ def get_timeshift_from_input_file(input_file):
     with open(input_file, 'r') as read_obj:
         csv_reader = reader(read_obj)
         row1 = next(csv_reader)
-        logger.debug("length %d, row1[0]: %s", len(row1), row1[0])
         if row1 and len(row1) > 2 and (row1[0] == TIMESHIFT_HEADER or row1[0] == TIMESHIFT_HEADER_ALT):
             num_rows_processed += 1
             try:
@@ -1105,13 +1103,15 @@ if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(argv, "vhco:d:i:")
     except getopt.GetoptError as e:
-        print(e)
+        logger.error("USAGE ERROR: %s", e)
         print_help()
     for opt, arg in opts:
         if opt == "-h":
             print_help()
         elif opt in ("-i"):
             input_dir = arg
+        elif opt in ("-o"):
+            output_dir = arg
         elif opt in ("-d"):
             output_folder = arg
         elif opt in ("-v"):
