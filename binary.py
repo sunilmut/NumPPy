@@ -614,8 +614,11 @@ def process_input_file(input_file, output_folder):
     if timeshift_val:
         logger.debug("\tUsing timeshift value of: %s", str(timeshift_val))
     else:
-        timeshift_val = 0
-        logger.debug("\tNo timeshift value specified")
+        if timeshift_val is None:
+            timeshift_val = 0
+            logger.warning("\tNo timeshift value specified")
+        else:
+            logger.warning("\tIncorrect timeshift value of zero specified")
         files_without_timeshift.append(input_file)
 
     # Parse the input file
@@ -827,25 +830,22 @@ def separate_input_file(input_file, output_folder):
     Main logic routine to separate input file into multiple files.
     """
 
+    global files_without_timeshift
+
     logger.debug("separating input file %s in output folder: %s",
                  input_file, output_folder)
 
-    global out_file_zero_to_one, out_file_zero_to_one_un
-    global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
-    global out_file_one_to_zero, out_file_one_to_zero_un
-    global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
-    global param_min_time_duration_before, param_window_duration, param_start_timestamp_series
-    global param_min_time_duration_after, files_without_timeshift
-
-    logger.debug("Processing input file: %s", os.path.basename(input_file))
     timeshift_val, num_rows_processed = get_timeshift_from_input_file(
         input_file)
 
     if timeshift_val:
         logger.debug("\tUsing timeshift value of: %s", str(timeshift_val))
     else:
-        timeshift_val = 0
-        logger.warning("\tNo timeshift value specified")
+        if timeshift_val is None:
+            timeshift_val = 0
+            logger.warning("\tNo timeshift value specified")
+        else:
+            logger.warning("\tIncorrect timeshift value of zero specified")
         files_without_timeshift.append(input_file)
 
     # Parse the input file
@@ -862,22 +862,26 @@ def separate_input_file(input_file, output_folder):
             continue
 
         # Integer columns only which has at least a 0 and at least a 1
-        elif (
+        if (
             is_integer_dtype(df[col])
             and df[col].min() == 0
             and df[col].max() == 1
         ):
-            out_df = pd.DataFrame(
-                [*zip(['shift', 'time'], [int(timeshift_val), np.nan])])
+            out_df_frame = pd.DataFrame(
+                [*zip([TIMESHIFT_HEADER_ALT, INPUT_COL0_TS], [int(timeshift_val), INPUT_COL1_MI], [np.nan, INPUT_COL2_FREEZE])])
             output_file_name = os.path.join(
                 output_folder, col.replace(" ", "_") + CSV_EXT)
-            out_df1 = pd.DataFrame()
-            out_df1 = pd.concat([df.iloc[:, time_col_index], df[col]],
-                                axis=1, ignore_index=True, sort=False)
-            out_df = pd.concat([out_df, out_df1],
+            out_df_freeze = df[col]
+            # Empty motion index columns
+            out_mi = pd.DataFrame(index=range(
+                out_df_freeze.size), columns=range(1))
+            out_df_time = df.iloc[:, time_col_index]
+            out_df = pd.concat([out_df_time, out_mi, out_df_freeze],
+                               axis=1, ignore_index=True, sort=False)
+            out_df = pd.concat([out_df_frame, out_df],
                                ignore_index=True, sort=False)
             out_df.to_csv(output_file_name, index=False, header=False)
-            print(out_df)
+            # print(out_df)
 
     return True
 
@@ -890,7 +894,7 @@ def get_timeshift_from_input_file(input_file):
     with open(input_file, 'r') as read_obj:
         csv_reader = reader(read_obj)
         row1 = next(csv_reader)
-        if row1 and len(row1) > 2 and (row1[0] == TIMESHIFT_HEADER or row1[0] == TIMESHIFT_HEADER_ALT):
+        if row1 and len(row1) >= 2 and (row1[0] == TIMESHIFT_HEADER or row1[0] == TIMESHIFT_HEADER_ALT):
             num_rows_processed += 1
             try:
                 timeshift_val = float(row1[1])
