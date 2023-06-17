@@ -867,13 +867,17 @@ def separate_input_file(input_file, output_folder):
             and df[col].min() == 0
             and df[col].max() == 1
         ):
-            out_df = pd.DataFrame()
+            out_df = pd.DataFrame(
+                [*zip(['shift', 'time'], [int(timeshift_val), np.nan])])
             output_file_name = os.path.join(
                 output_folder, col.replace(" ", "_") + CSV_EXT)
-            out_df = pd.concat([df.iloc[:, time_col_index], df[col]],
-                               axis=1, ignore_index=True, sort=False)
-
-            out_df.to_csv(output_file_name, index=False)
+            out_df1 = pd.DataFrame()
+            out_df1 = pd.concat([df.iloc[:, time_col_index], df[col]],
+                                axis=1, ignore_index=True, sort=False)
+            out_df = pd.concat([out_df, out_df1],
+                               ignore_index=True, sort=False)
+            out_df.to_csv(output_file_name, index=False, header=False)
+            print(out_df)
 
     return True
 
