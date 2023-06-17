@@ -5,7 +5,7 @@ import getopt
 import logging
 import os
 import pandas as pd
-from pandas.api.types import is_numeric_dtype
+from pandas.api.types import is_numeric_dtype, is_integer_dtype
 import glob
 from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
 import subprocess
@@ -63,6 +63,7 @@ PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
 logger = None
 r_log_box = None
 output_dir = None
+separate_files = False
 out_col_names = [OUTPUT_COL0_TS, OUTPUT_COL1_MI,
                  OUTPUT_COL2_MI_AVG, OUTPUT_COL3_FREEZE_TP]
 out_file_zero_to_one = ""
@@ -621,7 +622,7 @@ def process_input_file(input_file, output_folder):
     success, df = parse_input_file_into_df(
         input_file, NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
     if not success:
-        return
+        return False
 
     # Parse all the parameter files.
     reset_all_parameters()
@@ -630,7 +631,7 @@ def process_input_file(input_file, output_folder):
     # Get a base output dataframe without any criterias applied
     result, out_df = process_input_df(df)
     if result == False or out_df.empty:
-        return
+        return False
 
     out_base_file = out_base(input_file, output_folder)
     logger.debug(
@@ -759,11 +760,10 @@ class loghandler(logging.StreamHandler):
 
 
 def main(input_folder_or_file):
-    global input_dir, output_dir
+    global input_dir, output_dir, separate_files
 
     input_files = []
     output_folder = ""
-    separate_files = False
 
     # strip the quotes at the start and end, else
     # paths with white spaces won't work.
@@ -790,10 +790,13 @@ def main(input_folder_or_file):
     if not output_dir:
         output_dir = os.path.dirname(input_folder_or_file)
         base_name = os.path.basename(input_folder_or_file)
-        output_dir = os.path.join(
-            output_dir, base_name + OUTPUT_DIR_NAME)
-        if not os.path.isdir(output_dir):
-            os.mkdir(output_dir)
+        if separate_files:
+            output_dir = os.path.join(output_dir, base_name)
+        else:
+            output_dir = os.path.join(
+                output_dir, base_name + OUTPUT_DIR_NAME)
+            if not os.path.isdir(output_dir):
+                os.mkdir(output_dir)
 
     logger.debug("Input folder: %s", os.path.normpath(input_dir))
     logger.debug("Output folder: %s", os.path.normpath(output_dir))
@@ -803,12 +806,14 @@ def main(input_folder_or_file):
         # Create a different output folder for each input file
         output_folder = os.path.join(
             output_dir, os.path.splitext(os.path.basename(input_file))[0])
+        logger.debug("output folder is %s", output_folder)
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
         if separate_files:
-            separate_input_file(input_file, output_folder)
+            parsed = separate_input_file(input_file, output_folder)
         else:
             parsed = process_input_file(input_file, output_folder)
+
         if parsed:
             successfully_parsed_files.append(input_file)
         else:
@@ -818,8 +823,59 @@ def main(input_folder_or_file):
 
 
 def separate_input_file(input_file, output_folder):
+    """
+    Main logic routine to separate input file into multiple files.
+    """
+
     logger.debug("separating input file %s in output folder: %s",
                  input_file, output_folder)
+
+    global out_file_zero_to_one, out_file_zero_to_one_un
+    global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
+    global out_file_one_to_zero, out_file_one_to_zero_un
+    global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
+    global param_min_time_duration_before, param_window_duration, param_start_timestamp_series
+    global param_min_time_duration_after, files_without_timeshift
+
+    logger.debug("Processing input file: %s", os.path.basename(input_file))
+    timeshift_val, num_rows_processed = get_timeshift_from_input_file(
+        input_file)
+
+    if timeshift_val:
+        logger.debug("\tUsing timeshift value of: %s", str(timeshift_val))
+    else:
+        timeshift_val = 0
+        logger.warning("\tNo timeshift value specified")
+        files_without_timeshift.append(input_file)
+
+    # Parse the input file
+    df = pd.read_csv(input_file, header=0, skiprows=num_rows_processed)
+    columns = df.columns.str.lower().to_list()
+    try:
+        time_col_index = columns.index("time")
+    except ValueError:
+        logger.warning("Time column is not present in the file. Skipping file")
+        return False
+
+    for i, col in enumerate(df):
+        if i == time_col_index:
+            continue
+
+        # Integer columns only which has at least a 0 and at least a 1
+        elif (
+            is_integer_dtype(df[col])
+            and df[col].min() == 0
+            and df[col].max() == 1
+        ):
+            out_df = pd.DataFrame()
+            output_file_name = os.path.join(
+                output_folder, col.replace(" ", "_") + CSV_EXT)
+            out_df = pd.concat([df.iloc[:, time_col_index], df[col]],
+                               axis=1, ignore_index=True, sort=False)
+
+            out_df.to_csv(output_file_name, index=False)
+
+    return True
 
 
 def get_timeshift_from_input_file(input_file):
@@ -1101,7 +1157,7 @@ if __name__ == "__main__":
     console_mode = False
 
     try:
-        opts, args = getopt.getopt(argv, "vhco:d:i:")
+        opts, args = getopt.getopt(argv, "vhco:d:i:s")
     except getopt.GetoptError as e:
         logger.error("USAGE ERROR: %s", e)
         print_help()
