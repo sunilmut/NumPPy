@@ -701,11 +701,11 @@ def print_help():
 
     print("\nHelp/Usage:\n")
     print(
-        "python binary.py -i <input folder or .csv file> -d <output_directory> -v -h\n"
+        "python binary.py -i <input folder or .csv file> -o <output_directory> -v -h -c\n"
     )
     print("where:")
     print("-i (required): input folder or .csv file.")
-    print("-d (optional): output folder.")
+    print("-o (optional): output folder.")
     print("-v (optional): run in verbose mode")
     print("-h (optional): print this help")
     print("-c (optional): run in console (no UI) mode")
@@ -761,7 +761,7 @@ class loghandler(logging.StreamHandler):
             self.handleError(record)
 
 
-def main(input_folder_or_file, separate_files):
+def main(input_folder_or_file, separate_files, output_folder):
     global input_dir, output_dir
 
     input_files = []
@@ -790,19 +790,19 @@ def main(input_folder_or_file, separate_files):
 
     # If an output folder is specified, use it.
     # Else, output folder is '<parent of input file or folder>\output', create it
-    if not output_dir:
-        output_dir = os.path.dirname(input_folder_or_file)
+    if not output_folder:
+        output_folder = os.path.dirname(input_folder_or_file)
         base_name = os.path.basename(input_folder_or_file)
         if separate_files:
-            output_dir = os.path.join(output_dir, base_name)
+            output_folder = os.path.join(output_folder, base_name)
         else:
-            output_dir = os.path.join(
-                output_dir, base_name + OUTPUT_DIR_NAME)
-            if not os.path.isdir(output_dir):
-                os.mkdir(output_dir)
+            output_folder = os.path.join(
+                output_folder, base_name + OUTPUT_DIR_NAME)
+            if not os.path.isdir(output_folder):
+                os.mkdir(output_folder)
 
     logger.debug("Input folder: %s", os.path.normpath(input_dir))
-    output_dir = os.path.normpath(output_dir)
+    output_dir = os.path.normpath(output_folder)
     successfully_parsed_files = []
     unsuccessfully_parsed_files = []
     for input_file in input_files:
@@ -1073,7 +1073,7 @@ def process():
     update_min_t_in_file(min_time_duration_before_box.value,
                          min_time_duration_after_box.value)
     successfully_parsed_files, unsuccessfully_parsed_files = main(
-        input_dir, False)
+        input_dir, False, None)
     refresh_result_text_box(successfully_parsed_files,
                             unsuccessfully_parsed_files)
 
@@ -1092,7 +1092,7 @@ def process_separate_input():
     # processing results can be shown.
     reset_result_box()
     successfully_parsed_files, unsuccessfully_parsed_files = main(
-        input_dir, True)
+        input_dir, True, None)
     refresh_result_text_box(successfully_parsed_files,
                             unsuccessfully_parsed_files)
 
@@ -1180,6 +1180,7 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
     console_mode = False
     separate_files = False
+    output_folder = None
 
     try:
         opts, args = getopt.getopt(argv, "vhco:d:i:s")
@@ -1192,8 +1193,6 @@ if __name__ == "__main__":
         elif opt in ("-i"):
             input_dir = arg
         elif opt in ("-o"):
-            output_dir = arg
-        elif opt in ("-d"):
             output_folder = arg
         elif opt in ("-v"):
             logging.basicConfig(level=logging.DEBUG)
@@ -1205,7 +1204,7 @@ if __name__ == "__main__":
             print_help()
 
     if console_mode:
-        main(input_dir, separate_files)
+        main(input_dir, separate_files, output_folder)
         sys.exit()
 
     # Main app
