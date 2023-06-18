@@ -26,7 +26,12 @@ on your system
 In the opened command prompt, run:
 
 ```
-pip3 install guizero numpy pandas xlrd xlsxwriter matplotlib openpyxl nested_dict
+pip3 install guizero numpy pandas xlrd xlsxwriter matplotlib openpyxl nested_dict tkfilebrowser
+```
+
+If you are on Windows, additionally:
+```
+pip3 install pypiwin32
 ```
 
 ## Update the code:

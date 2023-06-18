@@ -13,6 +13,7 @@ import numpy as np
 import csv
 from csv import reader
 import unittest
+import tkfilebrowser
 
 # Constants:
 # Number of initial rows to skip.
@@ -74,6 +75,8 @@ out_file_one_to_zero_ts = ""
 out_file_one_to_zero_un = ""
 out_file_one_to_zero_un_ts = ""
 input_dir = ""
+input_dirs = []
+cur_selected_dir = None
 
 # Arrays to store the parameter names and its value as a dataframe
 # There is a dataframe value for each parameter and the indexes
@@ -96,6 +99,10 @@ cur_selected_param = None
 # When set to True, only the currently selected parameter is processed instead
 # of all the parameters. Default is to process all parameters.
 only_process_cur_param = False
+
+# When set to True, only the currently selected folder is processed instead
+# of all the folder(s). Default is to process all folder(s).
+only_process_cur_folder = False
 
 # When set to True, create output folder with the csv file name.
 create_output_folder_with_file_name = True
@@ -397,16 +404,14 @@ def parse_param_folder():
     return True, ""
 
 
-def get_parameter_min_t_file():
-    global input_dir
-
+def get_parameter_min_t_file(cur_selected_dir):
     min_t_file = os.path.join(
-        input_dir, PARAMETERS_DIR_NAME, TIME_DURATION_PARAMETER_FILE)
+        cur_selected_dir, PARAMETERS_DIR_NAME, TIME_DURATION_PARAMETER_FILE)
 
     return min_t_file
 
 
-def get_param_min_time_duration():
+def get_param_min_time_duration(cur_selected_dir):
     """
     Returns the value of the min parameter time duration value.
     """
@@ -416,7 +421,7 @@ def get_param_min_time_duration():
     t_duration_before = param_min_time_duration_before
     t_duration_after = param_min_time_duration_after
     itr = 0
-    param_min_t_file = get_parameter_min_t_file()
+    param_min_t_file = get_parameter_min_t_file(cur_selected_dir)
     try:
         with open(param_min_t_file) as min_t_file:
             param_file_exists = True
@@ -471,7 +476,8 @@ def reset_parameters():
     global param_min_time_duration_before, param_window_duration
     global param_min_time_duration_after, param_start_timestamp_series
 
-    param_min_time_duration_before = param_min_time_duration_before
+    param_min_time_duration_before = 0
+    param_min_time_duration_after = 0
     param_window_duration = param_min_time_duration_after
     param_start_timestamp_series = pd.Series(dtype=np.float64)
 
@@ -479,6 +485,7 @@ def reset_parameters():
 def reset_all_parameters():
     global param_name_list, param_df_list
 
+    cur_selected_param = None
     param_name_list.clear()
     param_df_list.clear()
     reset_parameters()
@@ -490,28 +497,35 @@ def parse_cur_param_file():
     parse_param(cur_selected_param)
 
 
-def parse_param(cur_selected_param):
+def apply_params_update():
+    # Apply the min_t value from the UI to the file
+    update_min_t_in_file(min_time_duration_before_box.value,
+                         min_time_duration_after_box.value)
+
+
+def parse_param(param):
     """
     Parse the paramter file
     """
     global param_min_time_duration_before, param_min_time_duration_after
     global param_window_duration, param_start_timestamp_series
     global input_dir, param_df_list, param_name_list
+    global cur_selected_dir
 
-    if not cur_selected_param:
+    if not param:
         return
 
     reset_all_parameters()
     parse_param_folder()
     try:
-        param_index = param_name_list.index(cur_selected_param)
+        param_index = param_name_list.index(param)
     except ValueError:
-        logger.error("Parameter value: %s is out of index",
-                     cur_selected_param)
+        logger.error("Parameter value: %s is out of index", param)
         return
 
     param_df = param_df_list[param_index]
-    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
+    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration(
+        cur_selected_dir)
     param_window_duration, param_start_timestamp_series = parse_param_df(
         param_df)
 
@@ -641,7 +655,7 @@ def apply_min_time_duration_criteria(min_t_before, min_t_after, df):
     return df
 
 
-def process_input_file(input_file, output_folder):
+def process_input_file(input_dir, input_file, output_folder):
     """
     Main logic routine to parse the input and spit out the output
     """
@@ -688,7 +702,8 @@ def process_input_file(input_file, output_folder):
         os.path.basename(out_base_file))
     out_df.to_csv(out_base_file, index=False)
 
-    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
+    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration(
+        input_dir)
     if param_file_exists:
         logger.debug("\tUsing min time duration (secs): %s",
                      str(param_min_time_duration_before))
@@ -771,7 +786,7 @@ def print_help():
     sys.exit()
 
 
-def get_inpput_files(input_dir):
+def get_input_files(input_dir):
     input_files = []
 
     # Normalize the path to deal with backslash/frontslash
@@ -827,7 +842,7 @@ def main(input_folder_or_file, separate_files, output_folder):
     input_folder_or_file = os.path.normpath(input_folder_or_file)
     if os.path.isdir(input_folder_or_file):
         input_dir = input_folder_or_file
-        input_files = get_inpput_files(input_dir)
+        input_files = get_input_files(input_dir)
     elif os.path.isfile(input_folder_or_file):
         input_dir = os.path.dirname(input_folder_or_file)
         input_files.append(input_folder_or_file)
@@ -864,7 +879,7 @@ def main(input_folder_or_file, separate_files, output_folder):
         if separate_files:
             parsed = separate_input_file(input_file, output_folder)
         else:
-            parsed = process_input_file(input_file, output_folder)
+            parsed = process_input_file(input_dir, input_file, output_folder)
 
         if parsed:
             successfully_parsed_files.append(input_file)
@@ -972,33 +987,33 @@ def line_r(rwin):
 
 
 def select_input_folder():
-    global input_dir, param_name_list, cur_selected_param
+    global input_dir, param_name_list
+    global input_dirs, cur_selected_dir
 
     open_folder = "."
     logger.debug("input dir is: %s", input_dir)
     if input_dir:
         open_folder = os.path.dirname(input_dir)
-    input_dir_temp = app.select_folder(folder=open_folder)
-    if not input_dir_temp:
+    # input_dir_temp = app.select_folder(folder=open_folder)
+    dirs = []
+    input_dirs = []
+    dirs.append(tkfilebrowser.askopendirnames(initialdir=open_folder))
+    for v_lsit in dirs:
+        for val in v_lsit:
+            if val:
+                input_dirs.append(os.path.normpath(val))
+
+    if len(input_dirs) == 0:
         logger.debug("no input folder selected, skipping")
         return
 
-    input_dir = os.path.normpath(input_dir_temp)
-    input_folder_text_box.value = os.path.basename(input_dir)
-    input_folder_text_box.width = min(
-        len(input_folder_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
+    input_folder_box.clear()
+    for val in input_dirs:
+        input_folder_box.append(os.path.basename(val))
 
-    # Reset all current values of the parameters and refresh the parameter
-    # UI section with the reset values (this will ensure the UI will show
-    # the default values even in cases when there are no parameters specified
-    # in the input folder).
-    reset_all_parameters()
-    refresh_param_values_ui(param_start_timestamp_series)
-    parse_param_folder()
-    refresh_param_names_combo_box(param_name_list)
-    if len(param_name_list):
-        cur_selected_param = param_name_list[0]
-        parse_param(cur_selected_param)
+    input_dir = input_dirs[0]
+    cur_selected_dir = input_dir
+    refresh_all_params_ui()
 
 
 def open_output_folder():
@@ -1084,9 +1099,10 @@ def update_min_t_in_file(min_t_before_val, min_t_after_val):
     min time duration value(s), both the global one and the one in the
     file.
     """
-    global param_min_time_duration_before, param_min_time_duration_after, logger
+    global logger, param_min_time_duration_before, param_min_time_duration_after
+    global cur_selected_dir
 
-    param_min_t_file = get_parameter_min_t_file()
+    param_min_t_file = get_parameter_min_t_file(cur_selected_dir)
 
     try:
         # "w+" will create the file if not exist.
@@ -1104,25 +1120,29 @@ def update_min_t_in_file(min_t_before_val, min_t_after_val):
 
 
 def process():
-    global input_dir
+    global input_dirs, input_dir
 
-    if not input_dir:
+    if not input_dir or len(input_dirs) == 0:
         app.warn(
-            "Uh oh!", "No input folder specified. Please select an input folder and run again!")
+            "Uh oh!", "No input folder(s) specified. Please select input folder(s) and run again!")
         return
 
     # Reset the result box before processing so that the new values of the
     # processing results can be shown.
     reset_result_box()
 
-    # Update the min time duration value in the file with the value
-    # from the UI so that it sticks.
-    # p.s: The main process loop will read this value from the file. So
-    #      the update should be done prior to processing the files.
-    update_min_t_in_file(min_time_duration_before_box.value,
-                         min_time_duration_after_box.value)
-    successfully_parsed_files, unsuccessfully_parsed_files = main(
-        input_dir, False, None)
+    successfully_parsed_files = []
+    unsuccessfully_parsed_files = []
+    for val in input_dirs:
+        if only_process_cur_folder:
+            if val != cur_selected_dir:
+                continue
+
+        input_dir = val
+        success_files, unsuccessful_files = main(
+            input_dir, False, None)
+        successfully_parsed_files += success_files
+        unsuccessfully_parsed_files += unsuccessful_files
     refresh_result_text_box(successfully_parsed_files,
                             unsuccessfully_parsed_files)
 
@@ -1130,18 +1150,29 @@ def process():
 
 
 def process_separate_input():
-    global input_dir
+    global input_dirs, input_dir
 
-    if not input_dir:
+    if not input_dir or len(input_dirs) == 0:
         app.warn(
-            "Uh oh!", "No input folder specified. Please select an input folder and run again!")
+            "Uh oh!", "No input folder(s) specified. Please select input folder(s) and run again!")
         return
 
     # Reset the result box before processing so that the new values of the
     # processing results can be shown.
     reset_result_box()
-    successfully_parsed_files, unsuccessfully_parsed_files = main(
-        input_dir, True, None)
+    successfully_parsed_files = []
+    unsuccessfully_parsed_files = []
+    for val in input_dirs:
+        if only_process_cur_folder:
+            if val != cur_selected_dir:
+                continue
+
+        input_dir = val
+        success_files, unsuccessful_files = main(
+            input_dir, True, None)
+        successfully_parsed_files += success_files
+        unsuccessfully_parsed_files += unsuccessful_files
+
     refresh_result_text_box(successfully_parsed_files,
                             unsuccessfully_parsed_files)
 
@@ -1153,6 +1184,7 @@ def select_param(selected_param_value):
     This method is called when the user selects a parameter from the parameter
     name drop down box.
     """
+
     global cur_selected_param, param_min_time_duration_before
     global param_min_time_duration_after, param_window_duration
 
@@ -1171,9 +1203,44 @@ def select_param(selected_param_value):
         return
 
     df = param_df_list[param_index]
-    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
+    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration(
+        cur_selected_dir)
     param_window_duration, param_start_timestamp_series = parse_param_df(df)
     refresh_param_values_ui(param_start_timestamp_series)
+
+
+def refresh_all_params_ui():
+    global cur_selected_param, param_name_list
+
+    # Reset all current values of the parameters and refresh the parameter
+    # UI section with the reset values (this will ensure the UI will show
+    # the default values even in cases when there are no parameters specified
+    # in the input folder).
+    reset_all_parameters()
+    refresh_param_values_ui(param_start_timestamp_series)
+    parse_param_folder()
+    refresh_param_names_combo_box(param_name_list)
+    if len(param_name_list):
+        cur_selected_param = param_name_list[0]
+        parse_param(cur_selected_param)
+
+
+def highlight_input_folder(selected_input_dir):
+    """
+    This method is called when the user selects a input folder from the input
+    folder drop down box.
+    """
+
+    global input_dirs, input_dir, cur_selected_dir
+
+    logger.debug("picking input folder: %s", selected_input_dir)
+    for val in input_dirs:
+        if os.path.basename(val) == selected_input_dir:
+            input_dir = val
+            cur_selected_dir = val
+            break
+
+    refresh_all_params_ui()
 
 
 def refresh_param_names_combo_box(param_name_list):
@@ -1205,6 +1272,15 @@ def set_min_time_duration_box_value():
 def set_time_window_duration_box_value():
     global param_window_duration
     time_window_duration_box.value = param_window_duration
+
+
+def only_process_sel_folder():
+    global only_process_cur_folder
+
+    if only_process_cur_folder_box.value == 1:
+        only_process_cur_folder = True
+    else:
+        only_process_cur_folder = False
 
 
 def only_process_sel_param():
@@ -1291,14 +1367,13 @@ if __name__ == "__main__":
     input_folder_button = PushButton(
         app, command=select_input_folder, text="Input Folder", width=26)
     input_folder_button.tk.config(font=("Verdana bold", 14))
-    # Box to display the input folder
+    # Input folder names combo box (grid high to keep it on the right side)
     line()
-    input_folder_text_box = TextBox(app)
-    # Non editable
-    input_folder_text_box.disable()
-    input_folder_text_box.width = INPUT_FOLDER_NAME_BOX_MAX_WIDTH
-    input_folder_text_box.font = "Verdana bold"
-    input_folder_text_box.text_size = 14
+    input_folder_box = Combo(
+        app, options=[], width=60, command=highlight_input_folder)
+    input_folder_box.clear()
+    input_folder_box.text_color = "blue"
+    input_folder_box.font = "Arial Bold"
     line()
 
     # Separate files from input folder
@@ -1367,11 +1442,17 @@ if __name__ == "__main__":
     update_params_button = PushButton(center_box, text="Refresh",
                                       command=parse_cur_param_file, grid=[1, 1], width=17, align="left")
     update_params_button.tk.config(font=("Verdana bold", 10))
+    apply_button = PushButton(center_box, text="Apply",
+                              command=apply_params_update, grid=[2, 1], width=17, align="left")
+    apply_button.tk.config(font=("Verdana bold", 10))
     line()
 
     # Process input button
     process_button = PushButton(app, text="Process", command=process, width=26)
     process_button.tk.config(font=("Verdana bold", 14))
+    only_process_cur_folder_box = CheckBox(
+        app, text="Only process the selected input folder", command=only_process_sel_folder)
+    only_process_cur_folder_box.value = only_process_cur_folder
     only_process_cur_param_box = CheckBox(
         app, text="Only process the selected parameter", command=only_process_sel_param)
     only_process_cur_param_box.value = only_process_cur_param
