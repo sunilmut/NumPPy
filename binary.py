@@ -84,7 +84,8 @@ param_name_list = []
 param_df_list = []
 # Currently selected parameter values
 param_col_names = [PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
-param_min_time_duration_before = 1
+param_file_exists = False
+param_min_time_duration_before = 0
 param_min_time_duration_after = 0
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
@@ -95,6 +96,12 @@ cur_selected_param = None
 # When set to True, only the currently selected parameter is processed instead
 # of all the parameters. Default is to process all parameters.
 only_process_cur_param = False
+
+# When set to True, create output folder with the csv file name.
+create_output_folder_with_file_name = True
+
+# When set to True, add the csv file name to the output file names.
+add_csv_file_name_to_output = False
 
 # Timeshift header in the input
 TIMESHIFT_HEADER = "timeshift"
@@ -206,7 +213,12 @@ def out_tw_filter_file(input_file, param_name, output_folder):
 
 def format_out_name_with_param_val(param_min_time_duration_before,
                                    param_min_time_duration_after):
-    return UNDERSCORE + str(int(param_min_time_duration_before)) + "-" + str(int(param_min_time_duration_after)) + "s"
+    global param_file_exists
+
+    if param_file_exists == False or (param_min_time_duration_before == 0 and param_min_time_duration_after == 0):
+        return ""
+    else:
+        return UNDERSCORE + str(int(param_min_time_duration_before)) + "-" + str(int(param_min_time_duration_after)) + "s"
 
 
 def format_out_nop_file_name(input_file, param_names, param_min_time_duration_before,
@@ -227,20 +239,35 @@ def format_out_nop_file_name(input_file, param_names, param_min_time_duration_be
         output_folder, input_file_without_ext + UNDERSCORE +
         OUTPUT_ZERO_TO_ONE_CSV_NAME + output_no_parameter + param_names + CSV_EXT
     )
-    out_file_zero_to_one_un_ts = os.path.join(
-        output_folder,  OUTPUT_ZERO_TO_ONE_CSV_NAME +
-        format_out_name_with_param_val(param_min_time_duration_before, param_min_time_duration_after) +
-        output_no_parameter + param_names + CSV_EXT
-    )
+    min_time_before_after = format_out_name_with_param_val(
+        param_min_time_duration_before, param_min_time_duration_after)
+
+    if add_csv_file_name_to_output:
+        out_file_zero_to_one_un_ts = os.path.join(
+            output_folder,  OUTPUT_ZERO_TO_ONE_CSV_NAME + UNDERSCORE + input_file_without_ext +
+            min_time_before_after + output_no_parameter + param_names + CSV_EXT
+        )
+    else:
+        out_file_zero_to_one_un_ts = os.path.join(
+            output_folder,  OUTPUT_ZERO_TO_ONE_CSV_NAME + min_time_before_after +
+            output_no_parameter + param_names + CSV_EXT
+        )
+
     out_file_one_to_zero_un = os.path.join(
         output_folder, input_file_without_ext + UNDERSCORE +
         OUTPUT_ONE_TO_ZERO_CSV_NAME + output_no_parameter + param_names + CSV_EXT
     )
-    out_file_one_to_zero_un_ts = os.path.join(
-        output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME +
-        format_out_name_with_param_val(param_min_time_duration_before, param_min_time_duration_after) +
-        output_no_parameter + param_names + CSV_EXT
-    )
+
+    if add_csv_file_name_to_output:
+        out_file_one_to_zero_un_ts = os.path.join(
+            output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME + UNDERSCORE + input_file_without_ext +
+            min_time_before_after + output_no_parameter + param_names + CSV_EXT
+        )
+    else:
+        out_file_one_to_zero_un_ts = os.path.join(
+            output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME + min_time_before_after +
+            output_no_parameter + param_names + CSV_EXT
+        )
 
     logger.debug("\tOutput files:")
     logger.debug("\t\tNOp [0->1]: %s",
@@ -260,7 +287,7 @@ def format_out_file_names(input_file, param_name,  param_min_time_duration_befor
     """
     global out_file_zero_to_one, out_file_zero_to_one_ts
     global out_file_one_to_zero, out_file_one_to_zero_ts
-    global logger
+    global logger, add_csv_file_name_to_output
 
     param_ext = ""
     if param_name:
@@ -271,20 +298,34 @@ def format_out_file_names(input_file, param_name,  param_min_time_duration_befor
         output_folder, input_file_without_ext + UNDERSCORE +
         OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + CSV_EXT
     )
-    out_file_zero_to_one_ts = os.path.join(
-        output_folder, OUTPUT_ZERO_TO_ONE_CSV_NAME +
-        format_out_name_with_param_val(param_min_time_duration_before, param_min_time_duration_after) +
-        param_ext + CSV_EXT
-    )
+    min_time_before_after = format_out_name_with_param_val(
+        param_min_time_duration_before, param_min_time_duration_after)
+    if add_csv_file_name_to_output:
+        out_file_zero_to_one_ts = os.path.join(
+            output_folder, OUTPUT_ZERO_TO_ONE_CSV_NAME + UNDERSCORE + input_file_without_ext +
+            min_time_before_after + param_ext + CSV_EXT
+        )
+    else:
+        out_file_zero_to_one_ts = os.path.join(
+            output_folder, OUTPUT_ZERO_TO_ONE_CSV_NAME +
+            min_time_before_after + param_ext + CSV_EXT
+        )
+
     out_file_one_to_zero = os.path.join(
         output_folder, input_file_without_ext + UNDERSCORE +
         OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + CSV_EXT
     )
-    out_file_one_to_zero_ts = os.path.join(
-        output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME +
-        format_out_name_with_param_val(param_min_time_duration_before, param_min_time_duration_after) +
-        param_ext + CSV_EXT
-    )
+
+    if add_csv_file_name_to_output:
+        out_file_one_to_zero_ts = os.path.join(
+            output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME + UNDERSCORE + input_file_without_ext +
+            min_time_before_after + param_ext + CSV_EXT
+        )
+    else:
+        out_file_one_to_zero_ts = os.path.join(
+            output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME +
+            min_time_before_after + param_ext + CSV_EXT
+        )
 
     logger.debug("\tOutput files:")
     logger.debug("\t\t[0->1]: %s", os.path.basename(out_file_zero_to_one))
@@ -369,14 +410,16 @@ def get_param_min_time_duration():
     """
     Returns the value of the min parameter time duration value.
     """
-    global logger
+    global logger, param_min_time_duration_before
+    global param_min_time_duration_after, param_file_exists
 
-    t_duration_before = 1
-    t_duration_after = 0
+    t_duration_before = param_min_time_duration_before
+    t_duration_after = param_min_time_duration_after
     itr = 0
     param_min_t_file = get_parameter_min_t_file()
     try:
         with open(param_min_t_file) as min_t_file:
+            param_file_exists = True
             while True:
                 line = min_t_file.readline().rstrip()
                 if not line:
@@ -395,8 +438,9 @@ def get_param_min_time_duration():
                         "number. Using default of %d", line, param_min_t_file, t_duration)
             min_t_file.close()
     except IOError:
+        param_file_exists = False
         logger.debug(
-            "Min time duration file(%s) does not exist. One will be created.", param_min_t_file)
+            "Min time duration file(%s) does not exist.", param_min_t_file)
         pass
 
     return t_duration_before, t_duration_after
@@ -424,10 +468,11 @@ def get_param_file_from_name(param_name):
 
 
 def reset_parameters():
-    global param_min_time_duration_before, param_window_duration, param_start_timestamp_series
+    global param_min_time_duration_before, param_window_duration
+    global param_min_time_duration_after, param_start_timestamp_series
 
-    param_min_time_duration_before = 1
-    param_window_duration = 0
+    param_min_time_duration_before = param_min_time_duration_before
+    param_window_duration = param_min_time_duration_after
     param_start_timestamp_series = pd.Series(dtype=np.float64)
 
 
@@ -588,6 +633,7 @@ def apply_min_time_duration_criteria(min_t_before, min_t_after, df):
     This will apply minimum time duration criteria on the provided
     dataframe and return the dataframe.
     """
+
     if min_t_before > 0 or min_t_after > 0:
         df = df.loc[list(apply_duration_criteria(
             df.iloc[:, 0], min_t_before, min_t_after))]
@@ -605,6 +651,7 @@ def process_input_file(input_file, output_folder):
     global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
     global param_min_time_duration_before, param_window_duration, param_start_timestamp_series
     global param_min_time_duration_after, files_without_timeshift
+    global param_file_exists
 
     logger.debug("Processing input file: %s", os.path.basename(input_file))
     timeshift_val, num_rows_processed = get_timeshift_from_input_file(
@@ -642,12 +689,13 @@ def process_input_file(input_file, output_folder):
     out_df.to_csv(out_base_file, index=False)
 
     param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
-    logger.debug("\tUsing min time duration (secs): %s",
-                 str(param_min_time_duration_before))
+    if param_file_exists:
+        logger.debug("\tUsing min time duration (secs): %s",
+                     str(param_min_time_duration_before))
+        # Apply any minimum time duration criteria
+        out_df = apply_min_time_duration_criteria(
+            param_min_time_duration_before, param_min_time_duration_after, out_df)
 
-    # Apply any minimum time duration criteria
-    out_df = apply_min_time_duration_criteria(
-        param_min_time_duration_before, param_min_time_duration_after, out_df)
     min_duration_file = out_min_duration_file(input_file, output_folder)
     logger.debug("\tAfter applying min time duration "
                  "criteria: %s", os.path.basename(min_duration_file))
@@ -762,7 +810,7 @@ class loghandler(logging.StreamHandler):
 
 
 def main(input_folder_or_file, separate_files, output_folder):
-    global input_dir, output_dir
+    global input_dir, output_dir, create_output_folder_with_file_name
 
     input_files = []
     output_folder = ""
@@ -807,8 +855,9 @@ def main(input_folder_or_file, separate_files, output_folder):
     unsuccessfully_parsed_files = []
     for input_file in input_files:
         # Create a different output folder for each input file
-        output_folder = os.path.join(
-            output_dir, os.path.splitext(os.path.basename(input_file))[0])
+        if separate_files or create_output_folder_with_file_name:
+            output_folder = os.path.join(
+                output_dir, os.path.splitext(os.path.basename(input_file))[0])
         logger.debug("Output folder: %s", output_folder)
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
@@ -1167,6 +1216,24 @@ def only_process_sel_param():
         only_process_cur_param = False
 
 
+def output_folder_with_file_name():
+    global create_output_folder_with_file_name
+
+    if output_folder_with_file_name_box.value == 1:
+        create_output_folder_with_file_name = True
+    else:
+        create_output_folder_with_file_name = False
+
+
+def csv_file_name_to_output():
+    global add_csv_file_name_to_output
+
+    if csv_file_name_to_output_box.value == 1:
+        add_csv_file_name_to_output = True
+    else:
+        add_csv_file_name_to_output = False
+
+
 if __name__ == "__main__":
     """
     Main entry point
@@ -1232,6 +1299,12 @@ if __name__ == "__main__":
     input_folder_text_box.width = INPUT_FOLDER_NAME_BOX_MAX_WIDTH
     input_folder_text_box.font = "Verdana bold"
     input_folder_text_box.text_size = 14
+    line()
+
+    # Separate files from input folder
+    process_button = PushButton(
+        app, text="Separate files from input folder", command=process_separate_input, width=26)
+    process_button.tk.config(font=("Verdana bold", 14))
     line()
 
     # Box to display the the timesfhit message
@@ -1301,12 +1374,13 @@ if __name__ == "__main__":
     process_button.tk.config(font=("Verdana bold", 14))
     only_process_cur_param_box = CheckBox(
         app, text="Only process the selected parameter", command=only_process_sel_param)
-    line()
-
-    # Separate files from input folder
-    process_button = PushButton(
-        app, text="Separate files from input folder", command=process_separate_input, width=26)
-    process_button.tk.config(font=("Verdana bold", 14))
+    only_process_cur_param_box.value = only_process_cur_param
+    output_folder_with_file_name_box = CheckBox(
+        app, text="Create additional output folder with file name", command=output_folder_with_file_name)
+    output_folder_with_file_name_box.value = create_output_folder_with_file_name
+    csv_file_name_to_output_box = CheckBox(
+        app, text="Add the csv file name to output file name", command=csv_file_name_to_output)
+    csv_file_name_to_output_box.value = add_csv_file_name_to_output
     line()
 
     # Browse output folder button
