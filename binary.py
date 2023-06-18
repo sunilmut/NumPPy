@@ -1303,7 +1303,7 @@ if __name__ == "__main__":
 
     # Separate files from input folder
     process_button = PushButton(
-        app, text="Separate files from input folder", command=process_separate_input, width=26)
+        app, text="Separate files from input folder (Anymaze)", command=process_separate_input, width=35)
     process_button.tk.config(font=("Verdana bold", 14))
     line()
 
