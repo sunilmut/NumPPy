@@ -1376,10 +1376,10 @@ if __name__ == "__main__":
         app, text="Only process the selected parameter", command=only_process_sel_param)
     only_process_cur_param_box.value = only_process_cur_param
     output_folder_with_file_name_box = CheckBox(
-        app, text="Create additional output folder with file name", command=output_folder_with_file_name)
+        app, text="Create additional output folder with file name (FreezeFrame)", command=output_folder_with_file_name)
     output_folder_with_file_name_box.value = create_output_folder_with_file_name
     csv_file_name_to_output_box = CheckBox(
-        app, text="Add the csv file name to output file name", command=csv_file_name_to_output)
+        app, text="Add the csv file name to output file name (Anymaze)", command=csv_file_name_to_output)
     csv_file_name_to_output_box.value = add_csv_file_name_to_output
     line()
 
