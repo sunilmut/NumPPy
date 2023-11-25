@@ -38,7 +38,7 @@ def read_hdf5(event, filepath, key):
 
     return arr
 
-def process(filename, ts_file, csv_file):
+def main(filename, ts_file, csv_file):
     # Get the timeshift and binary timestamps.
     timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(csv_file)
     print("timeshift value is: ", timeshift_val)
@@ -55,7 +55,9 @@ def process(filename, ts_file, csv_file):
     # Get the timestamps for the data values
     print("opening file: ", ts_file)
     ts = read_hdf5('', ts_file, 'timestampNew')
+    process(binary_df, timeshift_val, data, ts)
 
+def process(binary_df, timeshift_val, data, ts):
     # Perform some basic checks on the data sets.
     if len(ts) != len(data):
         common.logger.error("Timestamp series length(%d) does not match data series length(%d)",
@@ -183,7 +185,7 @@ def print_help():
 
     print("\nHelp/Usage:\n")
     print(
-        "python binary.py -i <input folder or .csv file> -o <output_directory> -v -h -c\n"
+        "python ff.py -i <input folder or .csv file> -o <output_directory> -v -h -c\n"
     )
     print("where:")
     print("-i (required): input folder or .csv file.")
@@ -193,13 +195,13 @@ def print_help():
     print("-c (optional): run in console (no UI) mode")
     print("\nExamples:\n")
     print("\nProcess input file:")
-    print("\tpython binary.py -i input.csv")
+    print("\tpython ff.py -i input.csv")
     print("\nProcess all the csv files from the input folder:")
-    print("\tpython binary.py -i c:\\data\\input")
+    print("\tpython ff.py -i c:\\data\\input")
     print(
         "\nProcess all the csv files from the input folder and use the output folder:"
     )
-    print("\tpython binary.py -i c:\\data\\input -d c:\\data\\output")
+    print("\tpython ff.py -i c:\\data\\input -d c:\\data\\output")
     print("\nNotes:")
     print("\tClose the output file prior to running.")
     sys.exit()
@@ -242,4 +244,6 @@ if __name__ == "__main__":
         else:
             print_help()
 
-    process(input_dir, ts_file, csv_file)
+    if console_mode:
+        main(input_dir, ts_file, csv_file)
+        sys.exit()
