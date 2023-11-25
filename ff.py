@@ -5,9 +5,20 @@ import logging
 import numpy as np
 import common
 import os
+import pandas as pd
+from pandas.api.types import is_integer_dtype
 
 # constants
 OUTPUT_LOG_FILE = "output.txt"
+
+OUTPUT_COL0_TS = 'Start time (sec)'
+OUTPUT_COL1_LEN = 'Bout length (sec)'
+OUTPUT_COL2_MI_AVG = 'Motion Index Average'
+OUTPUT_COL3_DATA_AUC = 'Area under curve (data)'
+OUTPUT_COL4_DATA_AVG = 'Data Average'
+OUTPUT_COLUMN_NAMES=[OUTPUT_COL0_TS, OUTPUT_COL1_LEN,
+                     OUTPUT_COL2_MI_AVG, OUTPUT_COL3_DATA_AUC,
+                     OUTPUT_COL4_DATA_AVG]
 
 # function to read hdf5 file
 def read_hdf5(event, filepath, key):
@@ -34,32 +45,54 @@ def process(filename, ts_file, csv_file):
 
     success, binary_df = common.parse_input_file_into_df(csv_file,
                                                   common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
-    #print(binary_df)
-    print("opening file", filename)
+    if not success:
+        common.log.error("Unable to parse the binary file")
+        return
 
     # Get the list of data values.
     data = read_hdf5('', filename, 'data')
-    print("data length is: ", len(data))
-    #print(data)
-    #ts = read_hdf5('timeCorrection_'+name_1, filepath, 'timestampNew')
-    print("opening file: ", ts_file)
 
     # Get the timestamps for the data values
+    print("opening file: ", ts_file)
     ts = read_hdf5('', ts_file, 'timestampNew')
-    print("data length of ts is: ", len(ts))
-    #print(ts)
 
+    # Perform some basic checks on the data sets.
+    if len(ts) != len(data):
+        common.logger.error("Timestamp series length(%d) does not match data series length(%d)",
+                            len(ts),
+                            len(data))
+        return
+    
+    if not binary_df[common.INPUT_COL0_TS].is_monotonic:
+        common.logger.error("Binary timestamp values are not sorted.")
+        return
+    
+    # Make sure the 'binary' column is actually binary.
+    if not (
+        is_integer_dtype(binary_df[common.INPUT_COL2_FREEZE])
+        and binary_df[common.INPUT_COL2_FREEZE].min() == 0
+        and binary_df[common.INPUT_COL2_FREEZE].max() == 1
+    ):
+        common.logger.error("Binary column contains non-binary data.")
+        return
+
+    # Timestamp series should be sorted.        
+    if not np.all(np.diff(ts) >= 0):
+        common.logger.error("Timestamp series is not sorted.")
+        return
+    
     index_start = -1
     row_count = binary_df.shape[0]
     auc_0s_sum = 0
     auc_0s_cnt = 0
     mi_0s_sum = 0
     mi_0s_cnt = 0
-    #os_out_df = pd.DataFrame(data, columns=['Name', 'Age']) 
+    out_df_0s = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
     auc_1s_sum = 0
     auc_1s_cnt = 0
     mi_1s_sum = 0
     mi_1s_cnt = 0
+    out_df_1s = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
     #print("binary file has rows", row_count)
     for index, row in binary_df.iterrows():
         if index_start == -1:
@@ -99,15 +132,29 @@ def process(filename, ts_file, csv_file):
             auc_0s_cnt += cnt_data
             mi_0s_sum += sum_mi
             mi_0s_cnt += cnt_mi
-            print("\n0: start: ", ts_start, " bout time: ", bout_length, " avg mi: ", sum_mi/cnt_mi, " auc: ", sum_data, " avg: ", sum_data/cnt_data)
+            out_df_0s.loc[len(out_df_0s.index)] = [ts_start,
+                                                   bout_length,
+                                                   sum_mi/cnt_mi,
+                                                   sum_data,
+                                                   sum_data/cnt_data]
         else:
             auc_1s_sum += sum_data
             auc_1s_cnt += cnt_data
             mi_1s_sum += sum_mi
             mi_1s_cnt += cnt_mi
-            print("\n1: start: ", ts_start, " bout time: ", bout_length, " avg mi: ", sum_mi/cnt_mi," auc: ", sum_data, " avg: ", sum_data/cnt_data)
+            out_df_1s.loc[len(out_df_0s.index)] = [ts_start,
+                                                   bout_length,
+                                                   sum_mi/cnt_mi,
+                                                   sum_data,
+                                                   sum_data/cnt_data]
 
+        # Reset the index to indicate the start of a new dataset.
         index_start = -1
+
+    auc_0s_avg = auc_0s_sum/auc_0s_cnt
+    auc_1s_avg = auc_1s_sum/auc_1s_cnt
+    print(out_df_0s)
+    print(out_df_1s)
 
 
 class loghandler(logging.StreamHandler):
