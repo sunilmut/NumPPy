@@ -13,7 +13,7 @@ import numpy as np
 import csv
 from csv import reader
 import unittest
-from common import *
+import common
 
 # Constants:
 ZERO_TO_ONE = "0 to 1"
@@ -96,9 +96,6 @@ create_output_folder_with_file_name = True
 # When set to True, add the csv file name to the output file names.
 add_csv_file_name_to_output = False
 
-# Timeshift header in the input
-TIMESHIFT_HEADER = "timeshift"
-TIMESHIFT_HEADER_ALT = "shift"
 files_without_timeshift = []
 
 
@@ -614,7 +611,7 @@ def process_input_file(input_file, output_folder):
     global param_file_exists
 
     logger.debug("Processing input file: %s", os.path.basename(input_file))
-    timeshift_val, num_rows_processed = get_timeshift_from_input_file(
+    timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(
         input_file)
 
     if timeshift_val:
@@ -628,8 +625,8 @@ def process_input_file(input_file, output_folder):
         files_without_timeshift.append(input_file)
 
     # Parse the input file
-    success, df = parse_input_file_into_df(
-        input_file, NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
+    success, df = common.parse_input_file_into_df(
+        input_file, common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
     if not success:
         return False
 
@@ -840,7 +837,7 @@ def separate_input_file(input_file, output_folder):
     """
 
     global files_without_timeshift
-    timeshift_val, num_rows_processed = get_timeshift_from_input_file(
+    timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(
         input_file)
 
     if timeshift_val:
@@ -866,15 +863,16 @@ def separate_input_file(input_file, output_folder):
         if i == time_col_index:
             continue
 
-        # Integer columns only which has at least a 0 and at least a 1
+        # Binary whole numbers only
         if (
             is_integer_dtype(df[col])
             and df[col].min() == 0
             and df[col].max() == 1
         ):
             out_df_frame = pd.DataFrame(
-                [*zip([TIMESHIFT_HEADER_ALT, INPUT_COL0_TS], [int(timeshift_val), INPUT_COL1_MI],
-                      [np.nan, INPUT_COL2_FREEZE])])
+                [*zip([common.TIMESHIFT_HEADER_ALT, common.INPUT_COL0_TS],
+                      [int(timeshift_val), common.INPUT_COL1_MI],
+                      [np.nan, common.INPUT_COL2_FREEZE])])
             output_file_name = os.path.join(
                 output_folder, col.replace(" ", "_") + CSV_EXT)
             out_df_freeze = df[col]
@@ -890,25 +888,6 @@ def separate_input_file(input_file, output_folder):
             # print(out_df)
 
     return True
-
-
-def get_timeshift_from_input_file(input_file):
-    global logger
-
-    timeshift_val = None
-    num_rows_processed = 0
-    with open(input_file, 'r') as read_obj:
-        csv_reader = reader(read_obj)
-        row1 = next(csv_reader)
-        if row1 and len(row1) >= 2 and (row1[0] == TIMESHIFT_HEADER or row1[0] == TIMESHIFT_HEADER_ALT):
-            num_rows_processed += 1
-            try:
-                timeshift_val = float(row1[1])
-            except ValueError:
-                logger.error(
-                    "Timeshift value (%s) is not numerical, ignoring it!", row1[1])
-
-    return timeshift_val, num_rows_processed
 
 
 """
@@ -1403,9 +1382,9 @@ if __name__ == "__main__":
 ------------------------------------------------------------
 """
 input_data1 = {
-    INPUT_COL0_TS:     [1, 2, 3, 4, 5, 10, 20,  30,  100, 200, 300, 310],
-    INPUT_COL1_MI:     [1, 2, 3, 4, 5, 6,  7.1, 8.2, 9.3, 10,  11,  20],
-    INPUT_COL2_FREEZE: [0, 0, 1, 0, 0, 1,  0,   0,   0,   0,   1,   0]
+    common.INPUT_COL0_TS:     [1, 2, 3, 4, 5, 10, 20,  30,  100, 200, 300, 310],
+    common.INPUT_COL1_MI:     [1, 2, 3, 4, 5, 6,  7.1, 8.2, 9.3, 10,  11,  20],
+    common.INPUT_COL2_FREEZE: [0, 0, 1, 0, 0, 1,  0,   0,   0,   0,   1,   0]
 }
 
 output_data1 = {

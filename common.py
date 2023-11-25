@@ -1,26 +1,23 @@
 #!/usr/bin/python
 
-import sys
-import getopt
-import logging
-import os
 import pandas as pd
 from pandas.api.types import is_numeric_dtype, is_integer_dtype
-import glob
-from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
-import subprocess
-import numpy as np
-import csv
 from csv import reader
-import unittest
 
 # input coloumns
 INPUT_COL0_TS = "timestamps"
 INPUT_COL1_MI = "Motion Index"
 INPUT_COL2_FREEZE = "Freeze"
 
+# Timeshift header in the input
+TIMESHIFT_HEADER = "timeshift"
+TIMESHIFT_HEADER_ALT = "shift"
+
 # Number of initial rows to skip.
 NUM_INITIAL_ROWS_TO_SKIP = 3
+
+# globals
+logger = None
 
 def parse_input_file_into_df(input_file, skip_num_initial_rows):
     """
@@ -53,3 +50,23 @@ def parse_input_file_into_df(input_file, skip_num_initial_rows):
         return False, pd.DataFrame()
 
     return True, df
+
+
+
+def get_timeshift_from_input_file(input_file):
+    global logger
+
+    timeshift_val = None
+    num_rows_processed = 0
+    with open(input_file, 'r') as read_obj:
+        csv_reader = reader(read_obj)
+        row1 = next(csv_reader)
+        if row1 and len(row1) >= 2 and (row1[0] == TIMESHIFT_HEADER or row1[0] == TIMESHIFT_HEADER_ALT):
+            num_rows_processed += 1
+            try:
+                timeshift_val = float(row1[1])
+            except ValueError:
+                logger.error(
+                    "Timeshift value (%s) is not numerical, ignoring it!", row1[1])
+
+    return timeshift_val, num_rows_processed
