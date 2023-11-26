@@ -27,7 +27,6 @@ OUTPUT_COL3_FREEZE_TP = "Freezing TurnPoints"
 
 # output directory and file names
 OUTPUT_DIR_NAME = "_output"
-PARAMETERS_DIR_NAME = "parameters"
 TIME_DURATION_PARAMETER_FILE = "min_time.txt"
 OUTPUT_BASE = "_base.csv"
 MIN_DURATION = "_min_duration.csv"
@@ -36,7 +35,6 @@ UNDERSCORE = "_"
 EMPTY = "_EMPTY"
 
 # output file name formats:
-CSV_EXT = ".csv"
 OUTPUT_NO_PARAMETERS = "_Not"
 OUTPUT_ZERO_TO_ONE_CSV_NAME = "01"
 OUTPUT_ONE_TO_ZERO_CSV_NAME = "10"
@@ -66,7 +64,6 @@ out_file_one_to_zero = ""
 out_file_one_to_zero_ts = ""
 out_file_one_to_zero_un = ""
 out_file_one_to_zero_un_ts = ""
-input_dir = ""
 
 # Arrays to store the parameter names and its value as a dataframe
 # There is a dataframe value for each parameter and the indexes
@@ -227,7 +224,7 @@ def format_out_nop_file_name(input_file, param_names, param_min_time_duration_be
     input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
     out_file_zero_to_one_un = os.path.join(
         output_folder, input_file_without_ext + UNDERSCORE +
-        OUTPUT_ZERO_TO_ONE_CSV_NAME + output_no_parameter + param_names + CSV_EXT
+        OUTPUT_ZERO_TO_ONE_CSV_NAME + output_no_parameter + param_names + common.CSV_EXT
     )
     min_time_before_after = format_out_name_with_param_val(
         param_min_time_duration_before, param_min_time_duration_after)
@@ -235,28 +232,28 @@ def format_out_nop_file_name(input_file, param_names, param_min_time_duration_be
     if add_csv_file_name_to_output:
         out_file_zero_to_one_un_ts = os.path.join(
             output_folder,  OUTPUT_ZERO_TO_ONE_CSV_NAME + UNDERSCORE + input_file_without_ext +
-            min_time_before_after + output_no_parameter + param_names + CSV_EXT
+            min_time_before_after + output_no_parameter + param_names + common.CSV_EXT
         )
     else:
         out_file_zero_to_one_un_ts = os.path.join(
             output_folder,  OUTPUT_ZERO_TO_ONE_CSV_NAME + min_time_before_after +
-            output_no_parameter + param_names + CSV_EXT
+            output_no_parameter + param_names + common.CSV_EXT
         )
 
     out_file_one_to_zero_un = os.path.join(
         output_folder, input_file_without_ext + UNDERSCORE +
-        OUTPUT_ONE_TO_ZERO_CSV_NAME + output_no_parameter + param_names + CSV_EXT
+        OUTPUT_ONE_TO_ZERO_CSV_NAME + output_no_parameter + param_names + common.CSV_EXT
     )
 
     if add_csv_file_name_to_output:
         out_file_one_to_zero_un_ts = os.path.join(
             output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME + UNDERSCORE + input_file_without_ext +
-            min_time_before_after + output_no_parameter + param_names + CSV_EXT
+            min_time_before_after + output_no_parameter + param_names + common.CSV_EXT
         )
     else:
         out_file_one_to_zero_un_ts = os.path.join(
             output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME + min_time_before_after +
-            output_no_parameter + param_names + CSV_EXT
+            output_no_parameter + param_names + common.CSV_EXT
         )
 
     logger.debug("\tOutput files:")
@@ -286,35 +283,35 @@ def format_out_file_names(input_file, param_name,  param_min_time_duration_befor
     input_file_without_ext = os.path.splitext(os.path.basename(input_file))[0]
     out_file_zero_to_one = os.path.join(
         output_folder, input_file_without_ext + UNDERSCORE +
-        OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + CSV_EXT
+        OUTPUT_ZERO_TO_ONE_CSV_NAME + param_ext + common.CSV_EXT
     )
     min_time_before_after = format_out_name_with_param_val(
         param_min_time_duration_before, param_min_time_duration_after)
     if add_csv_file_name_to_output:
         out_file_zero_to_one_ts = os.path.join(
             output_folder, OUTPUT_ZERO_TO_ONE_CSV_NAME + UNDERSCORE + input_file_without_ext +
-            min_time_before_after + param_ext + CSV_EXT
+            min_time_before_after + param_ext + common.CSV_EXT
         )
     else:
         out_file_zero_to_one_ts = os.path.join(
             output_folder, OUTPUT_ZERO_TO_ONE_CSV_NAME +
-            min_time_before_after + param_ext + CSV_EXT
+            min_time_before_after + param_ext + common.CSV_EXT
         )
 
     out_file_one_to_zero = os.path.join(
         output_folder, input_file_without_ext + UNDERSCORE +
-        OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + CSV_EXT
+        OUTPUT_ONE_TO_ZERO_CSV_NAME + param_ext + common.CSV_EXT
     )
 
     if add_csv_file_name_to_output:
         out_file_one_to_zero_ts = os.path.join(
             output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME + UNDERSCORE + input_file_without_ext +
-            min_time_before_after + param_ext + CSV_EXT
+            min_time_before_after + param_ext + common.CSV_EXT
         )
     else:
         out_file_one_to_zero_ts = os.path.join(
             output_folder, OUTPUT_ONE_TO_ZERO_CSV_NAME +
-            min_time_before_after + param_ext + CSV_EXT
+            min_time_before_after + param_ext + common.CSV_EXT
         )
 
     logger.debug("\tOutput files:")
@@ -331,8 +328,9 @@ def parse_param_folder():
     Parse parameter folder and create a list of parameter dataframe(s)
     out of it.
     """
-    global input_dir, param_name_list, param_df_list
+    global param_name_list, param_df_list
 
+    input_dir = common.get_input_dir()
     param_folder = os.path.join(input_dir, "parameters")
     logger.debug("param folder is %s", param_folder)
     if not os.path.isdir(param_folder):
@@ -355,10 +353,9 @@ def parse_param_folder():
 
 
 def get_parameter_min_t_file():
-    global input_dir
-
+    input_dir = common.get_input_dir()
     min_t_file = os.path.join(
-        input_dir, PARAMETERS_DIR_NAME, TIME_DURATION_PARAMETER_FILE)
+        input_dir, common.PARAMETERS_DIR_NAME, TIME_DURATION_PARAMETER_FILE)
 
     return min_t_file
 
@@ -415,15 +412,6 @@ def parse_param_df(df):
     return w_duration, ts_series
 
 
-def get_param_file_from_name(param_name):
-    global input_dir
-
-    param_file = os.path.join(input_dir, PARAMETERS_DIR_NAME, param_name)
-    # param_file = os.path.join(param_file, param_name)
-
-    return param_file + CSV_EXT
-
-
 def reset_parameters():
     global param_min_time_duration_before, param_window_duration
     global param_min_time_duration_after, param_start_timestamp_series
@@ -453,7 +441,7 @@ def parse_param(cur_selected_param):
     """
     global param_min_time_duration_before, param_min_time_duration_after
     global param_window_duration, param_start_timestamp_series
-    global input_dir, param_df_list, param_name_list
+    global param_df_list, param_name_list
 
     if not cur_selected_param:
         return
@@ -728,7 +716,7 @@ def print_help():
     sys.exit()
 
 
-def get_inpput_files(input_dir):
+def get_input_files(input_dir):
     input_files = []
 
     # Normalize the path to deal with backslash/frontslash
@@ -767,8 +755,9 @@ class loghandler(logging.StreamHandler):
 
 
 def main(input_folder_or_file, separate_files, output_folder):
-    global input_dir, output_dir, create_output_folder_with_file_name
+    global output_dir, create_output_folder_with_file_name
 
+    input_dir = ""
     input_files = []
     output_folder = ""
 
@@ -784,7 +773,7 @@ def main(input_folder_or_file, separate_files, output_folder):
     input_folder_or_file = os.path.normpath(input_folder_or_file)
     if os.path.isdir(input_folder_or_file):
         input_dir = input_folder_or_file
-        input_files = get_inpput_files(input_dir)
+        input_files = get_input_files(input_dir)
     elif os.path.isfile(input_folder_or_file):
         input_dir = os.path.dirname(input_folder_or_file)
         input_files.append(input_folder_or_file)
@@ -807,6 +796,7 @@ def main(input_folder_or_file, separate_files, output_folder):
             if not os.path.isdir(output_folder):
                 os.mkdir(output_folder)
 
+    common.set_input_dir(input_dir)
     logger.debug("Input folder: %s", os.path.normpath(input_dir))
     output_dir = os.path.normpath(output_folder)
     successfully_parsed_files = []
@@ -875,7 +865,7 @@ def separate_input_file(input_file, output_folder):
                       [int(timeshift_val), common.INPUT_COL1_MI],
                       [np.nan, common.INPUT_COL2_FREEZE])])
             output_file_name = os.path.join(
-                output_folder, col.replace(" ", "_") + CSV_EXT)
+                output_folder, col.replace(" ", "_") + common.CSV_EXT)
             out_df_freeze = df[col]
             # Empty motion index columns
             out_mi = pd.DataFrame(index=range(
@@ -912,20 +902,10 @@ def line_r(rwin):
     Text(rwin, "-------------------------------------------------------------------------------------")
 
 
-# TODO: Use the common.py method
 def select_input_folder():
-    global input_dir, param_name_list, cur_selected_param
+    global param_name_list, cur_selected_param
 
-    open_folder = "."
-    logger.debug("input dir is: %s", input_dir)
-    if input_dir:
-        open_folder = os.path.dirname(input_dir)
-    input_dir_temp = app.select_folder(folder=open_folder)
-    if not input_dir_temp:
-        logger.debug("no input folder selected, skipping")
-        return
-
-    input_dir = os.path.normpath(input_dir_temp)
+    input_dir = common.select_input_dir(app)
     input_folder_text_box.value = os.path.basename(input_dir)
     input_folder_text_box.width = min(
         len(input_folder_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
@@ -967,7 +947,7 @@ def open_params_file():
     if not cur_selected_param:
         return
 
-    param_file = get_param_file_from_name(cur_selected_param)
+    param_file = common.get_param_file_from_name(cur_selected_param)
     if not os.path.isfile(param_file):
         app.warn(
             "Uh oh!", "Parameters file " + param_file + " is not a file!")
@@ -1038,8 +1018,7 @@ def update_min_t_in_file(min_t_before_val, min_t_after_val):
 
 
 def process():
-    global input_dir
-
+    input_dir = common.get_input_dir()
     if not input_dir:
         app.warn(
             "Uh oh!", "No input folder specified. Please select an input folder and run again!")
@@ -1064,8 +1043,7 @@ def process():
 
 
 def process_separate_input():
-    global input_dir
-
+    input_dir = common.get_input_dir()
     if not input_dir:
         app.warn(
             "Uh oh!", "No input folder specified. Please select an input folder and run again!")

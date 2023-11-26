@@ -13,7 +13,6 @@ import glob
 
 # UI related constants
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
-PARAMETERS_DIR_NAME = "parameters"
 PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
 PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
 PARAM_UI_TIME_WINDOW_START_TIMES = "Time window start (secs):"
@@ -36,7 +35,6 @@ OUTPUT_COLUMN_NAMES=[OUTPUT_COL0_TS, OUTPUT_COL1_LEN,
 # output file names
 OUTPUT_ZEROS = "0_"
 OUTPUT_ONES = "1_"
-CSV_EXT = ".csv"
 OUTPUT_AUC = "AUC (sum)"
 OUTPUT_AUC_SEM = "AUC_SEM"
 OUTPUT_Z_SCORE = "z-score (avg)"
@@ -133,7 +131,7 @@ def main(input_dir):
                                                            sem_auc_0s_sum,
                                                            auc_0s_avg,
                                                            sem_auc_0s_avg]
-            out_0_file = os.path.join(this_output_folder, OUTPUT_ZEROS + csv_basename + CSV_EXT)
+            out_0_file = os.path.join(this_output_folder, OUTPUT_ZEROS + csv_basename + common.CSV_EXT)
             df_0s_summary.to_csv(out_0_file, mode='w', index=False, header=True)
             out_df_0s.to_csv(out_0_file, mode='a', index=False, header=True)
 
@@ -143,7 +141,7 @@ def main(input_dir):
                                                            sem_auc_1s_sum,
                                                            auc_1s_avg,
                                                            sem_auc_1s_avg]
-            out_1_file = os.path.join(this_output_folder, OUTPUT_ONES + csv_basename + CSV_EXT)
+            out_1_file = os.path.join(this_output_folder, OUTPUT_ONES + csv_basename + common.CSV_EXT)
             df_1s_summary.to_csv(out_1_file, mode='w', index=False, header=True)
             out_df_1s.to_csv(out_1_file, mode='a', index=False, header=True)
 
@@ -362,12 +360,8 @@ def ui_process():
     """
     main(common.get_input_dir())
 
-def get_param_file_from_name(param_name):
-    param_file = os.path.join(common.get_input_dir(), PARAMETERS_DIR_NAME, param_name)
-    return param_file + CSV_EXT
-
 def open_params_file():
-    param_file = get_param_file_from_name(cur_selected_param)
+    param_file = common.get_param_file_from_name(cur_selected_param)
     if not os.path.isfile(param_file):
         app.warn(
             "Uh oh!", "Parameters file " + param_file + " is not a file!")

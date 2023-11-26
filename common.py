@@ -19,6 +19,9 @@ TIMESHIFT_HEADER_ALT = "shift"
 # Number of initial rows to skip.
 NUM_INITIAL_ROWS_TO_SKIP = 3
 OUTPUT_DIR_NAME = "_output"
+CSV_EXT = ".csv"
+
+PARAMETERS_DIR_NAME = "parameters"
 
 # globals
 logger = None
@@ -108,9 +111,18 @@ def get_output_dir(input_dir, output_dir):
 def get_input_dir():
     return input_dir
 
+def set_input_dir(dir):
+    global input_dir
+
+    input_dir = dir
+
 def open_file(filename):
     if sys.platform == "win32":
         os.startfile(filename)
     else:
         opener = "open" if sys.platform == "darwin" else "xdg-open"
         subprocess.call([opener, filename])
+
+def get_param_file_from_name(param_name):
+    param_file = os.path.join(get_input_dir(), PARAMETERS_DIR_NAME, param_name)
+    return param_file + CSV_EXT
