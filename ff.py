@@ -16,12 +16,21 @@ OUTPUT_LOG_FILE = "output.txt"
 
 OUTPUT_COL0_TS = 'Start time (sec)'
 OUTPUT_COL1_LEN = 'Bout length (sec)'
-OUTPUT_COL2_MI_AVG = 'Motion Index Average'
-OUTPUT_COL3_DATA_AUC = 'Area under curve (data)'
-OUTPUT_COL4_DATA_AVG = 'Data Average'
+OUTPUT_COL2_MI_AVG = 'Motion Index (avg)'
+OUTPUT_COL3_DATA_AUC = 'AUC (data)'
+OUTPUT_COL4_DATA_AVG = 'z-score'
 OUTPUT_COLUMN_NAMES=[OUTPUT_COL0_TS, OUTPUT_COL1_LEN,
                      OUTPUT_COL2_MI_AVG, OUTPUT_COL3_DATA_AUC,
                      OUTPUT_COL4_DATA_AVG]
+
+# output file names
+OUTPUT_ZEROS = "0_"
+OUTPUT_ONES = "1_"
+CSV_EXT = ".csv"
+OUTPUT_AUC = "AUC (sum)"
+OUTPUT_AUC_SEM = "AUC_SEM"
+OUTPUT_Z_SCORE = "z-score (avg)"
+OUTPUT_Z_SCORE_SEM = "z-score_SEM"
 
 # function to read hdf5 file
 def read_hdf5(event, filepath, key):
@@ -43,6 +52,7 @@ def read_hdf5(event, filepath, key):
 
 def main(input_dir):            
     path = glob.glob(os.path.join(input_dir, 'z_score_*'))
+    output_dir = common.get_output_folder(input_dir, '')
     for i in range(len(path)):
         basename = (os.path.basename(path[i])).split('.')[0]
         name_1 = basename.split('_')[-1]
@@ -58,7 +68,58 @@ def main(input_dir):
             if not success:
                 common.logger.warning("Skipping CSV file (%s) as it is well formed")
                 continue
-            process(binary_df, timeshift_val, z_score, ts)
+
+            csv_basename = (os.path.basename(csv_file)).split('.')[0]
+            # Create output folder specific for this csv file.
+            this_output_folder = os.path.join(output_dir, csv_basename)
+            common.logger.debug("Output folder: %s", this_output_folder)
+            if not os.path.isdir(this_output_folder):
+                os.mkdir(this_output_folder)
+
+            # Process the data and write out the results
+            success, results = process(binary_df, timeshift_val, z_score, ts)
+            
+            if not success:
+                continue
+
+            auc_0s_sum = results[0]
+            auc_0s_cnt = results[1]
+            out_df_0s = results[2]
+            auc_1s_sum = results[3]
+            auc_1s_cnt = results[4]
+            out_df_1s = results[5]
+
+            auc_0s_avg = auc_0s_sum/auc_0s_cnt
+            auc_1s_avg = auc_1s_sum/auc_1s_cnt
+            print(out_df_0s)
+            print(out_df_1s)
+            sem_auc_0s_sum = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL3_DATA_AUC])
+            sem_auc_0s_avg = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL4_DATA_AVG])
+            sem_auc_1s_sum = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL3_DATA_AUC])
+            sem_auc_1s_avg = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL4_DATA_AVG])
+            print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
+            print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
+
+            # zeros
+            df_0s_summary = pd.DataFrame(columns=[OUTPUT_AUC, OUTPUT_AUC_SEM, OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM])
+            df_0s_summary.loc[len(df_0s_summary.index)] = [auc_0s_sum,
+                                                           sem_auc_0s_sum,
+                                                           auc_0s_avg,
+                                                           sem_auc_0s_avg]
+            out_0_file = os.path.join(this_output_folder, OUTPUT_ZEROS + csv_basename + CSV_EXT)
+            df_0s_summary.to_csv(out_0_file, mode='w', index=False, header=True)
+            out_df_0s.to_csv(out_0_file, mode='a', index=False, header=True)
+
+            # ones
+            df_1s_summary = pd.DataFrame(columns=[OUTPUT_AUC, OUTPUT_AUC_SEM, OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM])
+            df_1s_summary.loc[len(df_1s_summary.index)] = [auc_1s_sum,
+                                                           sem_auc_1s_sum,
+                                                           auc_1s_avg,
+                                                           sem_auc_1s_avg]
+            out_1_file = os.path.join(this_output_folder, OUTPUT_ONES + csv_basename + CSV_EXT)
+            df_1s_summary.to_csv(out_1_file, mode='w', index=False, header=True)
+            out_df_1s.to_csv(out_1_file, mode='a', index=False, header=True)
+
 
 def process(binary_df, timeshift_val, data, ts):
     # Perform some basic checks on the data sets.
@@ -66,11 +127,11 @@ def process(binary_df, timeshift_val, data, ts):
         common.logger.error("Timestamp series length(%d) does not match data series length(%d)",
                             len(ts),
                             len(data))
-        return
+        return False
     
     if not binary_df[common.INPUT_COL0_TS].is_monotonic:
         common.logger.error("Binary timestamp values are not sorted.")
-        return
+        return False, []
     
     # Make sure the 'binary' column is actually binary.
     if not (
@@ -79,12 +140,12 @@ def process(binary_df, timeshift_val, data, ts):
         and binary_df[common.INPUT_COL2_FREEZE].max() == 1
     ):
         common.logger.error("Binary column contains non-binary data.")
-        return
+        return False, []
 
     # Timestamp series should be sorted.        
     if not np.all(np.diff(ts) >= 0):
         common.logger.error("Timestamp series is not sorted.")
-        return
+        return False, []
     
     index_start = -1
     row_count = binary_df.shape[0]
@@ -154,7 +215,7 @@ def process(binary_df, timeshift_val, data, ts):
             auc_1s_cnt += cnt_data
             mi_1s_sum += sum_mi
             mi_1s_cnt += cnt_mi
-            out_df_1s.loc[len(out_df_0s.index)] = [ts_start,
+            out_df_1s.loc[len(out_df_1s.index)] = [ts_start,
                                                    bout_length,
                                                    sum_mi/cnt_mi,
                                                    sum_data,
@@ -163,16 +224,7 @@ def process(binary_df, timeshift_val, data, ts):
         # Reset the index to indicate the start of a new dataset.
         index_start = -1
 
-    auc_0s_avg = auc_0s_sum/auc_0s_cnt
-    auc_1s_avg = auc_1s_sum/auc_1s_cnt
-    print(out_df_0s)
-    print(out_df_1s)
-    sem_auc_0s_sum = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL3_DATA_AUC])
-    sem_auc_0s_avg = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL4_DATA_AVG])
-    sem_auc_1s_sum = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL3_DATA_AUC])
-    sem_auc_1s_avg = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL4_DATA_AVG])
-    print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
-    print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
+    return True, [auc_0s_sum, auc_0s_cnt, out_df_0s, auc_1s_sum, auc_1s_cnt, out_df_1s]
 
 
 class loghandler(logging.StreamHandler):

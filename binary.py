@@ -793,6 +793,7 @@ def main(input_folder_or_file, separate_files, output_folder):
                      input_folder_or_file)
         print_help()
 
+    # TODO: Use the common method.
     # If an output folder is specified, use it.
     # Else, output folder is '<parent of input file or folder>\output', create it
     if not output_folder:

@@ -17,6 +17,8 @@ TIMESHIFT_HEADER_ALT = "shift"
 # Number of initial rows to skip.
 NUM_INITIAL_ROWS_TO_SKIP = 3
 
+OUTPUT_DIR_NAME = "_output"
+
 # globals
 logger = None
 input_dir = ""
@@ -88,3 +90,17 @@ def select_input_folder(app):
 
     input_dir = os.path.normpath(input_dir_temp)
     return input_dir
+
+# Returns an output folder and create the dir, if needed.
+# If an output dir is specified, use it.
+# Else, output folder is '<parent of input file or folder>\output', create it
+def get_output_folder(input_dir, output_dir):
+    if output_dir:
+        return output_dir
+    output_folder = os.path.dirname(input_dir)
+    base_name = os.path.basename(input_dir)
+    output_folder = os.path.join(output_folder, base_name + OUTPUT_DIR_NAME)
+    if not os.path.isdir(output_folder):
+        os.mkdir(output_folder)
+
+    return output_folder
