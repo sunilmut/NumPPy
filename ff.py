@@ -7,6 +7,8 @@ import common
 import os
 import pandas as pd
 from pandas.api.types import is_integer_dtype
+from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
+import scipy
 
 # constants
 OUTPUT_LOG_FILE = "output.txt"
@@ -118,6 +120,8 @@ def process(binary_df, timeshift_val, data, ts):
         #print(ts_start, " - ", ts_end)
         ts_index_start_for_val = np.argmax(ts >= ts_start)
         ts_index_end_for_val = np.argmax(ts > ts_end)
+        if ts_index_end_for_val == 0:
+            ts_index_end_for_val = len(ts) - 1
         #print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
         bout_length = ts_end - ts_start
         motion_index_slice = binary_df.iloc[index_start : index_end + 1][common.INPUT_COL1_MI]
@@ -129,7 +133,10 @@ def process(binary_df, timeshift_val, data, ts):
         cnt_data = len(data_slice)
         #print(data_slice)
         #print("sum: ", sum_data, " count: ", cnt_data)
-        if cur_binary_value == 0:
+        if cnt_data == 0:
+            print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
+            print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
+        elif cur_binary_value == 0:
             auc_0s_sum += sum_data
             auc_0s_cnt += cnt_data
             mi_0s_sum += sum_mi
@@ -157,6 +164,12 @@ def process(binary_df, timeshift_val, data, ts):
     auc_1s_avg = auc_1s_sum/auc_1s_cnt
     print(out_df_0s)
     print(out_df_1s)
+    sem_auc_0s_sum = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL3_DATA_AUC])
+    sem_auc_0s_avg = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL4_DATA_AVG])
+    sem_auc_1s_sum = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL3_DATA_AUC])
+    sem_auc_1s_avg = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL4_DATA_AVG])
+    print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
+    print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
 
 
 class loghandler(logging.StreamHandler):
@@ -206,6 +219,48 @@ def print_help():
     print("\tClose the output file prior to running.")
     sys.exit()
 
+"""
+------------------------------------------------------------
+                UI related stuff
+------------------------------------------------------------
+"""
+
+INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
+def select_input_folder():
+    global param_name_list, cur_selected_param
+
+    input_dir = common.select_input_folder(app)
+    input_folder_text_box.value = os.path.basename(input_dir)
+    input_folder_text_box.width = min(
+        len(input_folder_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
+
+    # Reset all current values of the parameters and refresh the parameter
+    # UI section with the reset values (this will ensure the UI will show
+    # the default values even in cases when there are no parameters specified
+    # in the input folder).
+    """
+    reset_all_parameters()
+    refresh_param_values_ui(param_start_timestamp_series)
+    parse_param_folder()
+    refresh_param_names_combo_box(param_name_list)
+    if len(param_name_list):
+        cur_selected_param = param_name_list[0]
+        parse_param(cur_selected_param)
+    """
+
+def line():
+    """
+    Line for the main app
+    """
+    Text(app, "------------------------------------------------------------------------------------------------------")
+
+
+def line_r(rwin):
+    """
+    Line for results window
+    """
+    Text(rwin, "-------------------------------------------------------------------------------------")
+
 if __name__ == "__main__":
     """
     Main entry point
@@ -247,3 +302,29 @@ if __name__ == "__main__":
     if console_mode:
         main(input_dir, ts_file, csv_file)
         sys.exit()
+
+    # Main app
+    app = App("", height=900, width=900)
+
+    # App name box
+    title = Text(app, text="Binary Data Processing App",
+                 size=16, font="Arial Bold", width=30)
+    title.bg = "white"
+    line()
+
+    # Select input folder button
+    Text(app, "Select Input Folder --> Check Parameters --> Process",
+         font="Verdana bold")
+
+    line()
+    input_folder_button = PushButton(
+        app, command=select_input_folder, text="Input Folder", width=26)
+    input_folder_button.tk.config(font=("Verdana bold", 14))
+    # Box to display the input folder
+    line()
+    input_folder_text_box = TextBox(app)
+
+    # Display the app
+    app.display()
+
+    logging.shutdown()

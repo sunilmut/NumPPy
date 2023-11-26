@@ -3,6 +3,7 @@
 import pandas as pd
 from pandas.api.types import is_numeric_dtype, is_integer_dtype
 from csv import reader
+import os
 
 # input coloumns
 INPUT_COL0_TS = "timestamps"
@@ -18,6 +19,7 @@ NUM_INITIAL_ROWS_TO_SKIP = 3
 
 # globals
 logger = None
+input_dir = ""
 
 def parse_input_file_into_df(input_file, skip_num_initial_rows):
     """
@@ -70,3 +72,19 @@ def get_timeshift_from_input_file(input_file):
                     "Timeshift value (%s) is not numerical, ignoring it!", row1[1])
 
     return timeshift_val, num_rows_processed
+
+
+def select_input_folder(app):
+    global input_dir
+
+    open_folder = "."
+    logger.debug("input dir is: %s", input_dir)
+    if input_dir:
+        open_folder = os.path.dirname(input_dir)
+    input_dir_temp = app.select_folder(folder=open_folder)
+    if not input_dir_temp:
+        logger.debug("no input folder selected, skipping")
+        return
+
+    input_dir = os.path.normpath(input_dir_temp)
+    return input_dir
