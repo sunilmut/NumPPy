@@ -9,6 +9,7 @@ import pandas as pd
 from pandas.api.types import is_integer_dtype
 from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
 import scipy
+import glob
 
 # constants
 OUTPUT_LOG_FILE = "output.txt"
@@ -27,7 +28,7 @@ def read_hdf5(event, filepath, key):
     if event:
         event = event.replace("\\","_")
         event = event.replace("/","_")
-        op = os.path.join(filepath, event+'.hdf5')
+        op = os.path.join(filepath, event + '.hdf5')
     else:
         op = filepath
 
@@ -40,24 +41,24 @@ def read_hdf5(event, filepath, key):
 
     return arr
 
-def main(filename, ts_file, csv_file):
-    # Get the timeshift and binary timestamps.
-    timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(csv_file)
-    print("timeshift value is: ", timeshift_val)
-
-    success, binary_df = common.parse_input_file_into_df(csv_file,
-                                                  common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
-    if not success:
-        common.log.error("Unable to parse the binary file")
-        return
-
-    # Get the list of data values.
-    data = read_hdf5('', filename, 'data')
-
-    # Get the timestamps for the data values
-    print("opening file: ", ts_file)
-    ts = read_hdf5('', ts_file, 'timestampNew')
-    process(binary_df, timeshift_val, data, ts)
+def main(input_dir):            
+    path = glob.glob(os.path.join(input_dir, 'z_score_*'))
+    for i in range(len(path)):
+        basename = (os.path.basename(path[i])).split('.')[0]
+        name_1 = basename.split('_')[-1]
+        print(name_1)
+        # TODO: Should NaN be handled? 
+        z_score = read_hdf5('', path[i], 'data')
+        ts = read_hdf5('timeCorrection_' + name_1, input_dir, 'timestampNew')
+        csv_path = glob.glob(os.path.join(input_dir, '*.csv')) 
+        for csv_file in csv_path:
+            timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(csv_file)
+            success, binary_df = common.parse_input_file_into_df(csv_file,
+                                                    common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
+            if not success:
+                common.logger.warning("Skipping CSV file (%s) as it is well formed")
+                continue
+            process(binary_df, timeshift_val, z_score, ts)
 
 def process(binary_df, timeshift_val, data, ts):
     # Perform some basic checks on the data sets.
@@ -119,6 +120,8 @@ def process(binary_df, timeshift_val, data, ts):
         ts_end = binary_df.iloc[index_end][common.INPUT_COL0_TS] + timeshift_val
         #print(ts_start, " - ", ts_end)
         ts_index_start_for_val = np.argmax(ts >= ts_start)
+        if ts_index_start_for_val == 0:
+            break
         ts_index_end_for_val = np.argmax(ts > ts_end)
         if ts_index_end_for_val == 0:
             ts_index_end_for_val = len(ts) - 1
@@ -214,7 +217,7 @@ def print_help():
     print(
         "\nProcess all the csv files from the input folder and use the output folder:"
     )
-    print("\tpython ff.py -i c:\\data\\input -d c:\\data\\output")
+    print("\tpython ff.py -i c:\\data\\input -o c:\\data\\output")
     print("\nNotes:")
     print("\tClose the output file prior to running.")
     sys.exit()
@@ -248,6 +251,32 @@ def select_input_folder():
         parse_param(cur_selected_param)
     """
 
+def ui_process():
+    if not common.input_dir:
+        app.warn(
+            "Uh oh!", "No input folder specified. Please select an input folder and run again!")
+        return
+
+    """
+    # Reset the result box before processing so that the new values of the
+    # processing results can be shown.
+    reset_result_box()
+
+    # Update the min time duration value in the file with the value
+    # from the UI so that it sticks.
+    # p.s: The main process loop will read this value from the file. So
+    #      the update should be done prior to processing the files.
+    update_min_t_in_file(min_time_duration_before_box.value,
+                         min_time_duration_after_box.value)
+    successfully_parsed_files, unsuccessfully_parsed_files = main(
+        input_dir, False, None)
+    refresh_result_text_box(successfully_parsed_files,
+                            unsuccessfully_parsed_files)
+
+    rwin.show()
+    """
+    main(common.input_dir)
+
 def line():
     """
     Line for the main app
@@ -277,7 +306,7 @@ if __name__ == "__main__":
     output_folder = None
 
     try:
-        opts, args = getopt.getopt(argv, "i:t:s:vhcdo:")
+        opts, args = getopt.getopt(argv, "i:vhco:")
     except getopt.GetoptError as e:
         common.logger.error("USAGE ERROR: %s", e)
         print_help()
@@ -286,10 +315,6 @@ if __name__ == "__main__":
             print_help()
         elif opt in ("-i"):
             input_dir = arg
-        elif opt in ("-t"):
-            ts_file = arg
-        elif opt in ("-s"):
-            csv_file = arg
         elif opt in ("-o"):
             output_folder = arg
         elif opt in ("-v"):
@@ -300,7 +325,7 @@ if __name__ == "__main__":
             print_help()
 
     if console_mode:
-        main(input_dir, ts_file, csv_file)
+        main(input_dir)
         sys.exit()
 
     # Main app
@@ -323,6 +348,10 @@ if __name__ == "__main__":
     # Box to display the input folder
     line()
     input_folder_text_box = TextBox(app)
+
+    # Process input button
+    process_button = PushButton(app, text="Process", command=ui_process, width=26)
+    process_button.tk.config(font=("Verdana bold", 14))
 
     # Display the app
     app.display()

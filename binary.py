@@ -911,6 +911,7 @@ def line_r(rwin):
     Text(rwin, "-------------------------------------------------------------------------------------")
 
 
+# TODO: Use the common.py method
 def select_input_folder():
     global input_dir, param_name_list, cur_selected_param
 
@@ -1189,6 +1190,7 @@ if __name__ == "__main__":
     separate_files = False
     output_folder = None
 
+    # TODO: Fix this help.
     try:
         opts, args = getopt.getopt(argv, "vhco:d:i:s")
     except getopt.GetoptError as e:
