@@ -31,8 +31,12 @@ OUTPUT_AUC = "AUC (sum)"
 OUTPUT_AUC_SEM = "AUC_SEM"
 OUTPUT_Z_SCORE = "z-score (avg)"
 OUTPUT_Z_SCORE_SEM = "z-score_SEM"
+OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
+                               OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM]
 
-# function to read hdf5 file
+# Read the values of the given 'key' from the HDF5 file
+# into an numpy array. If an 'event' is provided, it will
+# be appended to the filepath.
 def read_hdf5(event, filepath, key):
     if event:
         event = event.replace("\\","_")
@@ -50,17 +54,17 @@ def read_hdf5(event, filepath, key):
 
     return arr
 
-def main(input_dir):            
+def main(input_dir):
     path = glob.glob(os.path.join(input_dir, 'z_score_*'))
-    output_dir = common.get_output_folder(input_dir, '')
+    output_dir = common.get_output_dir(input_dir, '')
     for i in range(len(path)):
         basename = (os.path.basename(path[i])).split('.')[0]
         name_1 = basename.split('_')[-1]
         print(name_1)
-        # TODO: Should NaN be handled? 
+        # TODO: Should NaN be handled?
         z_score = read_hdf5('', path[i], 'data')
         ts = read_hdf5('timeCorrection_' + name_1, input_dir, 'timestampNew')
-        csv_path = glob.glob(os.path.join(input_dir, '*.csv')) 
+        csv_path = glob.glob(os.path.join(input_dir, '*.csv'))
         for csv_file in csv_path:
             timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(csv_file)
             success, binary_df = common.parse_input_file_into_df(csv_file,
@@ -78,7 +82,6 @@ def main(input_dir):
 
             # Process the data and write out the results
             success, results = process(binary_df, timeshift_val, z_score, ts)
-            
             if not success:
                 continue
 
@@ -100,8 +103,8 @@ def main(input_dir):
             print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
             print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
 
-            # zeros
-            df_0s_summary = pd.DataFrame(columns=[OUTPUT_AUC, OUTPUT_AUC_SEM, OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM])
+            # 0's
+            df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
             df_0s_summary.loc[len(df_0s_summary.index)] = [auc_0s_sum,
                                                            sem_auc_0s_sum,
                                                            auc_0s_avg,
@@ -110,8 +113,8 @@ def main(input_dir):
             df_0s_summary.to_csv(out_0_file, mode='w', index=False, header=True)
             out_df_0s.to_csv(out_0_file, mode='a', index=False, header=True)
 
-            # ones
-            df_1s_summary = pd.DataFrame(columns=[OUTPUT_AUC, OUTPUT_AUC_SEM, OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM])
+            # 1's
+            df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
             df_1s_summary.loc[len(df_1s_summary.index)] = [auc_1s_sum,
                                                            sem_auc_1s_sum,
                                                            auc_1s_avg,
@@ -128,11 +131,11 @@ def process(binary_df, timeshift_val, data, ts):
                             len(ts),
                             len(data))
         return False
-    
+
     if not binary_df[common.INPUT_COL0_TS].is_monotonic:
         common.logger.error("Binary timestamp values are not sorted.")
         return False, []
-    
+
     # Make sure the 'binary' column is actually binary.
     if not (
         is_integer_dtype(binary_df[common.INPUT_COL2_FREEZE])
@@ -142,11 +145,11 @@ def process(binary_df, timeshift_val, data, ts):
         common.logger.error("Binary column contains non-binary data.")
         return False, []
 
-    # Timestamp series should be sorted.        
+    # Timestamp series should be sorted.
     if not np.all(np.diff(ts) >= 0):
         common.logger.error("Timestamp series is not sorted.")
         return False, []
-    
+
     index_start = -1
     row_count = binary_df.shape[0]
     auc_0s_sum = 0
@@ -166,7 +169,7 @@ def process(binary_df, timeshift_val, data, ts):
             cur_binary_value = binary_df.iloc[index_start][common.INPUT_COL2_FREEZE]
 
         if cur_binary_value == row[common.INPUT_COL2_FREEZE]:
-            index_end = index 
+            index_end = index
 
         # If there is a transition of the freeze value, compute the variables.
         # Note: The last row is also considered as the end of transition.
@@ -246,6 +249,7 @@ class loghandler(logging.StreamHandler):
         except:
             self.handleError(record)
 
+
 def print_help():
     """
     Display help
@@ -281,10 +285,10 @@ def print_help():
 """
 
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
-def select_input_folder():
+def select_input_dir():
     global param_name_list, cur_selected_param
 
-    input_dir = common.select_input_folder(app)
+    input_dir = common.select_input_dir(app)
     input_folder_text_box.value = os.path.basename(input_dir)
     input_folder_text_box.width = min(
         len(input_folder_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
@@ -304,7 +308,7 @@ def select_input_folder():
     """
 
 def ui_process():
-    if not common.input_dir:
+    if not common.get_input_dir():
         app.warn(
             "Uh oh!", "No input folder specified. Please select an input folder and run again!")
         return
@@ -327,7 +331,7 @@ def ui_process():
 
     rwin.show()
     """
-    main(common.input_dir)
+    main(common.get_input_dir())
 
 def line():
     """
@@ -395,7 +399,7 @@ if __name__ == "__main__":
 
     line()
     input_folder_button = PushButton(
-        app, command=select_input_folder, text="Input Folder", width=26)
+        app, command=select_input_dir, text="Input Folder", width=26)
     input_folder_button.tk.config(font=("Verdana bold", 14))
     # Box to display the input folder
     line()

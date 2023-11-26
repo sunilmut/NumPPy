@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import pandas as pd
-from pandas.api.types import is_numeric_dtype, is_integer_dtype
+from pandas.api.types import is_numeric_dtype
 from csv import reader
 import os
 
@@ -16,7 +16,6 @@ TIMESHIFT_HEADER_ALT = "shift"
 
 # Number of initial rows to skip.
 NUM_INITIAL_ROWS_TO_SKIP = 3
-
 OUTPUT_DIR_NAME = "_output"
 
 # globals
@@ -76,7 +75,7 @@ def get_timeshift_from_input_file(input_file):
     return timeshift_val, num_rows_processed
 
 
-def select_input_folder(app):
+def select_input_dir(app):
     global input_dir
 
     open_folder = "."
@@ -94,7 +93,7 @@ def select_input_folder(app):
 # Returns an output folder and create the dir, if needed.
 # If an output dir is specified, use it.
 # Else, output folder is '<parent of input file or folder>\output', create it
-def get_output_folder(input_dir, output_dir):
+def get_output_dir(input_dir, output_dir):
     if output_dir:
         return output_dir
     output_folder = os.path.dirname(input_dir)
@@ -104,3 +103,6 @@ def get_output_folder(input_dir, output_dir):
         os.mkdir(output_folder)
 
     return output_folder
+
+def get_input_dir():
+    return input_dir
