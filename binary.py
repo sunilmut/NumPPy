@@ -961,14 +961,6 @@ def open_output_folder():
         subprocess.Popen(["xdg-open", norm_path])
 
 
-def open_file(filename):
-    if sys.platform == "win32":
-        os.startfile(filename)
-    else:
-        opener = "open" if sys.platform == "darwin" else "xdg-open"
-        subprocess.call([opener, filename])
-
-
 def open_params_file():
     update_min_t_in_file(min_time_duration_before_box.value,
                          min_time_duration_after_box.value)
@@ -981,7 +973,7 @@ def open_params_file():
             "Uh oh!", "Parameters file " + param_file + " is not a file!")
         return
 
-    open_file(param_file)
+    common.open_file(param_file)
 
 
 def reset_result_box():

@@ -11,9 +11,19 @@ from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBo
 import scipy
 import glob
 
+# UI related constants
+INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
+PARAMETERS_DIR_NAME = "parameters"
+PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
+PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
+PARAM_UI_TIME_WINDOW_START_TIMES = "Time window start (secs):"
+PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT = "Min time duration criteria (secs):"
+PARAM_UI_MIN_BEFORE_TIME_DURATION_CRITERIA_TEXT = "\t\t    before: "
+PARAM_UI_MIN_AFTER_TIME_DURATION_CRITERIA_TEXT = "after: "
+PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
+
 # constants
 OUTPUT_LOG_FILE = "output.txt"
-
 OUTPUT_COL0_TS = 'Start time (sec)'
 OUTPUT_COL1_LEN = 'Bout length (sec)'
 OUTPUT_COL2_MI_AVG = 'Motion Index (avg)'
@@ -33,6 +43,20 @@ OUTPUT_Z_SCORE = "z-score (avg)"
 OUTPUT_Z_SCORE_SEM = "z-score_SEM"
 OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
                                OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM]
+
+# Globals
+# Arrays to store the parameter names and its value as a dataframe
+# There is a dataframe value for each parameter and the indexes
+# for these two arrays should be kept in sync.
+# Parameter names
+param_name_list = []
+# Parameter values as dataframe. There is one dataframe for each parameter
+param_df_list = []
+# Currently selected parameter values
+param_col_names = [PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
+param_file_exists = False
+param_window_duration = 0
+param_start_timestamp_series = pd.Series(dtype=np.float64)
 
 # Read the values of the given 'key' from the HDF5 file
 # into an numpy array. If an 'event' is provided, it will
@@ -285,19 +309,25 @@ def print_help():
 """
 
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
+def refresh_param_names_combo_box(param_name_list):
+    param_names_combo_box.clear()
+    for param_name in param_name_list:
+        param_names_combo_box.append(param_name)
+
+    param_names_combo_box.show()
+
 def select_input_dir():
     global param_name_list, cur_selected_param
 
     input_dir = common.select_input_dir(app)
-    input_folder_text_box.value = os.path.basename(input_dir)
-    input_folder_text_box.width = min(
-        len(input_folder_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
+    input_dir_text_box.value = os.path.basename(input_dir)
+    input_dir_text_box.width = min(
+        len(input_dir_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
 
     # Reset all current values of the parameters and refresh the parameter
     # UI section with the reset values (this will ensure the UI will show
     # the default values even in cases when there are no parameters specified
     # in the input folder).
-    """
     reset_all_parameters()
     refresh_param_values_ui(param_start_timestamp_series)
     parse_param_folder()
@@ -305,7 +335,6 @@ def select_input_dir():
     if len(param_name_list):
         cur_selected_param = param_name_list[0]
         parse_param(cur_selected_param)
-    """
 
 def ui_process():
     if not common.get_input_dir():
@@ -332,6 +361,132 @@ def ui_process():
     rwin.show()
     """
     main(common.get_input_dir())
+
+def get_param_file_from_name(param_name):
+    param_file = os.path.join(common.get_input_dir(), PARAMETERS_DIR_NAME, param_name)
+    return param_file + CSV_EXT
+
+def open_params_file():
+    param_file = get_param_file_from_name(cur_selected_param)
+    if not os.path.isfile(param_file):
+        app.warn(
+            "Uh oh!", "Parameters file " + param_file + " is not a file!")
+        return
+
+    common.open_file(param_file)
+
+def parse_cur_param_file():
+    parse_param(cur_selected_param)
+
+def reset_parameters():
+    global param_window_duration, param_start_timestamp_series
+
+    param_start_timestamp_series = pd.Series(dtype=np.float64)
+
+def reset_all_parameters():
+    global param_name_list, param_df_list
+
+    param_name_list.clear()
+    param_df_list.clear()
+    reset_parameters()
+
+def parse_param_folder():
+    """
+    Parse parameter folder and create a list of parameter dataframe(s)
+    out of it.
+    """
+    global param_name_list, param_df_list
+
+    param_folder = os.path.join(common.get_input_dir(), "parameters")
+    common.logger.debug("param folder is %s", param_folder)
+    if not os.path.isdir(param_folder):
+        return False, ("Parameter folder " + param_folder + " does not exist!")
+
+    search_path = os.path.join(param_folder, "*.csv")
+    for param_file in glob.glob(search_path):
+        common.logger.debug("param file: %s", param_file)
+        if not os.path.isfile(param_file):
+            continue
+
+        param_file_name_without_ext = os.path.splitext(
+            os.path.basename(param_file))[0]
+        param_name_list.append(param_file_name_without_ext)
+        param_df = pd.read_csv(
+            param_file, names=param_col_names, header=None, skiprows=1)
+        param_df_list.append(param_df)
+
+    return True, ""
+
+def parse_param_df(df):
+    value = df[PARAM_TIME_WINDOW_DURATION].iat[0]
+    w_duration = 0
+    if not pd.isnull(value):
+        w_duration = value
+
+    ts_series = df[PARAM_TIME_WINDOW_START_LIST]
+    ts_series.sort_values(ascending=True)
+
+    return w_duration, ts_series
+
+def set_time_window_duration_box_value():
+    global param_window_duration
+    time_window_duration_box.value = param_window_duration
+
+def refresh_ts_list_box(ts_series):
+    ts_series_list_box.clear()
+    for val in ts_series:
+        ts_series_list_box.append(val)
+
+def refresh_param_values_ui(param_start_timestamp_series):
+    set_time_window_duration_box_value()
+    refresh_ts_list_box(param_start_timestamp_series)
+
+def select_param(selected_param_value):
+    """
+    This method is called when the user selects a parameter from the parameter
+    name drop down box.
+    """
+    global cur_selected_param, param_window_duration
+
+    if not selected_param_value:
+        return
+
+    cur_selected_param = selected_param_value
+    try:
+        param_index = param_name_list.index(cur_selected_param)
+    except ValueError:
+        logging.error("Parameter value: %s is out of index",
+                      cur_selected_param)
+        return
+
+    df = param_df_list[param_index]
+    param_window_duration, param_start_timestamp_series = parse_param_df(df)
+    refresh_param_values_ui(param_start_timestamp_series)
+
+def parse_param(cur_selected_param):
+    """
+    Parse the paramter file
+    """
+    global param_window_duration, param_start_timestamp_series
+    global param_df_list, param_name_list
+
+    if not cur_selected_param:
+        return
+
+    reset_all_parameters()
+    parse_param_folder()
+    try:
+        param_index = param_name_list.index(cur_selected_param)
+    except ValueError:
+        common.logger.error("Parameter value: %s is out of index",
+                     cur_selected_param)
+        return
+
+    param_df = param_df_list[param_index]
+    param_window_duration, param_start_timestamp_series = parse_param_df(
+        param_df)
+
+    refresh_param_values_ui(param_start_timestamp_series)
 
 def line():
     """
@@ -388,7 +543,7 @@ if __name__ == "__main__":
     app = App("", height=900, width=900)
 
     # App name box
-    title = Text(app, text="Binary Data Processing App",
+    title = Text(app, text="Z-Score Splitting App",
                  size=16, font="Arial Bold", width=30)
     title.bg = "white"
     line()
@@ -398,12 +553,59 @@ if __name__ == "__main__":
          font="Verdana bold")
 
     line()
-    input_folder_button = PushButton(
+    input_dir_button = PushButton(
         app, command=select_input_dir, text="Input Folder", width=26)
-    input_folder_button.tk.config(font=("Verdana bold", 14))
+    input_dir_button.tk.config(font=("Verdana bold", 14))
     # Box to display the input folder
     line()
-    input_folder_text_box = TextBox(app)
+    input_dir_text_box = TextBox(app)
+    # Non editable
+    input_dir_text_box.disable()
+    input_dir_text_box.width = INPUT_FOLDER_NAME_BOX_MAX_WIDTH
+    input_dir_text_box.font = "Verdana bold"
+    input_dir_text_box.text_size = 14
+    line()
+
+    # Master parameter box
+    param_box = Box(app, layout="grid")
+    cnt = 0
+    param_title_box = TitleBox(param_box, text="", grid=[0, cnt])
+    param_title = Text(param_title_box, text="Parameters",
+                       size=10, font="Arial Bold", align="left", color="orange")
+
+    # Parameter names combo box (grid high to keep it on the right side)
+    param_names_combo_box = Combo(
+        param_box, options=[], grid=[5, cnt], command=select_param)
+    param_names_combo_box.clear()
+    param_names_combo_box.text_color = "orange"
+    param_names_combo_box.font = "Arial Bold"
+    # param_names_combo_box.hide()
+    cnt += 1
+
+    # Boxes related to showing parameters
+    time_window_duration_label_box = Text(
+        param_box, text=PARAM_UI_TIME_WINDOW_DURATION_TEXT, grid=[0, cnt], align="left")
+    time_window_duration_box = TextBox(
+        param_box, text="", grid=[1, cnt], align="left")
+    # Non editable
+    time_window_duration_box.disable()
+    cnt += 1
+
+    ts_series_list_label_box = Text(param_box, text=PARAM_UI_TIME_WINDOW_START_TIMES,
+                                    grid=[0, cnt], align="left")
+    ts_series_list_box = ListBox(
+        param_box, param_start_timestamp_series, scrollbar=True, grid=[1, cnt], align="left", width=80, height=125)
+    cnt += 1
+
+    # Open & update parameters file button
+    center_box = Box(app, layout="grid")
+    open_params_button = PushButton(center_box, command=open_params_file,
+                                    text="Open parameters file", grid=[0, 1], width=17, align="left")
+    open_params_button.tk.config(font=("Verdana bold", 10))
+    update_params_button = PushButton(center_box, text="Refresh",
+                                      command=parse_cur_param_file, grid=[1, 1], width=17, align="left")
+    update_params_button.tk.config(font=("Verdana bold", 10))
+    line()
 
     # Process input button
     process_button = PushButton(app, text="Process", command=ui_process, width=26)

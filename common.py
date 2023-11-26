@@ -1,9 +1,11 @@
 #!/usr/bin/python
 
+import sys
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 from csv import reader
 import os
+import subprocess
 
 # input coloumns
 INPUT_COL0_TS = "timestamps"
@@ -79,7 +81,6 @@ def select_input_dir(app):
     global input_dir
 
     open_folder = "."
-    logger.debug("input dir is: %s", input_dir)
     if input_dir:
         open_folder = os.path.dirname(input_dir)
     input_dir_temp = app.select_folder(folder=open_folder)
@@ -106,3 +107,10 @@ def get_output_dir(input_dir, output_dir):
 
 def get_input_dir():
     return input_dir
+
+def open_file(filename):
+    if sys.platform == "win32":
+        os.startfile(filename)
+    else:
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.call([opener, filename])
