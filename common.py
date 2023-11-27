@@ -196,6 +196,10 @@ class Parameters:
         param_df = self._param_df_list[param_index]
         return Parameters.parse_param_df(param_df)
 
+    def get_param_file_from_name(self, param_name):
+        return os.path.join(self._param_dir, param_name + CSV_EXT)
+
+    @staticmethod
     def parse_param_df(df):
         value = df[Parameters.PARAM_TIME_WINDOW_DURATION].iat[0]
         w_duration = 0
@@ -206,9 +210,6 @@ class Parameters:
         ts_series.sort_values(ascending=True)
 
         return w_duration, ts_series
-
-    def get_param_file_from_name(self, param_name):
-        return os.path.join(self._param_dir, param_name + CSV_EXT)
 
     @staticmethod
     def get_param_column_names():

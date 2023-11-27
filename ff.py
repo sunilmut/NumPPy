@@ -366,8 +366,8 @@ def ui_process():
     """
     main(common.get_input_dir())
 
-def open_params_file():
-    param_file = common.get_param_file_from_name(cur_selected_param)
+def open_params_file(parameter_obj):
+    param_file = parameter_obj.get_param_file_from_name(parameter_obj.get_currently_selected_param())
     if not os.path.isfile(param_file):
         app.warn(
             "Uh oh!", "Parameters file " + param_file + " is not a file!")
@@ -597,7 +597,7 @@ if __name__ == "__main__":
 
     # Open & update parameters file button
     center_box = Box(app, layout="grid")
-    open_params_button = PushButton(center_box, command=open_params_file,
+    open_params_button = PushButton(center_box, command=open_params_file, args=[parameter_obj],
                                     text="Open parameters file", grid=[0, 1], width=17, align="left")
     open_params_button.tk.config(font=("Verdana bold", 10))
     update_params_button = PushButton(center_box, text="Refresh",
