@@ -52,7 +52,6 @@ param_name_list = []
 param_df_list = []
 # Currently selected parameter values
 param_col_names = [PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
-param_file_exists = False
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
 
@@ -373,7 +372,7 @@ def parse_cur_param_file():
     parse_param(cur_selected_param)
 
 def reset_parameters():
-    global param_window_duration, param_start_timestamp_series
+    global param_start_timestamp_series
 
     param_start_timestamp_series = pd.Series(dtype=np.float64)
 
@@ -424,6 +423,7 @@ def parse_param_df(df):
 
 def set_time_window_duration_box_value():
     global param_window_duration
+
     time_window_duration_box.value = param_window_duration
 
 def refresh_ts_list_box(ts_series):
