@@ -50,8 +50,6 @@ OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
 param_name_list = []
 # Parameter values as dataframe. There is one dataframe for each parameter
 param_df_list = []
-# Currently selected parameter values
-param_col_names = [PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
 
@@ -313,10 +311,17 @@ def refresh_param_names_combo_box(param_name_list):
 
     param_names_combo_box.show()
 
-def select_input_dir():
+def select_input_dir(parameter_obj):
     global param_name_list, cur_selected_param
 
     input_dir = common.select_input_dir(app)
+    try:
+        parameter_obj.parse(input_dir)
+    except ValueError:
+        common.logger.warning("Input dir (%s) does not has any valid parameter file", input_dir)
+
+    param_list = parameter_obj.get_param_name_list()
+    print(param_list)
     input_dir_text_box.value = os.path.basename(input_dir)
     input_dir_text_box.width = min(
         len(input_dir_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
@@ -328,9 +333,10 @@ def select_input_dir():
     reset_all_parameters()
     refresh_param_values_ui(param_start_timestamp_series)
     parse_param_folder()
+    param_name_list = parameter_obj.get_param_name_list()
     refresh_param_names_combo_box(param_name_list)
     if len(param_name_list):
-        cur_selected_param = param_name_list[0]
+        cur_selected_param = parameter_obj.get_currently_selected_param()
         parse_param(cur_selected_param)
 
 def ui_process():
@@ -405,7 +411,7 @@ def parse_param_folder():
             os.path.basename(param_file))[0]
         param_name_list.append(param_file_name_without_ext)
         param_df = pd.read_csv(
-            param_file, names=param_col_names, header=None, skiprows=1)
+            param_file, names=common.Parameters.get_param_column_names(), header=None, skiprows=1)
         param_df_list.append(param_df)
 
     return True, ""
@@ -449,7 +455,7 @@ def select_param(selected_param_value):
     try:
         param_index = param_name_list.index(cur_selected_param)
     except ValueError:
-        logging.error("Parameter value: %s is out of index",
+        common.logger.error("Parameter value: %s is out of index",
                       cur_selected_param)
         return
 
@@ -509,6 +515,7 @@ if __name__ == "__main__":
     console_mode = False
     separate_files = False
     output_folder = None
+    parameter_obj = common.Parameters()
 
     try:
         opts, args = getopt.getopt(argv, "i:vhco:")
@@ -548,7 +555,7 @@ if __name__ == "__main__":
 
     line()
     input_dir_button = PushButton(
-        app, command=select_input_dir, text="Input Folder", width=26)
+        app, command=select_input_dir, args=[parameter_obj], text="Input Folder", width=26)
     input_dir_button.tk.config(font=("Verdana bold", 14))
     # Box to display the input folder
     line()

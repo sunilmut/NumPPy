@@ -164,7 +164,7 @@ class Parameters:
             if not os.path.isfile(param_file):
                 continue
 
-            param_file_name_without_ext = os.path.splitext(s.path.basename(param_file))[0]
+            param_file_name_without_ext = os.path.splitext(os.path.basename(param_file))[0]
             self._param_name_list.append(param_file_name_without_ext)
             param_df = pd.read_csv(param_file, names=Parameters.get_param_column_names(), header=None, skiprows=1)
             self._param_df_list.append(param_df)
