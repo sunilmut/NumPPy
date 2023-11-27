@@ -377,7 +377,23 @@ def open_params_file(parameter_obj):
     common.open_file(param_file)
 
 def parse_cur_param_file(parameter_obj):
-    parse_param(parameter_obj.get_currently_selected_param())
+    """
+    Parse the paramter file
+    """
+
+    currently_selected_param = parameter_obj.get_currently_selected_param()
+    if not currently_selected_param:
+        return
+
+    reset_all_parameters()
+    try:
+        parameter_obj.parse(common.get_input_dir())
+        parameter_obj.set_currently_selected_param(currently_selected_param)
+        param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(currently_selected_param)
+    except ValueError as e:
+        common.logger.error(e)
+
+    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
 def reset_parameters():
     global param_start_timestamp_series
@@ -437,7 +453,7 @@ def refresh_ts_list_box(ts_series):
     for val in ts_series:
         ts_series_list_box.append(val)
 
-def refresh_param_values_ui(param_window_duration, param_start_timestamp_series, ):
+def refresh_param_values_ui(param_window_duration, param_start_timestamp_series):
     set_time_window_duration_box_value(param_window_duration)
     refresh_ts_list_box(param_start_timestamp_series)
 
@@ -460,30 +476,6 @@ def select_param(selected_param_value):
     param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(cur_selected_param)
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
-def parse_param(cur_selected_param):
-    """
-    Parse the paramter file
-    """
-    global param_window_duration, param_start_timestamp_series
-    global param_df_list, param_name_list
-
-    if not cur_selected_param:
-        return
-
-    reset_all_parameters()
-    parse_param_folder()
-    try:
-        param_index = param_name_list.index(cur_selected_param)
-    except ValueError:
-        common.logger.error("Parameter value: %s is out of index",
-                     cur_selected_param)
-        return
-
-    param_df = param_df_list[param_index]
-    param_window_duration, param_start_timestamp_series = parse_param_df(
-        param_df)
-
-    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
 def line():
     """
