@@ -47,7 +47,6 @@ OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
 # There is a dataframe value for each parameter and the indexes
 # for these two arrays should be kept in sync.
 # Parameter names
-param_name_list = []
 # Parameter values as dataframe. There is one dataframe for each parameter
 param_df_list = []
 param_window_duration = 0
@@ -333,7 +332,6 @@ def select_input_dir(parameter_obj):
     reset_all_parameters()
     param_window_duration, param_start_timestamp_series = parameter_obj.get_default_parameter_values()
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
-    parse_param_folder()
     param_name_list = parameter_obj.get_param_name_list()
     refresh_param_names_combo_box(parameter_obj)
     if len(param_name_list):
@@ -401,49 +399,10 @@ def reset_parameters():
     param_start_timestamp_series = pd.Series(dtype=np.float64)
 
 def reset_all_parameters():
-    global param_name_list, param_df_list
+    global param_df_list
 
-    param_name_list.clear()
     param_df_list.clear()
     reset_parameters()
-
-def parse_param_folder():
-    """
-    Parse parameter folder and create a list of parameter dataframe(s)
-    out of it.
-    """
-    global param_name_list, param_df_list
-
-    param_folder = os.path.join(common.get_input_dir(), "parameters")
-    common.logger.debug("param folder is %s", param_folder)
-    if not os.path.isdir(param_folder):
-        return False, ("Parameter folder " + param_folder + " does not exist!")
-
-    search_path = os.path.join(param_folder, "*.csv")
-    for param_file in glob.glob(search_path):
-        common.logger.debug("param file: %s", param_file)
-        if not os.path.isfile(param_file):
-            continue
-
-        param_file_name_without_ext = os.path.splitext(
-            os.path.basename(param_file))[0]
-        param_name_list.append(param_file_name_without_ext)
-        param_df = pd.read_csv(
-            param_file, names=common.Parameters.get_param_column_names(), header=None, skiprows=1)
-        param_df_list.append(param_df)
-
-    return True, ""
-
-def parse_param_df(df):
-    value = df[PARAM_TIME_WINDOW_DURATION].iat[0]
-    w_duration = 0
-    if not pd.isnull(value):
-        w_duration = value
-
-    ts_series = df[PARAM_TIME_WINDOW_START_LIST]
-    ts_series.sort_values(ascending=True)
-
-    return w_duration, ts_series
 
 def set_time_window_duration_box_value(param_window_duration):
     time_window_duration_box.value = param_window_duration
