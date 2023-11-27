@@ -13,8 +13,8 @@ import glob
 
 # UI related constants
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
-PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
-PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
+
+# Parameter UI strings
 PARAM_UI_TIME_WINDOW_START_TIMES = "Time window start (secs):"
 PARAM_UI_MIN_TIME_DURATION_CRITERIA_TEXT = "Min time duration criteria (secs):"
 PARAM_UI_MIN_BEFORE_TIME_DURATION_CRITERIA_TEXT = "\t\t    before: "
@@ -465,7 +465,7 @@ if __name__ == "__main__":
         sys.exit()
 
     # Main app
-    app = App("", height=900, width=900)
+    app = App("", height=600, width=900)
 
     # App name box
     title = Text(app, text="Z-Score Splitting App",
