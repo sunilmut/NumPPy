@@ -199,6 +199,10 @@ class Parameters:
     def get_param_file_from_name(self, param_name):
         return os.path.join(self._param_dir, param_name + CSV_EXT)
 
+    def get_default_parameter_values(self):
+        # Window duration, time series
+        return 0, pd.Series(dtype=np.float64)
+
     @staticmethod
     def parse_param_df(df):
         value = df[Parameters.PARAM_TIME_WINDOW_DURATION].iat[0]

@@ -305,7 +305,8 @@ def print_help():
 """
 
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
-def refresh_param_names_combo_box(param_name_list):
+def refresh_param_names_combo_box(parameter_obj):
+    param_name_list = parameter_obj.get_param_name_list()
     param_names_combo_box.clear()
     for param_name in param_name_list:
         param_names_combo_box.append(param_name)
@@ -313,7 +314,7 @@ def refresh_param_names_combo_box(param_name_list):
     param_names_combo_box.show()
 
 def select_input_dir(parameter_obj):
-    global param_name_list, cur_selected_param
+    global param_window_duration, param_start_timestamp_series
 
     input_dir = common.select_input_dir(app)
     try:
@@ -321,8 +322,6 @@ def select_input_dir(parameter_obj):
     except ValueError:
         common.logger.warning("Input dir (%s) does not has any valid parameter file", input_dir)
 
-    param_list = parameter_obj.get_param_name_list()
-    print(param_list)
     input_dir_text_box.value = os.path.basename(input_dir)
     input_dir_text_box.width = min(
         len(input_dir_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
@@ -332,13 +331,15 @@ def select_input_dir(parameter_obj):
     # the default values even in cases when there are no parameters specified
     # in the input folder).
     reset_all_parameters()
-    refresh_param_values_ui(param_start_timestamp_series)
+    param_window_duration, param_start_timestamp_series = parameter_obj.get_default_parameter_values()
+    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
     parse_param_folder()
     param_name_list = parameter_obj.get_param_name_list()
-    refresh_param_names_combo_box(param_name_list)
+    refresh_param_names_combo_box(parameter_obj)
     if len(param_name_list):
-        cur_selected_param = parameter_obj.get_currently_selected_param()
-        parse_param(cur_selected_param)
+        param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(
+            parameter_obj.get_currently_selected_param())
+        refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
 def ui_process():
     if not common.get_input_dir():
@@ -375,8 +376,8 @@ def open_params_file(parameter_obj):
 
     common.open_file(param_file)
 
-def parse_cur_param_file():
-    parse_param(cur_selected_param)
+def parse_cur_param_file(parameter_obj):
+    parse_param(parameter_obj.get_currently_selected_param())
 
 def reset_parameters():
     global param_start_timestamp_series
@@ -428,9 +429,7 @@ def parse_param_df(df):
 
     return w_duration, ts_series
 
-def set_time_window_duration_box_value():
-    global param_window_duration
-
+def set_time_window_duration_box_value(param_window_duration):
     time_window_duration_box.value = param_window_duration
 
 def refresh_ts_list_box(ts_series):
@@ -438,8 +437,8 @@ def refresh_ts_list_box(ts_series):
     for val in ts_series:
         ts_series_list_box.append(val)
 
-def refresh_param_values_ui(param_start_timestamp_series):
-    set_time_window_duration_box_value()
+def refresh_param_values_ui(param_window_duration, param_start_timestamp_series, ):
+    set_time_window_duration_box_value(param_window_duration)
     refresh_ts_list_box(param_start_timestamp_series)
 
 def select_param(selected_param_value):
@@ -459,7 +458,7 @@ def select_param(selected_param_value):
         common.logger.error("Parameter name(%s) not found in list; unexpected")
 
     param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(cur_selected_param)
-    refresh_param_values_ui(param_start_timestamp_series)
+    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
 def parse_param(cur_selected_param):
     """
@@ -484,7 +483,7 @@ def parse_param(cur_selected_param):
     param_window_duration, param_start_timestamp_series = parse_param_df(
         param_df)
 
-    refresh_param_values_ui(param_start_timestamp_series)
+    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
 def line():
     """
@@ -592,7 +591,8 @@ if __name__ == "__main__":
     ts_series_list_label_box = Text(param_box, text=PARAM_UI_TIME_WINDOW_START_TIMES,
                                     grid=[0, cnt], align="left")
     ts_series_list_box = ListBox(
-        param_box, param_start_timestamp_series, scrollbar=True, grid=[1, cnt], align="left", width=80, height=125)
+        param_box, param_start_timestamp_series, scrollbar=True, grid=[1, cnt],
+        align="left", width=80, height=125)
     cnt += 1
 
     # Open & update parameters file button
@@ -600,8 +600,8 @@ if __name__ == "__main__":
     open_params_button = PushButton(center_box, command=open_params_file, args=[parameter_obj],
                                     text="Open parameters file", grid=[0, 1], width=17, align="left")
     open_params_button.tk.config(font=("Verdana bold", 10))
-    update_params_button = PushButton(center_box, text="Refresh",
-                                      command=parse_cur_param_file, grid=[1, 1], width=17, align="left")
+    update_params_button = PushButton(center_box, text="Refresh", command=parse_cur_param_file,
+                                       args=[parameter_obj], grid=[1, 1], width=17, align="left")
     update_params_button.tk.config(font=("Verdana bold", 10))
     line()
 
