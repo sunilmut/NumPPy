@@ -308,8 +308,8 @@ def select_input_dir(parameter_obj):
     input_dir = common.select_input_dir(app)
     try:
         parameter_obj.parse(input_dir)
-    except ValueError:
-        common.logger.warning("Input dir (%s) does not has any valid parameter file", input_dir)
+    except ValueError as e:
+        common.logger.warning(e)
 
     input_dir_text_box.value = os.path.basename(input_dir)
     input_dir_text_box.width = min(
@@ -398,7 +398,7 @@ def select_param(selected_param_value):
     This method is called when the user selects a parameter from the parameter
     name drop down box.
     """
-    global cur_selected_param, param_window_duration, parameter_obj
+    global parameter_obj
 
     if not selected_param_value:
         return
