@@ -43,14 +43,6 @@ OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
                                OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM]
 
 # Globals
-# Arrays to store the parameter names and its value as a dataframe
-# There is a dataframe value for each parameter and the indexes
-# for these two arrays should be kept in sync.
-# Parameter names
-# Parameter values as dataframe. There is one dataframe for each parameter
-param_df_list = []
-param_window_duration = 0
-param_start_timestamp_series = pd.Series(dtype=np.float64)
 parameter_obj = common.Parameters()
 
 # Read the values of the given 'key' from the HDF5 file
@@ -313,8 +305,6 @@ def refresh_param_names_combo_box(parameter_obj):
     param_names_combo_box.show()
 
 def select_input_dir(parameter_obj):
-    global param_window_duration, param_start_timestamp_series
-
     input_dir = common.select_input_dir(app)
     try:
         parameter_obj.parse(input_dir)
@@ -329,7 +319,6 @@ def select_input_dir(parameter_obj):
     # UI section with the reset values (this will ensure the UI will show
     # the default values even in cases when there are no parameters specified
     # in the input folder).
-    reset_all_parameters()
     param_window_duration, param_start_timestamp_series = parameter_obj.get_default_parameter_values()
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
     param_name_list = parameter_obj.get_param_name_list()
@@ -383,7 +372,6 @@ def parse_cur_param_file(parameter_obj):
     if not currently_selected_param:
         return
 
-    reset_all_parameters()
     try:
         parameter_obj.parse(common.get_input_dir())
         parameter_obj.set_currently_selected_param(currently_selected_param)
@@ -392,17 +380,6 @@ def parse_cur_param_file(parameter_obj):
         common.logger.error(e)
 
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
-
-def reset_parameters():
-    global param_start_timestamp_series
-
-    param_start_timestamp_series = pd.Series(dtype=np.float64)
-
-def reset_all_parameters():
-    global param_df_list
-
-    param_df_list.clear()
-    reset_parameters()
 
 def set_time_window_duration_box_value(param_window_duration):
     time_window_duration_box.value = param_window_duration
@@ -542,7 +519,7 @@ if __name__ == "__main__":
     ts_series_list_label_box = Text(param_box, text=PARAM_UI_TIME_WINDOW_START_TIMES,
                                     grid=[0, cnt], align="left")
     ts_series_list_box = ListBox(
-        param_box, param_start_timestamp_series, scrollbar=True, grid=[1, cnt],
+        param_box, pd.Series(dtype=np.float64), scrollbar=True, grid=[1, cnt],
         align="left", width=80, height=125)
     cnt += 1
 
