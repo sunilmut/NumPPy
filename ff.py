@@ -52,6 +52,7 @@ param_name_list = []
 param_df_list = []
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
+parameter_obj = common.Parameters()
 
 # Read the values of the given 'key' from the HDF5 file
 # into an numpy array. If an 'event' is provided, it will
@@ -446,21 +447,18 @@ def select_param(selected_param_value):
     This method is called when the user selects a parameter from the parameter
     name drop down box.
     """
-    global cur_selected_param, param_window_duration
+    global cur_selected_param, param_window_duration, parameter_obj
 
     if not selected_param_value:
         return
 
     cur_selected_param = selected_param_value
     try:
-        param_index = param_name_list.index(cur_selected_param)
-    except ValueError:
-        common.logger.error("Parameter value: %s is out of index",
-                      cur_selected_param)
-        return
+        parameter_obj.set_currently_selected_param(selected_param_value)
+    except:
+        common.logger.error("Parameter name(%s) not found in list; unexpected")
 
-    df = param_df_list[param_index]
-    param_window_duration, param_start_timestamp_series = parse_param_df(df)
+    param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(cur_selected_param)
     refresh_param_values_ui(param_start_timestamp_series)
 
 def parse_param(cur_selected_param):
@@ -515,7 +513,6 @@ if __name__ == "__main__":
     console_mode = False
     separate_files = False
     output_folder = None
-    parameter_obj = common.Parameters()
 
     try:
         opts, args = getopt.getopt(argv, "i:vhco:")

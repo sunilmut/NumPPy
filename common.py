@@ -194,7 +194,7 @@ class Parameters:
             return
 
         param_df = self._param_df_list[param_index]
-        param_window_duration, param_start_timestamp_series = self.parse_param_df(param_df)
+        return Parameters.parse_param_df(param_df)
 
     def parse_param_df(df):
         value = df[Parameters.PARAM_TIME_WINDOW_DURATION].iat[0]
