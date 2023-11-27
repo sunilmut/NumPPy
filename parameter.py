@@ -5,6 +5,8 @@ import os
 import numpy as np
 import glob
 
+CSV_EXT = ".csv"
+
 class Parameters:
     PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
     PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
@@ -64,10 +66,13 @@ class Parameters:
         return self._param_name_list
 
     def get_param_values(self, param_name):
+        if not param_name:
+            return self.get_default_parameter_values()
+
         try:
             param_index = self._param_name_list.index(param_name)
         except ValueError:
-            raise ValueError("Parameter(%s) is not in the parameter list.", param_name)
+            raise ValueError("Parameter " + param_name + " is not in the parameter list.")
 
         param_df = self._param_df_list[param_index]
         return Parameters.parse_param_df(param_df)

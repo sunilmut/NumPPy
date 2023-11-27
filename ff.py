@@ -66,13 +66,12 @@ def read_hdf5(event, filepath, key):
 
     return arr
 
-def main(input_dir):
+def main(input_dir, parameter_obj):
     path = glob.glob(os.path.join(input_dir, 'z_score_*'))
     output_dir = common.get_output_dir(input_dir, '')
     for i in range(len(path)):
         basename = (os.path.basename(path[i])).split('.')[0]
         name_1 = basename.split('_')[-1]
-        print(name_1)
         # TODO: Should NaN be handled?
         z_score = read_hdf5('', path[i], 'data')
         ts = read_hdf5('timeCorrection_' + name_1, input_dir, 'timestampNew')
@@ -92,51 +91,75 @@ def main(input_dir):
             if not os.path.isdir(this_output_folder):
                 os.mkdir(this_output_folder)
 
-            # Process the data and write out the results
-            success, results = process(binary_df, timeshift_val, z_score, ts)
-            if not success:
-                continue
+            # We want to generate without any parameters as well. So start with
+            # no parameters and append the parameter list.
+            param_name_list = [""]
+            param_name_list.extend(parameter_obj.get_param_name_list())
+            for param in param_name_list:
+                param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(param)
 
-            auc_0s_sum = results[0]
-            auc_0s_cnt = results[1]
-            out_df_0s = results[2]
-            auc_1s_sum = results[3]
-            auc_1s_cnt = results[4]
-            out_df_1s = results[5]
+                # Process the data and write out the results
+                success, results = process(param_window_duration,
+                                           param_start_timestamp_series,
+                                           binary_df,
+                                           timeshift_val,
+                                           z_score,
+                                           ts)
+                if not success:
+                    continue
 
-            auc_0s_avg = auc_0s_sum/auc_0s_cnt
-            auc_1s_avg = auc_1s_sum/auc_1s_cnt
-            print(out_df_0s)
-            print(out_df_1s)
-            sem_auc_0s_sum = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL3_DATA_AUC])
-            sem_auc_0s_avg = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL4_DATA_AVG])
-            sem_auc_1s_sum = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL3_DATA_AUC])
-            sem_auc_1s_avg = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL4_DATA_AVG])
-            print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
-            print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
+                auc_0s_sum = results[0]
+                auc_0s_cnt = results[1]
+                out_df_0s = results[2]
+                auc_1s_sum = results[3]
+                auc_1s_cnt = results[4]
+                out_df_1s = results[5]
 
-            # 0's
-            df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-            df_0s_summary.loc[len(df_0s_summary.index)] = [auc_0s_sum,
-                                                           sem_auc_0s_sum,
-                                                           auc_0s_avg,
-                                                           sem_auc_0s_avg]
-            out_0_file = os.path.join(this_output_folder, OUTPUT_ZEROS + csv_basename + common.CSV_EXT)
-            df_0s_summary.to_csv(out_0_file, mode='w', index=False, header=True)
-            out_df_0s.to_csv(out_0_file, mode='a', index=False, header=True)
+                auc_0s_avg = auc_0s_sum/auc_0s_cnt
+                auc_1s_avg = auc_1s_sum/auc_1s_cnt
+                print(out_df_0s)
+                print(out_df_1s)
+                sem_auc_0s_sum = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL3_DATA_AUC])
+                sem_auc_0s_avg = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL4_DATA_AVG])
+                sem_auc_1s_sum = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL3_DATA_AUC])
+                sem_auc_1s_avg = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL4_DATA_AVG])
+                print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
+                print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
 
-            # 1's
-            df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-            df_1s_summary.loc[len(df_1s_summary.index)] = [auc_1s_sum,
-                                                           sem_auc_1s_sum,
-                                                           auc_1s_avg,
-                                                           sem_auc_1s_avg]
-            out_1_file = os.path.join(this_output_folder, OUTPUT_ONES + csv_basename + common.CSV_EXT)
-            df_1s_summary.to_csv(out_1_file, mode='w', index=False, header=True)
-            out_df_1s.to_csv(out_1_file, mode='a', index=False, header=True)
+                param_ext = ""
+                if not param == "":
+                    param_ext = "_" + param
+
+                # 0's
+                df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+                df_0s_summary.loc[len(df_0s_summary.index)] = [auc_0s_sum,
+                                                            sem_auc_0s_sum,
+                                                            auc_0s_avg,
+                                                            sem_auc_0s_avg]
+                out_0_file = os.path.join(this_output_folder,
+                                          OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT)
+                df_0s_summary.to_csv(out_0_file, mode='w', index=False, header=True)
+                out_df_0s.to_csv(out_0_file, mode='a', index=False, header=True)
+
+                # 1's
+                df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+                df_1s_summary.loc[len(df_1s_summary.index)] = [auc_1s_sum,
+                                                            sem_auc_1s_sum,
+                                                            auc_1s_avg,
+                                                            sem_auc_1s_avg]
+                out_1_file = os.path.join(this_output_folder,
+                                          OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT)
+                df_1s_summary.to_csv(out_1_file, mode='w', index=False, header=True)
+                out_df_1s.to_csv(out_1_file, mode='a', index=False, header=True)
 
 
-def process(binary_df, timeshift_val, data, ts):
+def process(param_window_duration,
+            param_start_timestamp_series,
+            binary_df,
+            timeshift_val,
+            data,
+            ts):
+
     # Perform some basic checks on the data sets.
     if len(ts) != len(data):
         common.logger.error("Timestamp series length(%d) does not match data series length(%d)",
@@ -329,7 +352,7 @@ def select_input_dir(parameter_obj):
             parameter_obj.get_currently_selected_param())
         refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
-def ui_process():
+def ui_process_cmd(parameter_obj):
     if not common.get_input_dir():
         app.warn(
             "Uh oh!", "No input folder specified. Please select an input folder and run again!")
@@ -353,7 +376,7 @@ def ui_process():
 
     rwin.show()
     """
-    main(common.get_input_dir())
+    main(common.get_input_dir(), parameter_obj)
 
 def open_params_file(parameter_obj):
     param_file = parameter_obj.get_param_file_from_name(parameter_obj.get_currently_selected_param())
@@ -462,7 +485,7 @@ if __name__ == "__main__":
             print_help()
 
     if console_mode:
-        main(input_dir)
+        main(input_dir, parameter_obj)
         sys.exit()
 
     # Main app
@@ -535,7 +558,8 @@ if __name__ == "__main__":
     line()
 
     # Process input button
-    process_button = PushButton(app, text="Process", command=ui_process, width=26)
+    process_button = PushButton(app, text="Process", command=ui_process_cmd,
+                                args=[parameter_obj], width=26)
     process_button.tk.config(font=("Verdana bold", 14))
 
     # Display the app
