@@ -4,6 +4,7 @@ import getopt
 import logging
 import numpy as np
 import common
+from parameter import *
 import os
 import pandas as pd
 from pandas.api.types import is_integer_dtype
@@ -43,7 +44,7 @@ OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
                                OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM]
 
 # Globals
-parameter_obj = common.Parameters()
+parameter_obj = Parameters()
 
 # Read the values of the given 'key' from the HDF5 file
 # into an numpy array. If an 'event' is provided, it will
