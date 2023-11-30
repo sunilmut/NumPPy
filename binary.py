@@ -373,6 +373,7 @@ def get_param_min_time_duration():
     t_duration_after = param_min_time_duration_after
     itr = 0
     param_min_t_file = get_parameter_min_t_file()
+    logger.debug("opening min time file %s", param_min_t_file)
     try:
         with open(param_min_t_file) as min_t_file:
             param_file_exists = True
