@@ -14,6 +14,7 @@ import csv
 from csv import reader
 import unittest
 import common
+from parameter import *
 
 # Constants:
 ZERO_TO_ONE = "0 to 1"
@@ -79,6 +80,7 @@ param_min_time_duration_before = 0
 param_min_time_duration_after = 0
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
+parameter_obj = Parameters()
 
 # Currently selected parameter name
 cur_selected_param = None
@@ -355,7 +357,7 @@ def parse_param_folder():
 def get_parameter_min_t_file():
     input_dir = common.get_input_dir()
     min_t_file = os.path.join(
-        input_dir, common.PARAMETERS_DIR_NAME, TIME_DURATION_PARAMETER_FILE)
+        input_dir, Parameters.PARAMETERS_DIR_NAME, TIME_DURATION_PARAMETER_FILE)
 
     return min_t_file
 
@@ -429,38 +431,26 @@ def reset_all_parameters():
     reset_parameters()
 
 
-def parse_cur_param_file():
-    update_min_t_in_file(min_time_duration_before_box.value,
-                         min_time_duration_after_box.value)
-    parse_param(cur_selected_param)
-
-
-def parse_param(cur_selected_param):
+def parse_cur_param_file(parameter_obj):
     """
     Parse the paramter file
     """
-    global param_min_time_duration_before, param_min_time_duration_after
-    global param_window_duration, param_start_timestamp_series
-    global param_df_list, param_name_list
 
-    if not cur_selected_param:
+    update_min_t_in_file(min_time_duration_before_box.value,
+                         min_time_duration_after_box.value)
+
+    currently_selected_param = parameter_obj.get_currently_selected_param()
+    if not currently_selected_param:
         return
 
-    reset_all_parameters()
-    parse_param_folder()
     try:
-        param_index = param_name_list.index(cur_selected_param)
-    except ValueError:
-        logger.error("Parameter value: %s is out of index",
-                     cur_selected_param)
-        return
+        parameter_obj.parse(common.get_input_dir())
+        parameter_obj.set_currently_selected_param(currently_selected_param)
+        param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(currently_selected_param)
+    except ValueError as e:
+        common.logger.error(e)
 
-    param_df = param_df_list[param_index]
-    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
-    param_window_duration, param_start_timestamp_series = parse_param_df(
-        param_df)
-
-    refresh_param_values_ui(param_start_timestamp_series)
+    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
 
 def process_param(param_idx, out_df, nop_df):
@@ -901,14 +891,38 @@ def line_r(rwin):
     """
     Text(rwin, "-------------------------------------------------------------------------------------")
 
+def select_input_dir(parameter_obj):
+    input_dir = common.select_input_dir(app)
+    try:
+        parameter_obj.parse(input_dir)
+    except ValueError as e:
+        common.logger.warning(e)
 
-def select_input_folder():
+    input_dir_text_box.value = os.path.basename(input_dir)
+    input_dir_text_box.width = min(
+        len(input_dir_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
+
+    # Reset all current values of the parameters and refresh the parameter
+    # UI section with the reset values (this will ensure the UI will show
+    # the default values even in cases when there are no parameters specified
+    # in the input folder).
+    param_window_duration, param_start_timestamp_series = parameter_obj.get_default_parameter_values()
+    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+    param_name_list = parameter_obj.get_param_name_list()
+    refresh_param_names_combo_box(parameter_obj)
+    if len(param_name_list):
+        param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(
+            parameter_obj.get_currently_selected_param())
+        refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+
+"""
+def select_input_dir(parameter_obj):
     global param_name_list, cur_selected_param
 
     input_dir = common.select_input_dir(app)
-    input_folder_text_box.value = os.path.basename(input_dir)
-    input_folder_text_box.width = min(
-        len(input_folder_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
+    input_dir_text_box.value = os.path.basename(input_dir)
+    input_dir_text_box.width = min(
+        len(input_dir_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
 
     # Reset all current values of the parameters and refresh the parameter
     # UI section with the reset values (this will ensure the UI will show
@@ -921,7 +935,7 @@ def select_input_folder():
     if len(param_name_list):
         cur_selected_param = param_name_list[0]
         parse_param(cur_selected_param)
-
+"""
 
 def open_output_folder():
     global output_dir
@@ -941,13 +955,14 @@ def open_output_folder():
         subprocess.Popen(["xdg-open", norm_path])
 
 
-def open_params_file():
+def open_params_file(parameter_obj):
     update_min_t_in_file(min_time_duration_before_box.value,
                          min_time_duration_after_box.value)
     if not cur_selected_param:
         return
 
-    param_file = common.get_param_file_from_name(cur_selected_param)
+    param_file = parameter_obj.get_param_file_from_name(
+        parameter_obj.get_currently_selected_param())
     if not os.path.isfile(param_file):
         app.warn(
             "Uh oh!", "Parameters file " + param_file + " is not a file!")
@@ -1085,20 +1100,19 @@ def select_param(selected_param_value):
     df = param_df_list[param_index]
     param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
     param_window_duration, param_start_timestamp_series = parse_param_df(df)
-    refresh_param_values_ui(param_start_timestamp_series)
+    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
 
-def refresh_param_names_combo_box(param_name_list):
+def refresh_param_names_combo_box(parameter_obj):
+    param_name_list = parameter_obj.get_param_name_list()
     param_names_combo_box.clear()
     for param_name in param_name_list:
         param_names_combo_box.append(param_name)
 
     param_names_combo_box.show()
 
-
-def refresh_param_values_ui(param_start_timestamp_series):
-    set_min_time_duration_box_value()
-    set_time_window_duration_box_value()
+def refresh_param_values_ui(param_window_duration, param_start_timestamp_series):
+    set_time_window_duration_box_value(param_window_duration)
     refresh_ts_list_box(param_start_timestamp_series)
 
 
@@ -1114,8 +1128,7 @@ def set_min_time_duration_box_value():
     min_time_duration_after_box.value = param_min_time_duration_after
 
 
-def set_time_window_duration_box_value():
-    global param_window_duration
+def set_time_window_duration_box_value(param_window_duration):
     time_window_duration_box.value = param_window_duration
 
 
@@ -1202,16 +1215,16 @@ if __name__ == "__main__":
 
     line()
     input_folder_button = PushButton(
-        app, command=select_input_folder, text="Input Folder", width=26)
+        app, command=select_input_dir, args=[parameter_obj], text="Input Folder", width=26)
     input_folder_button.tk.config(font=("Verdana bold", 14))
     # Box to display the input folder
     line()
-    input_folder_text_box = TextBox(app)
+    input_dir_text_box = TextBox(app)
     # Non editable
-    input_folder_text_box.disable()
-    input_folder_text_box.width = INPUT_FOLDER_NAME_BOX_MAX_WIDTH
-    input_folder_text_box.font = "Verdana bold"
-    input_folder_text_box.text_size = 14
+    input_dir_text_box.disable()
+    input_dir_text_box.width = INPUT_FOLDER_NAME_BOX_MAX_WIDTH
+    input_dir_text_box.font = "Verdana bold"
+    input_dir_text_box.text_size = 14
     line()
 
     # Separate files from input folder
@@ -1274,11 +1287,11 @@ if __name__ == "__main__":
 
     # Open & update parameters file button
     center_box = Box(app, layout="grid")
-    open_params_button = PushButton(center_box, command=open_params_file,
+    open_params_button = PushButton(center_box, command=open_params_file, args=[parameter_obj],
                                     text="Open parameters file", grid=[0, 1], width=17, align="left")
     open_params_button.tk.config(font=("Verdana bold", 10))
-    update_params_button = PushButton(center_box, text="Refresh",
-                                      command=parse_cur_param_file, grid=[1, 1], width=17, align="left")
+    update_params_button = PushButton(center_box, text="Refresh", command=parse_cur_param_file,
+                                      args=[parameter_obj], grid=[1, 1], width=17, align="left")
     update_params_button.tk.config(font=("Verdana bold", 10))
     line()
 
