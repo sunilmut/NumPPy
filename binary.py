@@ -381,6 +381,7 @@ def get_param_min_time_duration():
                 line = min_t_file.readline().rstrip()
                 if not line:
                     break
+                logger.debug("line %s", line)
                 try:
                     t_duration = float(line)
                     if itr == 0:
@@ -400,6 +401,7 @@ def get_param_min_time_duration():
             "Min time duration file(%s) does not exist.", param_min_t_file)
         pass
 
+    #logger.debug("min t before %d & after %d", t_duration_before, t_duration_after)
     return t_duration_before, t_duration_after
 
 
@@ -893,6 +895,8 @@ def line_r(rwin):
     Text(rwin, "-------------------------------------------------------------------------------------")
 
 def select_input_dir(parameter_obj):
+    global param_min_time_duration_before, param_min_time_duration_after
+
     input_dir = common.select_input_dir(app)
     try:
         parameter_obj.parse(input_dir)
@@ -909,6 +913,7 @@ def select_input_dir(parameter_obj):
     # in the input folder).
     param_window_duration, param_start_timestamp_series = parameter_obj.get_default_parameter_values()
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
     param_name_list = parameter_obj.get_param_name_list()
     refresh_param_names_combo_box(parameter_obj)
     if len(param_name_list):
@@ -1114,6 +1119,7 @@ def refresh_param_names_combo_box(parameter_obj):
 
 def refresh_param_values_ui(param_window_duration, param_start_timestamp_series):
     set_time_window_duration_box_value(param_window_duration)
+    set_min_time_duration_box_value()
     refresh_ts_list_box(param_start_timestamp_series)
 
 
@@ -1125,6 +1131,7 @@ def refresh_ts_list_box(ts_series):
 
 def set_min_time_duration_box_value():
     global param_min_time_duration_before, param_min_time_duration_after
+
     min_time_duration_before_box.value = param_min_time_duration_before
     min_time_duration_after_box.value = param_min_time_duration_after
 
