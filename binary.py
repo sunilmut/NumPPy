@@ -72,11 +72,11 @@ param_name_list = []
 # Parameter values as dataframe. There is one dataframe for each parameter
 param_df_list = []
 param_file_exists = False
+parameter_obj = Parameters()
+
 param_min_time_duration_before = 0
 param_min_time_duration_after = 0
 param_window_duration = 0
-param_start_timestamp_series = pd.Series(dtype=np.float64)
-parameter_obj = Parameters()
 
 # When set to True, only the currently selected parameter is processed instead
 # of all the parameters. Default is to process all parameters.
@@ -401,11 +401,10 @@ def parse_param_df(df):
 
 def reset_parameters():
     global param_min_time_duration_before, param_window_duration
-    global param_min_time_duration_after, param_start_timestamp_series
+    global param_min_time_duration_after
 
     param_min_time_duration_before = param_min_time_duration_before
     param_window_duration = param_min_time_duration_after
-    param_start_timestamp_series = pd.Series(dtype=np.float64)
 
 
 def reset_all_parameters():
@@ -569,7 +568,7 @@ def process_input_file(input_file, output_folder):
     global out_file_zero_to_one_ts, out_file_zero_to_one_un_ts
     global out_file_one_to_zero, out_file_one_to_zero_un
     global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
-    global param_min_time_duration_before, param_window_duration, param_start_timestamp_series
+    global param_min_time_duration_before, param_window_duration
     global param_min_time_duration_after, files_without_timeshift
     global param_file_exists, parameter_obj
 
@@ -1249,7 +1248,8 @@ if __name__ == "__main__":
     ts_series_list_label_box = Text(param_box, text=PARAM_UI_TIME_WINDOW_START_TIMES,
                                     grid=[0, cnt], align="left")
     ts_series_list_box = ListBox(
-        param_box, param_start_timestamp_series, scrollbar=True, grid=[1, cnt], align="left", width=80, height=125)
+        param_box, pd.Series(dtype=np.float64), scrollbar=True,
+        grid=[1, cnt], align="left", width=80, height=125)
     cnt += 1
 
     # Open & update parameters file button
