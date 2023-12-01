@@ -318,12 +318,11 @@ def format_out_file_names(input_file, param_name,  param_min_time_duration_befor
                  os.path.basename(out_file_one_to_zero_ts))
 
 
-def parse_param_folder():
+def parse_param_folder(parameter_obj):
     """
     Parse parameter folder and create a list of parameter dataframe(s)
     out of it.
     """
-    global param_name_list, param_df_list
 
     input_dir = common.get_input_dir()
 
@@ -331,9 +330,6 @@ def parse_param_folder():
         parameter_obj.parse(input_dir)
     except ValueError as e:
         common.logger.warning(e)
-
-    param_name_list = parameter_obj.get_param_name_list()
-    param_df_list = parameter_obj.get_param_df()
 
 
 def get_parameter_min_t_file():
@@ -408,10 +404,6 @@ def reset_parameters():
 
 
 def reset_all_parameters():
-    global param_name_list, param_df_list
-
-    param_name_list.clear()
-    param_df_list.clear()
     reset_parameters()
 
 
@@ -437,7 +429,7 @@ def parse_cur_param_file(parameter_obj):
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
 
-def process_param(param_idx, out_df, nop_df):
+def process_param(parameter_obj, param_name, out_df, nop_df):
     """
     Processes the dataframe for the parameter name specified using
     the parameter name.
@@ -447,12 +439,10 @@ def process_param(param_idx, out_df, nop_df):
       entries that were selected by the parameter criterias
       p.s - This parameter allows continuation from a previous 'nop_df'
     """
-    global param_df_list
 
     # Make a copy by value
     temp_out_df = out_df[:]
-    param_window_duration, param_start_timestamp_series = parse_param_df(
-        param_df_list[param_idx])
+    param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(param_name)
 
     # Apply time window filter
     if not param_start_timestamp_series.empty:
@@ -594,7 +584,7 @@ def process_input_file(input_file, output_folder):
 
     # Parse all the parameter files.
     reset_all_parameters()
-    parse_param_folder()
+    parse_param_folder(parameter_obj)
 
     # Get a base output dataframe without any criterias applied
     result, out_df = process_input_df(df)
@@ -630,6 +620,7 @@ def process_input_file(input_file, output_folder):
     cur_selected_param = parameter_obj.get_currently_selected_param()
 
     # Iterate through the parameters and apply each one of them
+    param_name_list = parameter_obj.get_param_name_list()
     for idx, param_name in enumerate(param_name_list):
         common.logger.debug("\tProcessing parameter: %s", param_name)
         if only_process_cur_param and param_name != cur_selected_param:
@@ -638,7 +629,7 @@ def process_input_file(input_file, output_folder):
         params_name += UNDERSCORE + param_name
 
         # process the dataframe for the parameter with the given index.
-        temp_out_df, nop_df = process_param(idx, out_df, nop_df)
+        temp_out_df, nop_df = process_param(parameter_obj, param_name, out_df, nop_df)
 
         # Format the file names of the output files using the parameter name
         format_out_file_names(input_file, param_name,  param_min_time_duration_before,
