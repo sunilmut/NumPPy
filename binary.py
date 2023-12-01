@@ -64,13 +64,6 @@ out_file_one_to_zero_ts = ""
 out_file_one_to_zero_un = ""
 out_file_one_to_zero_un_ts = ""
 
-# Arrays to store the parameter names and its value as a dataframe
-# There is a dataframe value for each parameter and the indexes
-# for these two arrays should be kept in sync.
-# Parameter names
-param_name_list = []
-# Parameter values as dataframe. There is one dataframe for each parameter
-param_df_list = []
 param_file_exists = False
 parameter_obj = Parameters()
 
@@ -89,7 +82,6 @@ create_output_folder_with_file_name = True
 add_csv_file_name_to_output = False
 
 files_without_timeshift = []
-
 
 def apply_duration_criteria(ts_series, param_min_time_duration_before, param_min_time_duration_after):
     it = ts_series.iteritems()
@@ -395,6 +387,7 @@ def parse_param_df(df):
     return w_duration, ts_series
 
 
+#TODO: remove these.
 def reset_parameters():
     global param_min_time_duration_before, param_window_duration
     global param_min_time_duration_after
@@ -1385,10 +1378,7 @@ out_p1_nop = {
 # Run these tests using `python -m unittest .\binary.py`
 class TestDataProcessing(unittest.TestCase):
     def setUp(self):
-        global param_name_list, param_df_list
-
         self.input_df1 = pd.DataFrame(input_data1)
-        reset_all_parameters()
         self.p1_df = pd.DataFrame(test_p1)
 
     def validate_df(self, df, expected_data):
@@ -1412,11 +1402,12 @@ class TestDataProcessing(unittest.TestCase):
         self.validate_min_t(0, 4, out_df, output_data1_min_t_4_after)
 
     def test_param_processing(self):
-        param_name_list.append("test_p1")
-        param_df_list.append(self.p1_df)
+        parameter_obj = Parameters()
+        param_name = "test_p1"
+        parameter_obj.set_param_value(param_name, self.p1_df)
         out_df = process_input_df(self.input_df1)[1]
         nop_df = out_df[:]
-        temp_out_df, nop_df = process_param(0, out_df, nop_df)
+        temp_out_df, nop_df = process_param(parameter_obj, param_name, out_df, nop_df)
         temp_out_df.reset_index(drop=True, inplace=True)
         self.validate_df(temp_out_df, out_p1)
         self.validate_df(nop_df, out_p1_nop)

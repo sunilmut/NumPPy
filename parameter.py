@@ -83,6 +83,10 @@ class Parameters:
     def get_param_file_from_name(self, param_name):
         return os.path.join(self._param_dir, param_name + CSV_EXT)
 
+    def set_param_value(self, param_name, param_df):
+        self._param_name_list.append(param_name)
+        self._param_df_list.append(param_df)
+
     def get_default_parameter_values(self):
         # Window duration, time series
         return 0, pd.Series(dtype=np.float64)
