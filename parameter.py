@@ -77,6 +77,9 @@ class Parameters:
         param_df = self._param_df_list[param_index]
         return Parameters.parse_param_df(param_df)
 
+    def get_param_df(self):
+        return self._param_df_list
+
     def get_param_file_from_name(self, param_name):
         return os.path.join(self._param_dir, param_name + CSV_EXT)
 

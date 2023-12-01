@@ -71,17 +71,12 @@ out_file_one_to_zero_un_ts = ""
 param_name_list = []
 # Parameter values as dataframe. There is one dataframe for each parameter
 param_df_list = []
-# Currently selected parameter values
-param_col_names = [Parameters.PARAM_TIME_WINDOW_START_LIST, Parameters.PARAM_TIME_WINDOW_DURATION]
 param_file_exists = False
 param_min_time_duration_before = 0
 param_min_time_duration_after = 0
 param_window_duration = 0
 param_start_timestamp_series = pd.Series(dtype=np.float64)
 parameter_obj = Parameters()
-
-# Currently selected parameter name
-cur_selected_param = None
 
 # When set to True, only the currently selected parameter is processed instead
 # of all the parameters. Default is to process all parameters.
@@ -331,25 +326,14 @@ def parse_param_folder():
     global param_name_list, param_df_list
 
     input_dir = common.get_input_dir()
-    param_folder = os.path.join(input_dir, "parameters")
-    common.logger.debug("param folder is %s", param_folder)
-    if not os.path.isdir(param_folder):
-        return False, ("Parameter folder " + param_folder + " does not exist!")
 
-    search_path = os.path.join(param_folder, "*.csv")
-    for param_file in glob.glob(search_path):
-        common.logger.debug("param file: %s", param_file)
-        if not os.path.isfile(param_file):
-            continue
+    try:
+        parameter_obj.parse(input_dir)
+    except ValueError as e:
+        common.logger.warning(e)
 
-        param_file_name_without_ext = os.path.splitext(
-            os.path.basename(param_file))[0]
-        param_name_list.append(param_file_name_without_ext)
-        param_df = pd.read_csv(
-            param_file, names=param_col_names, header=None, skiprows=1)
-        param_df_list.append(param_df)
-
-    return True, ""
+    param_name_list = parameter_obj.get_param_name_list()
+    param_df_list = parameter_obj.get_param_df()
 
 
 def get_parameter_min_t_file():
@@ -587,7 +571,7 @@ def process_input_file(input_file, output_folder):
     global out_file_one_to_zero_ts, out_file_one_to_zero_un_ts
     global param_min_time_duration_before, param_window_duration, param_start_timestamp_series
     global param_min_time_duration_after, files_without_timeshift
-    global param_file_exists
+    global param_file_exists, parameter_obj
 
     common.logger.debug("Processing input file: %s", os.path.basename(input_file))
     timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(
@@ -644,6 +628,7 @@ def process_input_file(input_file, output_folder):
     # Make a copy of out dataframe 'by value' and not by reference.
     nop_df = out_df[:]
     params_name = ""
+    cur_selected_param = parameter_obj.get_currently_selected_param()
 
     # Iterate through the parameters and apply each one of them
     for idx, param_name in enumerate(param_name_list):
@@ -938,6 +923,7 @@ def open_output_folder():
 
 
 def open_params_file(parameter_obj):
+    cur_selected_param = parameter_obj.get_currently_selected_param()
     update_min_t_in_file(min_time_duration_before_box.value,
                          min_time_duration_after_box.value)
     if not cur_selected_param:
@@ -1062,7 +1048,7 @@ def select_param(selected_param_value):
     This method is called when the user selects a parameter from the parameter
     name drop down box.
     """
-    global cur_selected_param, param_min_time_duration_before
+    global param_min_time_duration_before, parameter_obj
     global param_min_time_duration_after, param_window_duration
 
     # First thing is to apply any update to the min time duration box value.
@@ -1073,15 +1059,12 @@ def select_param(selected_param_value):
 
     cur_selected_param = selected_param_value
     try:
-        param_index = param_name_list.index(cur_selected_param)
-    except ValueError:
-        logging.error("Parameter value: %s is out of index",
-                      cur_selected_param)
-        return
+        parameter_obj.set_currently_selected_param(selected_param_value)
+    except:
+        common.logger.error("Parameter name(%s) not found in list; unexpected")
 
-    df = param_df_list[param_index]
     param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
-    param_window_duration, param_start_timestamp_series = parse_param_df(df)
+    param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(cur_selected_param)
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
 
