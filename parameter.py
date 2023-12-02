@@ -29,15 +29,16 @@ class Parameters:
         self._min_time_duration_after = 0
         self._parse_file_exists = False
 
-    def _set_param_dir(self, param_dir):
-        self._param_dir = param_dir
+    def _set_param_dir(self, input_dir):
+        self._param_dir = Parameters.get_param_dir(input_dir)
+        print("self param dir", self._param_dir)
 
     def parse(self, input_dir):
         self.reset()
-        self._param_dir = os.path.join(input_dir, Parameters.PARAMETERS_DIR_NAME)
+        self._param_dir = Parameters.get_param_dir(input_dir)
         param_dir = self._param_dir
         if not os.path.isdir(param_dir):
-            raise ValueError("Parameter folder " + param_dir + " does not exist!")
+            raise ValueError("Parameter folder %s does not exist!", param_dir)
 
         search_path = os.path.join(param_dir, "*.csv")
         for param_file in glob.glob(search_path):
@@ -63,7 +64,7 @@ class Parameters:
         if param_name in self._param_name_list:
             self._cur_selected_param = param_name
         else:
-            raise ValueError("Parameter name " + param_name + " is not part of valid parameter list!")
+            raise ValueError("Parameter name %s is not part of valid parameter list!", param_name)
 
     def get_param_name_list(self):
         return self._param_name_list
@@ -75,13 +76,21 @@ class Parameters:
         try:
             param_index = self._param_name_list.index(param_name)
         except ValueError:
-            raise ValueError("Parameter " + param_name + " is not in the parameter list.")
+            raise ValueError("Parameter %s is not in the parameter list.", param_name)
 
         param_df = self._param_df_list[param_index]
         return Parameters.parse_param_df(param_df)
 
     def get_param_df(self):
         return self._param_df_list
+
+    def get_param_df_for_param(self, param_name):
+        try:
+            param_index = self._param_name_list.index(param_name)
+        except ValueError:
+            raise ValueError("Parameter %s is not in the parameter list.", param_name)
+
+        return self._param_df_list[param_index]
 
     def get_param_file_from_name(self, param_name):
         return os.path.join(self._param_dir, param_name + CSV_EXT)
@@ -95,20 +104,13 @@ class Parameters:
         return 0, pd.Series(dtype=np.float64)
 
     def _write_params(self):
-        self.reset()
         if not os.path.isdir(self._param_dir):
-            raise ValueError("Parameter folder " + self._param_dir + " does not exist!")
+            raise ValueError("Parameter folder %s does not exist!", self._param_dir)
 
         for index, param_name in enumerate(self._param_name_list):
             param_file_name = os.path.join(self._param_dir, param_name + ".csv")
             param_df = self._param_df_list[index]
-            param_df = pd.read_csv(param_name, names=Parameters.get_param_column_names(), header=None, skiprows=1)
-            self._param_df_list.append(param_df)
-
-        if len(self._param_name_list) > 0:
-            self._cur_selected_param = self._param_name_list[0]
-
-        self.parse_min_time_duration()
+            param_df.to_csv(param_file_name, index=False, header=True)
 
         return
 
@@ -186,13 +188,43 @@ class Parameters:
 ------------------------------------------------------------
                 Unit Tests
 ------------------------------------------------------------
-# Run these tests using `python -m unittest .\binary.py`
+# Run these tests using `python -m unittest parameter`
 ------------------------------------------------------------
 """
+param1 = {
+    Parameters.PARAM_TIME_WINDOW_START_LIST:    [100,   200,    300,    400,    500],
+    Parameters.PARAM_TIME_WINDOW_DURATION:      [30,    np.nan, np.nan, np.nan, np.nan]
+}
+
 class ParameterTest(unittest.TestCase):
+    TEST_DATA_DIR = "test_data"
+    TEST_TRASH_DIR = "trash"
     def setUp(self):
         self.param = Parameters()
+        # TODO: Create test trash dir with Parameters and cleanup
 
     def validate_df(self, df, expected_data):
         expected_df = pd.DataFrame(expected_data)
         self.assertEqual(expected_df.equals(df), True)
+
+    def test_param_bvt(self):
+        param = Parameters()
+        input_dir = ParameterTest.get_trash_dir()
+        param._set_param_dir(input_dir)
+        expected_df = pd.DataFrame(param1)
+        param.set_param_value("param1", expected_df)
+        param._write_params()
+        param.parse(input_dir)
+        param_list = param.get_param_name_list()
+        expected_param_list = ["param1"]
+        self.assertEqual(param_list == expected_param_list, True)
+        param_df = param.get_param_df_for_param(param_list[0])
+        self.assertEqual(expected_df.equals(param_df), True)
+
+    @staticmethod
+    def get_test_dir():
+        return os.path.join(os.getcwd(), ParameterTest.TEST_DATA_DIR)
+
+    @staticmethod
+    def get_trash_dir():
+        return os.path.join(ParameterTest.get_test_dir(), ParameterTest.TEST_TRASH_DIR)
