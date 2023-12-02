@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import numpy as np
 import glob
+import unittest
 
 CSV_EXT = ".csv"
 
@@ -27,6 +28,9 @@ class Parameters:
         self._min_time_duration_before = 0
         self._min_time_duration_after = 0
         self._parse_file_exists = False
+
+    def _set_param_dir(self, param_dir):
+        self._param_dir = param_dir
 
     def parse(self, input_dir):
         self.reset()
@@ -89,6 +93,24 @@ class Parameters:
     def get_default_parameter_values(self):
         # Window duration, time series
         return 0, pd.Series(dtype=np.float64)
+
+    def _write_params(self):
+        self.reset()
+        if not os.path.isdir(self._param_dir):
+            raise ValueError("Parameter folder " + self._param_dir + " does not exist!")
+
+        for index, param_name in enumerate(self._param_name_list):
+            param_file_name = os.path.join(self._param_dir, param_name + ".csv")
+            param_df = self._param_df_list[index]
+            param_df = pd.read_csv(param_name, names=Parameters.get_param_column_names(), header=None, skiprows=1)
+            self._param_df_list.append(param_df)
+
+        if len(self._param_name_list) > 0:
+            self._cur_selected_param = self._param_name_list[0]
+
+        self.parse_min_time_duration()
+
+        return
 
     def get_min_time_duration_file(self):
         return os.path.join(self._param_dir, Parameters.TIME_DURATION_PARAMETER_FILE)
@@ -155,3 +177,22 @@ class Parameters:
         ts_series.sort_values(ascending=True)
 
         return w_duration, ts_series
+
+    @staticmethod
+    def get_param_dir(input_dir):
+        return os.path.join(input_dir, Parameters.PARAMETERS_DIR_NAME)
+
+"""
+------------------------------------------------------------
+                Unit Tests
+------------------------------------------------------------
+# Run these tests using `python -m unittest .\binary.py`
+------------------------------------------------------------
+"""
+class ParameterTest(unittest.TestCase):
+    def setUp(self):
+        self.param = Parameters()
+
+    def validate_df(self, df, expected_data):
+        expected_df = pd.DataFrame(expected_data)
+        self.assertEqual(expected_df.equals(df), True)

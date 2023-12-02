@@ -5,13 +5,12 @@ import getopt
 import logging
 import os
 import pandas as pd
-from pandas.api.types import is_numeric_dtype, is_integer_dtype
+from pandas.api.types import is_integer_dtype
 import glob
 from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
 import subprocess
 import numpy as np
 import csv
-from csv import reader
 import unittest
 import common
 from parameter import *
@@ -1258,6 +1257,8 @@ if __name__ == "__main__":
 ------------------------------------------------------------
                 Unit Tests
 ------------------------------------------------------------
+# Run these tests using `python -m unittest .\binary.py`
+------------------------------------------------------------
 """
 input_data1 = {
     common.INPUT_COL0_TS:     [1, 2, 3, 4, 5, 10, 20,  30,  100, 200, 300, 310],
@@ -1316,7 +1317,6 @@ out_p1_nop = {
 }
 
 
-# Run these tests using `python -m unittest .\binary.py`
 class TestDataProcessing(unittest.TestCase):
     def setUp(self):
         self.input_df1 = pd.DataFrame(input_data1)
