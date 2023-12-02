@@ -22,7 +22,7 @@ PARAM_UI_MIN_BEFORE_TIME_DURATION_CRITERIA_TEXT = "\t\t    before: "
 PARAM_UI_MIN_AFTER_TIME_DURATION_CRITERIA_TEXT = "after: "
 PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
 
-# constants
+# Other constants
 OUTPUT_LOG_FILE = "output.txt"
 OUTPUT_COL0_TS = 'Start time (sec)'
 OUTPUT_COL1_LEN = 'Bout length (sec)'

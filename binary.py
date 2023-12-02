@@ -28,7 +28,6 @@ OUTPUT_COL3_FREEZE_TP = "Freezing TurnPoints"
 
 # output directory and file names
 OUTPUT_DIR_NAME = "_output"
-TIME_DURATION_PARAMETER_FILE = "min_time.txt"
 OUTPUT_BASE = "_base.csv"
 MIN_DURATION = "_min_duration.csv"
 TW_FILTER = "_tw_filter.csv"
@@ -50,7 +49,6 @@ PARAM_UI_MIN_AFTER_TIME_DURATION_CRITERIA_TEXT = "after: "
 PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
 
 # globals
-logger = None
 r_log_box = None
 output_dir = None
 out_col_names = [OUTPUT_COL0_TS, OUTPUT_COL1_MI,
@@ -83,7 +81,9 @@ add_csv_file_name_to_output = False
 
 files_without_timeshift = []
 
-def apply_duration_criteria(ts_series, param_min_time_duration_before, param_min_time_duration_after):
+def apply_duration_criteria(ts_series,
+                            param_min_time_duration_before,
+                            param_min_time_duration_after):
     it = ts_series.iteritems()
     prev_ts = 0
     for i, (idx, ts) in enumerate(it):
@@ -324,54 +324,14 @@ def parse_param_folder(parameter_obj):
         common.logger.warning(e)
 
 
-def get_parameter_min_t_file():
-    input_dir = common.get_input_dir()
-    min_t_file = os.path.join(
-        input_dir, Parameters.PARAMETERS_DIR_NAME, TIME_DURATION_PARAMETER_FILE)
-
-    return min_t_file
-
-
-def get_param_min_time_duration():
+def get_param_min_time_duration(parameter_obj):
     """
     Returns the value of the min parameter time duration value.
     """
-    global logger, param_min_time_duration_before
-    global param_min_time_duration_after, param_file_exists
+    global param_file_exists
 
-    t_duration_before = param_min_time_duration_before
-    t_duration_after = param_min_time_duration_after
-    itr = 0
-    param_min_t_file = get_parameter_min_t_file()
-    common.logger.debug("opening min time file %s", param_min_t_file)
-    try:
-        with open(param_min_t_file) as min_t_file:
-            param_file_exists = True
-            while True:
-                line = min_t_file.readline().rstrip()
-                if not line:
-                    break
-                common.logger.debug("line %s", line)
-                try:
-                    t_duration = float(line)
-                    if itr == 0:
-                        t_duration_before = t_duration
-                        itr += 1
-                    else:
-                        t_duration_after = t_duration
-                        break
-                except ValueError:
-                    common.logger.error(
-                        "Min time duration(%s) from file(%s) cannot be converted to a "
-                        "number. Using default of %d", line, param_min_t_file, t_duration)
-            min_t_file.close()
-    except IOError:
-        param_file_exists = False
-        common.logger.debug(
-            "Min time duration file(%s) does not exist.", param_min_t_file)
-        pass
+    param_file_exists, t_duration_before, t_duration_after = parameter_obj.get_min_time_duration_values()
 
-    #common.logger.debug("min t before %d & after %d", t_duration_before, t_duration_after)
     return t_duration_before, t_duration_after
 
 
@@ -590,7 +550,7 @@ def process_input_file(input_file, output_folder):
         os.path.basename(out_base_file))
     out_df.to_csv(out_base_file, index=False)
 
-    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
+    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration(parameter_obj)
     if param_file_exists:
         common.logger.debug("\tUsing min time duration (secs): %s",
                      str(param_min_time_duration_before))
@@ -879,7 +839,7 @@ def select_input_dir(parameter_obj):
     # in the input folder).
     param_window_duration, param_start_timestamp_series = parameter_obj.get_default_parameter_values()
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
-    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
+    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration(parameter_obj)
     param_name_list = parameter_obj.get_param_name_list()
     refresh_param_names_combo_box(parameter_obj)
     if len(param_name_list):
@@ -959,27 +919,12 @@ def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_fil
 
 
 def update_min_t_in_file(min_t_before_val, min_t_after_val):
-    """
-    Will read the min time duration value(s) from the UI and update the
-    min time duration value(s), both the global one and the one in the
-    file.
-    """
-    global param_min_time_duration_before, param_min_time_duration_after, logger
-
-    param_min_t_file = get_parameter_min_t_file()
+    global parameter_obj
 
     try:
-        # "w+" will create the file if not exist.
-        with open(param_min_t_file, "w+") as min_t_file:
-            min_t_file.write(min_t_before_val)
-            min_t_file.write("\n")
-            min_t_file.write(min_t_after_val)
-            min_t_file.close()
-            param_min_time_duration_before = min_t_before_val
-            param_min_time_duration_after = min_t_after_val
-    except IOError:
-        common.logger.error(
-            "Min time duration file(%s) cannot be created or written to.", param_min_t_file)
+        parameter_obj.set_min_time_duration_values(min_t_before_val, min_t_after_val)
+    except ValueError(e):
+        common.logger.error(e)
         pass
 
 
@@ -1046,7 +991,7 @@ def select_param(selected_param_value):
     except:
         common.logger.error("Parameter name(%s) not found in list; unexpected")
 
-    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration()
+    param_min_time_duration_before, param_min_time_duration_after = get_param_min_time_duration(parameter_obj)
     param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(cur_selected_param)
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
