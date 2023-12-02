@@ -132,8 +132,6 @@ def split_df_and_output(out_df, timeshift_val, out_file_zero_to_one, out_file_on
     Timestamps file should have the header
     """
 
-    global logger
-
     # Create a copy of the dataframe so that the original is not affected
     output_df = out_df[:]
 
@@ -202,7 +200,6 @@ def format_out_nop_file_name(input_file, param_names, param_min_time_duration_be
     """
     global out_file_zero_to_one_un, out_file_zero_to_one_un_ts
     global out_file_one_to_zero_un, out_file_one_to_zero_un_ts
-    global logger
 
     output_no_parameter = ""
     if param_names:
@@ -261,7 +258,7 @@ def format_out_file_names(input_file, param_name,  param_min_time_duration_befor
     """
     global out_file_zero_to_one, out_file_zero_to_one_ts
     global out_file_one_to_zero, out_file_one_to_zero_ts
-    global logger, add_csv_file_name_to_output
+    global add_csv_file_name_to_output
 
     param_ext = ""
     if param_name:
@@ -418,7 +415,6 @@ def process_input_df(input_df):
     Process an input dataframe and return an output base dataframe (i.e. without
     any of the criterias or parameters applied)
     """
-    global logger
 
     sum = 0
     itr = 0
