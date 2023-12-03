@@ -22,9 +22,9 @@ class Parameters:
     _param_col_names = [PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
 
     def __init__(self):
-        self.reset()
+        self._reset()
 
-    def reset(self):
+    def _reset(self):
         self._cur_selected_param = ""
         self._param_name_list = []
         self._param_df_list = []
@@ -39,7 +39,7 @@ class Parameters:
         self._param_dir = Parameters.get_param_dir(input_dir)
 
     def parse(self, input_dir):
-        self.reset()
+        self._reset()
         self._param_dir = Parameters.get_param_dir(input_dir)
         param_dir = self._param_dir
         if not os.path.isdir(param_dir):
@@ -58,7 +58,7 @@ class Parameters:
         if len(self._param_name_list) > 0:
             self._cur_selected_param = self._param_name_list[0]
 
-        self.parse_min_time_duration()
+        self._parse_min_time_duration()
 
         return
 
@@ -125,7 +125,7 @@ class Parameters:
     def get_min_time_duration_file(self):
         return os.path.join(self._param_dir, Parameters.TIME_DURATION_PARAMETER_FILE)
 
-    def parse_min_time_duration(self):
+    def _parse_min_time_duration(self):
         itr = 0
         param_min_t_file = self.get_min_time_duration_file()
         try:
@@ -275,6 +275,11 @@ class ParameterTest(unittest.TestCase):
         self.assertEqual(param_file_exists == True, True)
         self.assertEqual(min_time_duration_before == 5, True)
         self.assertEqual(min_time_duration_after == 10, True)
+
+        # Test for set/get_currently_selected_param
+        expected_param.set_currently_selected_param(PARAM2_NAME)
+        cur_selected_param = expected_param.get_currently_selected_param()
+        self.assertEqual(cur_selected_param == PARAM2_NAME, True)
 
     @staticmethod
     def get_test_dir():
