@@ -10,7 +10,6 @@ import glob
 from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
 import subprocess
 import numpy as np
-import csv
 import unittest
 import common
 from parameter import *

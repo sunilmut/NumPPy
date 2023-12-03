@@ -3,8 +3,11 @@
 import pandas as pd
 import os
 import numpy as np
+from numpy import NAN as NAN
 import glob
 import unittest
+import shutil
+from pathlib import Path
 
 CSV_EXT = ".csv"
 
@@ -31,7 +34,6 @@ class Parameters:
 
     def _set_param_dir(self, input_dir):
         self._param_dir = Parameters.get_param_dir(input_dir)
-        print("self param dir", self._param_dir)
 
     def parse(self, input_dir):
         self.reset()
@@ -108,11 +110,14 @@ class Parameters:
             raise ValueError("Parameter folder %s does not exist!", self._param_dir)
 
         for index, param_name in enumerate(self._param_name_list):
-            param_file_name = os.path.join(self._param_dir, param_name + ".csv")
+            param_file_name = self._get_file_name_for_param(param_name)
             param_df = self._param_df_list[index]
             param_df.to_csv(param_file_name, index=False, header=True)
 
         return
+
+    def _get_file_name_for_param(self, param_name):
+        return os.path.join(self._param_dir, param_name + ".csv")
 
     def get_min_time_duration_file(self):
         return os.path.join(self._param_dir, Parameters.TIME_DURATION_PARAMETER_FILE)
@@ -196,6 +201,11 @@ param1 = {
     Parameters.PARAM_TIME_WINDOW_DURATION:      [30,    np.nan, np.nan, np.nan, np.nan]
 }
 
+param2 = {
+    Parameters.PARAM_TIME_WINDOW_START_LIST:    [1,  2,      3,      4,      5],
+    Parameters.PARAM_TIME_WINDOW_DURATION:      [30, NAN, np.nan, np.nan, np.nan]
+}
+
 class ParameterTest(unittest.TestCase):
     TEST_DATA_DIR = "test_data"
     TEST_TRASH_DIR = "trash"
@@ -208,18 +218,40 @@ class ParameterTest(unittest.TestCase):
         self.assertEqual(expected_df.equals(df), True)
 
     def test_param_bvt(self):
-        param = Parameters()
+        expected_param = Parameters()
         input_dir = ParameterTest.get_trash_dir()
-        param._set_param_dir(input_dir)
-        expected_df = pd.DataFrame(param1)
-        param.set_param_value("param1", expected_df)
-        param._write_params()
-        param.parse(input_dir)
-        param_list = param.get_param_name_list()
-        expected_param_list = ["param1"]
+        expected_param._set_param_dir(input_dir)
+        param_dir = Parameters.get_param_dir(input_dir)
+        shutil.rmtree(param_dir)
+        path = Path(param_dir)
+        path.mkdir(parents=True, exist_ok=True)
+        # Basic test of writing a parameter with values and then validate that
+        # the parsed values match.
+        PARAM1_NAME = "param1"
+        expected_df1 = pd.DataFrame(param1)
+        expected_param.set_param_value(PARAM1_NAME, expected_df1)
+        expected_param._write_params()
+        validate_param = Parameters()
+        validate_param.parse(input_dir)
+        param_list = validate_param.get_param_name_list()
+        expected_param_list = [PARAM1_NAME]
         self.assertEqual(param_list == expected_param_list, True)
-        param_df = param.get_param_df_for_param(param_list[0])
-        self.assertEqual(expected_df.equals(param_df), True)
+        param_df1 = validate_param.get_param_df_for_param(PARAM1_NAME)
+        self.assertEqual(expected_df1.equals(param_df1), True)
+
+        # Add more parameters.
+        PARAM2_NAME = "param2"
+        expected_df2 = pd.DataFrame(param2)
+        expected_param.set_param_value(PARAM2_NAME, expected_df2)
+        expected_param._write_params()
+        validate_param = Parameters()
+        validate_param.parse(input_dir)
+        param_list = validate_param.get_param_name_list()
+        expected_param_list = [PARAM1_NAME, PARAM2_NAME]
+        self.assertEqual(param_list == expected_param_list, True)
+        param_df2 = validate_param.get_param_df_for_param(PARAM2_NAME)
+        self.assertEqual(expected_df2.equals(param_df2), True)
+
 
     @staticmethod
     def get_test_dir():
@@ -228,3 +260,8 @@ class ParameterTest(unittest.TestCase):
     @staticmethod
     def get_trash_dir():
         return os.path.join(ParameterTest.get_test_dir(), ParameterTest.TEST_TRASH_DIR)
+
+    @staticmethod
+    def remove_file(file_path):
+        if os.path.exists(file_path):
+            os.remove(file_path)
