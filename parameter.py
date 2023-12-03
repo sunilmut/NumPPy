@@ -16,6 +16,9 @@ class Parameters:
     PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
     PARAMETERS_DIR_NAME = "parameters"
     TIME_DURATION_PARAMETER_FILE = "min_time.txt"
+    MIN_TIME_DURATION_BEFORE_DEFAULT = float(0)
+    MIN_TIME_DURATION_AFTER_DEFAULT = float(0)
+    PARAM_WINDOW_DURATION_DEFAULT = 0
     _param_col_names = [PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
 
     def __init__(self):
@@ -25,12 +28,12 @@ class Parameters:
         self._cur_selected_param = ""
         self._param_name_list = []
         self._param_df_list = []
-        self._param_window_duration = 0
+        self._param_window_duration = Parameters.PARAM_WINDOW_DURATION_DEFAULT
         self._param_start_timestamp_series = pd.Series(dtype=np.float64)
         self._param_dir = ""
-        self._min_time_duration_before = 0
-        self._min_time_duration_after = 0
-        self._parse_file_exists = False
+        self._min_time_duration_before = Parameters.MIN_TIME_DURATION_BEFORE_DEFAULT
+        self._min_time_duration_after = Parameters.MIN_TIME_DURATION_AFTER_DEFAULT
+        self._param_file_exists = False
 
     def _set_param_dir(self, input_dir):
         self._param_dir = Parameters.get_param_dir(input_dir)
@@ -103,7 +106,7 @@ class Parameters:
 
     def get_default_parameter_values(self):
         # Window duration, time series
-        return 0, pd.Series(dtype=np.float64)
+        return Parameters.PARAM_WINDOW_DURATION_DEFAULT, pd.Series(dtype=np.float64)
 
     def _write_params(self):
         if not os.path.isdir(self._param_dir):
@@ -151,19 +154,19 @@ class Parameters:
             pass
 
     def get_min_time_duration_values(self):
-        return self._param_file_exists, self._min_time_duration_before , self._min_time_duration_after
+        return self._param_file_exists, float(self._min_time_duration_before), float(self._min_time_duration_after)
 
-    def set_min_time_duration_values(self, min_time_duration_befor, min_time_duration_after):
+    def set_min_time_duration_values(self, min_time_duration_before, min_time_duration_after):
         param_min_t_file = self.get_min_time_duration_file()
         try:
             # "w+" will create the file if not exist.
             with open(param_min_t_file, "w+") as min_t_file:
-                min_t_file.write(min_time_duration_befor)
+                min_t_file.write(str(min_time_duration_before))
                 min_t_file.write("\n")
-                min_t_file.write(min_time_duration_after)
+                min_t_file.write(str(min_time_duration_after))
                 self._param_file_exists = True
                 min_t_file.close()
-                self._min_time_duration_before = min_time_duration_befor
+                self._min_time_duration_before = min_time_duration_before
                 self._min_time_duration_after = min_time_duration_after
         except IOError:
             raise ValueError("Min time duration file(%s) cannot be created or written to.", param_min_t_file)
@@ -252,6 +255,26 @@ class ParameterTest(unittest.TestCase):
         param_df2 = validate_param.get_param_df_for_param(PARAM2_NAME)
         self.assertEqual(expected_df2.equals(param_df2), True)
 
+        # Min time duration values should be set to default without any
+        # min time duration parameter present.
+        (param_file_exists,
+         min_time_duration_before,
+         min_time_duration_after) = expected_param.get_min_time_duration_values()
+        self.assertEqual(param_file_exists == False, True)
+        self.assertEqual(min_time_duration_before == Parameters.MIN_TIME_DURATION_BEFORE_DEFAULT,
+                         True)
+        self.assertEqual(min_time_duration_after == Parameters.MIN_TIME_DURATION_AFTER_DEFAULT,
+                         True)
+
+        # Set some min time duration values, parse and make sure they match
+        expected_param.set_min_time_duration_values(5, 10)
+        validate_param.parse(input_dir)
+        (param_file_exists,
+         min_time_duration_before,
+         min_time_duration_after) = expected_param.get_min_time_duration_values()
+        self.assertEqual(param_file_exists == True, True)
+        self.assertEqual(min_time_duration_before == 5, True)
+        self.assertEqual(min_time_duration_after == 10, True)
 
     @staticmethod
     def get_test_dir():
