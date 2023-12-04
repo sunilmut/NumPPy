@@ -434,6 +434,15 @@ class ParameterTest(unittest.TestCase):
         expected_df = pd.DataFrame(expected_data)
         self.assertEqual(expected_df.equals(df), True)
 
+    def reset(self) -> str:
+        input_dir = ParameterTest.get_trash_dir()
+        param_dir = Parameters.get_param_dir(input_dir)
+        shutil.rmtree(param_dir)
+        path = Path(param_dir)
+        path.mkdir(parents=True, exist_ok=True)
+
+        return input_dir
+
     def validate_min_t_duration(self, input_dir):
         expected_param = Parameters()
         expected_param._set_param_dir(input_dir)
@@ -462,13 +471,10 @@ class ParameterTest(unittest.TestCase):
             self.assertEqual(min_time_duration_after == row[1], True)
 
     def test_param_bvt(self):
+        input_dir = self.reset()
         expected_param = Parameters()
-        input_dir = ParameterTest.get_trash_dir()
         expected_param._set_param_dir(input_dir)
-        param_dir = Parameters.get_param_dir(input_dir)
-        shutil.rmtree(param_dir)
-        path = Path(param_dir)
-        path.mkdir(parents=True, exist_ok=True)
+
         # Basic test of writing a parameter with values and then validate that
         # the parsed values match.
         PARAM1_NAME = "param1"
@@ -506,13 +512,10 @@ class ParameterTest(unittest.TestCase):
         self.validate_min_t_duration(input_dir)
 
     def test_min_t_param(self):
+        input_dir = self.reset()
         expected_param = Parameters()
-        input_dir = ParameterTest.get_trash_dir()
         expected_param._set_param_dir(input_dir)
-        param_dir = Parameters.get_param_dir(input_dir)
-        shutil.rmtree(param_dir)
-        path = Path(param_dir)
-        path.mkdir(parents=True, exist_ok=True)
+
         # Validate that min time duration parameters can work without
         # any other parameters present.
         self.validate_min_t_duration(input_dir)
