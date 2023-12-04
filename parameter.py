@@ -416,6 +416,13 @@ param2 = {
     Parameters.PARAM_TIME_WINDOW_DURATION:      [30,    np.nan, np.nan, np.nan,    np.nan]
 }
 
+min_time_duration_validation_set = [
+    [5, 10],
+    [1.0, 2],
+    [20.0, 30.0],
+    [0, 0]
+]
+
 class ParameterTest(unittest.TestCase):
     TEST_DATA_DIR = "test_data"
     TEST_TRASH_DIR = "trash"
@@ -426,6 +433,33 @@ class ParameterTest(unittest.TestCase):
     def validate_df(self, df, expected_data):
         expected_df = pd.DataFrame(expected_data)
         self.assertEqual(expected_df.equals(df), True)
+
+    def validate_min_t_duration(self, input_dir):
+        expected_param = Parameters()
+        expected_param._set_param_dir(input_dir)
+
+        # Min time duration values should be set to default valuse without any
+        # min time duration parameter present.
+        (param_file_exists,
+         min_time_duration_before,
+         min_time_duration_after) = expected_param.get_min_time_duration_values()
+        self.assertEqual(param_file_exists == False, True)
+        self.assertEqual(min_time_duration_before == Parameters.MIN_TIME_DURATION_BEFORE_DEFAULT,
+                         True)
+        self.assertEqual(min_time_duration_after == Parameters.MIN_TIME_DURATION_AFTER_DEFAULT,
+                         True)
+
+        # Set some min time duration values, parse and make sure they match
+        for row in min_time_duration_validation_set:
+            validate_param = Parameters()
+            expected_param.set_min_time_duration_values(row[0], row[1])
+            validate_param.parse(input_dir)
+            (param_file_exists,
+            min_time_duration_before,
+            min_time_duration_after) = expected_param.get_min_time_duration_values()
+            self.assertEqual(param_file_exists == True, True)
+            self.assertEqual(min_time_duration_before == row[0], True)
+            self.assertEqual(min_time_duration_after == row[1], True)
 
     def test_param_bvt(self):
         expected_param = Parameters()
@@ -462,31 +496,26 @@ class ParameterTest(unittest.TestCase):
         param_df2 = validate_param.get_param_df_for_param(PARAM2_NAME)
         self.assertEqual(expected_df2.equals(param_df2), True)
 
-        # Min time duration values should be set to default without any
-        # min time duration parameter present.
-        (param_file_exists,
-         min_time_duration_before,
-         min_time_duration_after) = expected_param.get_min_time_duration_values()
-        self.assertEqual(param_file_exists == False, True)
-        self.assertEqual(min_time_duration_before == Parameters.MIN_TIME_DURATION_BEFORE_DEFAULT,
-                         True)
-        self.assertEqual(min_time_duration_after == Parameters.MIN_TIME_DURATION_AFTER_DEFAULT,
-                         True)
-
-        # Set some min time duration values, parse and make sure they match
-        expected_param.set_min_time_duration_values(5, 10)
-        validate_param.parse(input_dir)
-        (param_file_exists,
-         min_time_duration_before,
-         min_time_duration_after) = expected_param.get_min_time_duration_values()
-        self.assertEqual(param_file_exists == True, True)
-        self.assertEqual(min_time_duration_before == 5, True)
-        self.assertEqual(min_time_duration_after == 10, True)
-
         # Test for set/get_currently_selected_param
         expected_param.set_currently_selected_param(PARAM2_NAME)
         cur_selected_param = expected_param.get_currently_selected_param()
         self.assertEqual(cur_selected_param == PARAM2_NAME, True)
+
+        # Validate min time duration values after the above parameters
+        # have been set on the input dir.
+        self.validate_min_t_duration(input_dir)
+
+    def test_min_t_param(self):
+        expected_param = Parameters()
+        input_dir = ParameterTest.get_trash_dir()
+        expected_param._set_param_dir(input_dir)
+        param_dir = Parameters.get_param_dir(input_dir)
+        shutil.rmtree(param_dir)
+        path = Path(param_dir)
+        path.mkdir(parents=True, exist_ok=True)
+        # Validate that min time duration parameters can work without
+        # any other parameters present.
+        self.validate_min_t_duration(input_dir)
 
     @staticmethod
     def get_test_dir():
