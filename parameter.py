@@ -136,15 +136,8 @@ class Parameters:
         ValueError
             If the parameter is not part of the current parameter list.
         """
-        if not param_name:
-            return self.get_default_parameter_values()
+        param_df = self.get_param_df_for_param(param_name)
 
-        try:
-            param_index = self._param_name_list.index(param_name)
-        except ValueError:
-            raise ValueError("Parameter %s is not in the parameter list.", param_name)
-
-        param_df = self._param_df_list[param_index]
         return Parameters.parse_param_df(param_df)
 
     def set_param_value(self, param_name: str, param_df: pd.DataFrame):
@@ -160,6 +153,16 @@ class Parameters:
         """
         self._param_name_list.append(param_name)
         self._param_df_list.append(param_df)
+
+    def set_time_window_duration(self, time_window: float):
+        """set the parameter value for the time window duration to the provided value.
+
+        Parameters
+        ----------
+        time_window : float
+            The time window duration value to set
+        """
+        self.self._param_window_duration = time_window
 
     def get_param_df(self):
         """get all the parameter dataframe values for all of the parameters"""
@@ -267,6 +270,81 @@ class Parameters:
         except IOError:
             raise ValueError("Min time duration file(%s) cannot be created or written to.", param_min_t_file)
             pass
+
+    def get_ts_series_for_timestamps(self,
+                                     param_name: str,
+                                     ts_start: float,
+                                     ts_end: float):
+        """get the timestamp series for the given parameter name and the timestamp duration.
+
+        Parameters
+        ----------
+        param_name : str
+            The parameter name to which to apply the timestamp for
+
+        ts_start : float
+            The start timestamp
+
+        ts_end : float
+            The end timestamp
+
+        Raises
+        ------
+        ValueError
+            If an error occurs while writing to the min time duration parameter file.
+
+        Returns
+        ----------
+        Returns a split timestamp series for the given parameter and timestamp duration with an
+        indication of whether the split timestamp fits within the window or outside. This is
+        best explained with an example.
+        For example, if the timestamp series for this parameter is
+        Window duration: 5s
+        Timestamps: 10, 20, 30, 40
+        So, for a given timestamp of [8, 23] (i.e from 8 to 17 seconds), this routine will return
+        Within the window: [[10, 15, True], [15, 20, False], [20, 23, True]]
+
+        Another example:
+        Window duration: 5s
+        Timestamps: 10, 20
+        So, for a given timestamp of [5, 35] (i.e from 5 to 35 seconds), this routine will return
+        Within the window: [[5, 10, False], [10, 15, True], [15, 20, False], [20, 25, True], [25, 35, False]]
+        Outside the window:
+        """
+        ts_split = []
+        param_window_duration, ts = self.get_param_values(param_name)
+        indices = list(filter(lambda x: (ts[x] >= ts_start and ts[x] < ts_end) or
+                              ((ts[x] < ts_start) and (ts[x] + param_window_duration) > ts_start), range(len(ts))))
+        # No timestamp in the series fits within the provided time
+        if len(indices) == 0:
+            return ts_split
+
+        start = ts_start
+        idx = 0
+        while True:
+            print("start: ", start, " ts[idx]: ", ts[indices[idx]])
+            if start < ts[indices[idx]]:
+                is_in = False
+                end = min(ts_end, ts[idx])
+            else:
+                is_in = True
+                end = min(ts_end, ts[indices[idx]] + param_window_duration)
+                idx += 1
+
+            ts_split.append([start, end, is_in])
+
+            # If we have reached the end of the ts series and there is
+            # still some left in the duration, just add the rest.
+            if idx >= len(ts) and end < ts_end:
+                ts_split.append([end, ts_end, False])
+                end = ts_end
+
+            if end == ts_end:
+                break
+
+            start = end
+
+        return ts_split
 
     @staticmethod
     def get_param_column_names() -> list:
@@ -407,13 +485,13 @@ class Parameters:
 ------------------------------------------------------------
 """
 param1 = {
-    Parameters.PARAM_TIME_WINDOW_START_LIST:    [100,   200,    300,    400,    500],
-    Parameters.PARAM_TIME_WINDOW_DURATION:      [30,    np.nan, np.nan, np.nan, np.nan]
+    Parameters.PARAM_TIME_WINDOW_START_LIST:    [100, 200, 300, 400, 500],
+    Parameters.PARAM_TIME_WINDOW_DURATION:      [30, np.nan, np.nan, np.nan, np.nan]
 }
 
 param2 = {
-    Parameters.PARAM_TIME_WINDOW_START_LIST:    [1.0,   2,      3,      4.0,       5],
-    Parameters.PARAM_TIME_WINDOW_DURATION:      [30,    np.nan, np.nan, np.nan,    np.nan]
+    Parameters.PARAM_TIME_WINDOW_START_LIST:    [1.0, 2, 3, 4.0, 5],
+    Parameters.PARAM_TIME_WINDOW_DURATION:      [30, np.nan, np.nan, np.nan, np.nan]
 }
 
 min_time_duration_validation_set = [
@@ -519,6 +597,75 @@ class ParameterTest(unittest.TestCase):
         # Validate that min time duration parameters can work without
         # any other parameters present.
         self.validate_min_t_duration(input_dir)
+
+    def test_get_ts_series_for_timestamps(self):
+        param_val = {
+            Parameters.PARAM_TIME_WINDOW_START_LIST:    [10, 20, 30],
+            Parameters.PARAM_TIME_WINDOW_DURATION:      [5, np.nan, np.nan]
+        }
+        ts1 = [5, 8]
+        expected_out1 = []
+
+        ts2 = [5, 37]
+        expected_out2 = [[5, 10, False], [10, 15, True], [15, 20, False],
+                        [20, 25, True], [25, 30, False], [30, 35, True],
+                        [35, 37, False]]
+
+        ts3 = [5, 23]
+        expected_out3 = [[5, 10, False], [10, 15, True], [15, 20, False],
+                        [20, 23, True]]
+
+        ts4 = [5, 13]
+        expected_out4 = [[5, 10, False], [10, 13, True]]
+
+        ts5 = [20, 25]
+        expected_out5 = [[20, 25, True]]
+
+        ts6 = [10, 15]
+        expected_out6 = [[10, 15, True]]
+
+        ts7 = [30, 35]
+        expected_out7 = [[30, 35, True]]
+
+        ts8 = [30, 43]
+        expected_out8 = [[30, 35, True], [35, 43, False]]
+
+        ts8 = [45, 70]
+        expected_out8 = [45, 70, False]
+
+        ts9 = [25, 30]
+        expected_out9 = [25, 30, False]
+
+        expected_ts = [[ts1, expected_out1], [ts2, expected_out2],
+                       [ts3, expected_out3], [ts4, expected_out4],
+                       [ts5, expected_out5], [ts6, expected_out6],
+                       [ts7, expected_out7], [ts8, expected_out8],
+                       [ts9, expected_out9]]
+        param = Parameters()
+        PARAM_NAME = "param"
+        df = pd.DataFrame(param_val)
+        for val in expected_ts:
+            print("validating ", val[0])
+            input_dir = self.reset()
+            param._set_param_dir(input_dir)
+            param.set_param_value(PARAM_NAME, df)
+            ts_split = param.get_ts_series_for_timestamps(PARAM_NAME, val[0][0], val[0][1])
+            print(ts_split)
+            self.assertEqual(ts_split == val[1], True)
+
+        """
+        Timestamps: 10, 20, 30, 40
+        So, for a given timestamp of [8, 23] (i.e from 8 to 17 seconds), this routine will return
+        Within the window: [[10, 15], [20, 23]]
+        Outside the window: [(15, 20)] -> where () means excluding
+
+        Another example:
+        Window duration: 5s
+        Timestamps: 10, 20
+        So, for a given timestamp of [5, 35] (i.e from 5 to 35 seconds), this routine will return
+        Within the window: [[10, 15], [20, 25]]
+        Outside the window: [(5, 10), (15, 20), (25, 35)]
+        """
 
     @staticmethod
     def get_test_dir():

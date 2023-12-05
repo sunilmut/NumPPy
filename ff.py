@@ -8,7 +8,7 @@ from parameter import *
 import os
 import pandas as pd
 from pandas.api.types import is_integer_dtype
-from guizero import App, Box, CheckBox, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
+from guizero import App, Box, Combo, ListBox, PushButton, Text, TextBox, TitleBox
 import scipy
 import glob
 
