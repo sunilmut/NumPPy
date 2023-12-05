@@ -77,7 +77,7 @@ class Parameters:
         self._param_dir = Parameters.get_param_dir(input_dir)
         param_dir = self._param_dir
         if not os.path.isdir(param_dir):
-            raise ValueError("Parameter folder %s does not exist!", param_dir)
+            raise ValueError("Parameter folder", param_dir, "does not exist!")
 
         search_path = os.path.join(param_dir, "*.csv")
         for param_file in glob.glob(search_path):
@@ -116,7 +116,7 @@ class Parameters:
         if param_name in self._param_name_list:
             self._cur_selected_param = param_name
         else:
-            raise ValueError("Parameter name %s is not part of valid parameter list!", param_name)
+            raise ValueError("Parameter", param_name, "is not part of valid parameter list!")
 
     def get_param_name_list(self):
         """get the list of parameter names"""
@@ -136,6 +136,8 @@ class Parameters:
         ValueError
             If the parameter is not part of the current parameter list.
         """
+        if param_name == "":
+            return self.get_default_parameter_values()
         param_df = self.get_param_df_for_param(param_name)
 
         return Parameters.parse_param_df(param_df)
@@ -186,7 +188,7 @@ class Parameters:
         try:
             param_index = self._param_name_list.index(param_name)
         except ValueError:
-            raise ValueError("Parameter %s is not in the parameter list.", param_name)
+            raise ValueError("Parameter", param_name, "is not in the parameter list.")
 
         return self._param_df_list[param_index]
 
@@ -268,7 +270,7 @@ class Parameters:
                 self._min_time_duration_before = min_time_duration_before
                 self._min_time_duration_after = min_time_duration_after
         except IOError:
-            raise ValueError("Min time duration file(%s) cannot be created or written to.", param_min_t_file)
+            raise ValueError("Min time duration file", param_min_t_file, "cannot be created or written to.")
             pass
 
     def get_ts_series_for_timestamps(self,
@@ -438,8 +440,8 @@ class Parameters:
                             break
                     except ValueError:
                         raise ValueError(
-                            "Min time duration(%s) from file(%s) cannot be converted to a "
-                            "number. Using default of %d", line, param_min_t_file, t_duration)
+                            "Min time duration", line, "from file", param_min_t_file,
+                            "cannot be converted to a number. Using default of", t_duration)
                 min_t_file.close()
         except IOError:
             self._param_file_exists = False
@@ -455,7 +457,7 @@ class Parameters:
         """
 
         if not os.path.isdir(self._param_dir):
-            raise ValueError("Parameter folder %s does not exist!", self._param_dir)
+            raise ValueError("Parameter folder", self._param_dir, "does not exist!", )
 
         for index, param_name in enumerate(self._param_name_list):
             param_file_name = self._get_file_name_for_param(param_name)
