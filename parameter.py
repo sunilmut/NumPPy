@@ -656,20 +656,6 @@ class ParameterTest(unittest.TestCase):
             #print("Timestamp splits: ", ts_split)
             self.assertEqual(ts_split == val[1], True)
 
-        """
-        Timestamps: 10, 20, 30, 40
-        So, for a given timestamp of [8, 23] (i.e from 8 to 17 seconds), this routine will return
-        Within the window: [[10, 15], [20, 23]]
-        Outside the window: [(15, 20)] -> where () means excluding
-
-        Another example:
-        Window duration: 5s
-        Timestamps: 10, 20
-        So, for a given timestamp of [5, 35] (i.e from 5 to 35 seconds), this routine will return
-        Within the window: [[10, 15], [20, 25]]
-        Outside the window: [(5, 10), (15, 20), (25, 35)]
-        """
-
     @staticmethod
     def get_test_dir():
         return os.path.join(os.getcwd(), ParameterTest.TEST_DATA_DIR)
