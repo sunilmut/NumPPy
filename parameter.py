@@ -315,14 +315,16 @@ class Parameters:
         param_window_duration, ts = self.get_param_values(param_name)
         indices = list(filter(lambda x: (ts[x] >= ts_start and ts[x] < ts_end) or
                               ((ts[x] < ts_start) and (ts[x] + param_window_duration) > ts_start), range(len(ts))))
-        # No timestamp in the series fits within the provided time
+        # No timestamp in the series fits within the provided time. Mark
+        # the whole duration as outside.
         if len(indices) == 0:
+            ts_split.append([ts_start, ts_end, False])
             return ts_split
 
         start = ts_start
         idx = 0
         while True:
-            print("start: ", start, " ts[idx]: ", ts[indices[idx]])
+            #print("start: ", start, " ts[idx]: ", ts[indices[idx]])
             if start < ts[indices[idx]]:
                 is_in = False
                 end = min(ts_end, ts[idx])
@@ -335,7 +337,7 @@ class Parameters:
 
             # If we have reached the end of the ts series and there is
             # still some left in the duration, just add the rest.
-            if idx >= len(ts) and end < ts_end:
+            if idx >= len(indices) and end < ts_end:
                 ts_split.append([end, ts_end, False])
                 end = ts_end
 
@@ -604,7 +606,7 @@ class ParameterTest(unittest.TestCase):
             Parameters.PARAM_TIME_WINDOW_DURATION:      [5, np.nan, np.nan]
         }
         ts1 = [5, 8]
-        expected_out1 = []
+        expected_out1 = [[5, 8, False]]
 
         ts2 = [5, 37]
         expected_out2 = [[5, 10, False], [10, 15, True], [15, 20, False],
@@ -630,27 +632,28 @@ class ParameterTest(unittest.TestCase):
         ts8 = [30, 43]
         expected_out8 = [[30, 35, True], [35, 43, False]]
 
-        ts8 = [45, 70]
-        expected_out8 = [45, 70, False]
+        ts9 = [45, 70]
+        expected_out9 = [[45, 70, False]]
 
-        ts9 = [25, 30]
-        expected_out9 = [25, 30, False]
+        ts10 = [25, 30]
+        expected_out10 = [[25, 30, False]]
 
         expected_ts = [[ts1, expected_out1], [ts2, expected_out2],
                        [ts3, expected_out3], [ts4, expected_out4],
                        [ts5, expected_out5], [ts6, expected_out6],
                        [ts7, expected_out7], [ts8, expected_out8],
-                       [ts9, expected_out9]]
+                       [ts9, expected_out9], [ts10, expected_out10]]
         param = Parameters()
         PARAM_NAME = "param"
         df = pd.DataFrame(param_val)
+        #print(param_val)
         for val in expected_ts:
-            print("validating ", val[0])
+            #print("timestamp duration: ", val[0])
             input_dir = self.reset()
             param._set_param_dir(input_dir)
             param.set_param_value(PARAM_NAME, df)
             ts_split = param.get_ts_series_for_timestamps(PARAM_NAME, val[0][0], val[0][1])
-            print(ts_split)
+            #print("Timestamp splits: ", ts_split)
             self.assertEqual(ts_split == val[1], True)
 
         """
