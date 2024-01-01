@@ -315,6 +315,7 @@ class Parameters:
         """
         ts_split = []
         param_window_duration, ts = self.get_param_values(param_name)
+        print("param name: ", param_name, "ts_start: ", ts_start, "ts_end: ", ts_end, "window dur: ", param_window_duration)
         indices = list(filter(lambda x: (ts[x] >= ts_start and ts[x] < ts_end) or
                               ((ts[x] < ts_start) and (ts[x] + param_window_duration) > ts_start), range(len(ts))))
         # No timestamp in the series fits within the provided time. Mark

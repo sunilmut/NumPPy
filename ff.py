@@ -96,11 +96,9 @@ def main(input_dir, parameter_obj):
             param_name_list = [""]
             param_name_list.extend(parameter_obj.get_param_name_list())
             for param in param_name_list:
-                param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(param)
-
                 # Process the data and write out the results
-                success, results = process(param_window_duration,
-                                           param_start_timestamp_series,
+                success, results = process(parameter_obj,
+                                           param,
                                            binary_df,
                                            timeshift_val,
                                            z_score,
@@ -153,8 +151,8 @@ def main(input_dir, parameter_obj):
                 out_df_1s.to_csv(out_1_file, mode='a', index=False, header=True)
 
 
-def process(param_window_duration,
-            param_start_timestamp_series,
+def process(parameter_obj,
+            param_name,
             binary_df,
             timeshift_val,
             data,
@@ -217,14 +215,16 @@ def process(param_window_duration,
         #print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
         ts_start = binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val
         ts_end = binary_df.iloc[index_end][common.INPUT_COL0_TS] + timeshift_val
-        #print(ts_start, " - ", ts_end)
+        print("timestamp series is: ", ts, "ts_start: ", ts_start, "ts_end: ", ts_end)
+        ts = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
         ts_index_start_for_val = np.argmax(ts >= ts_start)
-        if ts_index_start_for_val == 0:
-            break
+        #if ts_index_start_for_val == 0:
+        #    print("ts start index is 0")
+        #    break
         ts_index_end_for_val = np.argmax(ts > ts_end)
         if ts_index_end_for_val == 0:
             ts_index_end_for_val = len(ts) - 1
-        #print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
+        print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
         bout_length = ts_end - ts_start
         motion_index_slice = binary_df.iloc[index_start : index_end + 1][common.INPUT_COL1_MI]
         sum_mi = sum(motion_index_slice)
