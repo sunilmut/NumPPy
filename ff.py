@@ -224,50 +224,57 @@ def process(parameter_obj,
         #print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
         ts_start = binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val
         ts_end = binary_df.iloc[index_end][common.INPUT_COL0_TS] + timeshift_val
-        ts1 = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
-        print("timestamp series is: ", ts1, "ts_start: ", ts_start, "ts_end: ", ts_end)
-        ts_index_start_for_val = np.argmax(ts >= ts_start)
-        if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
-            print("ts start is out of bounds")
-            break
-        ts_index_end_for_val = np.argmax(ts > ts_end)
-        print("ts_index_end_for_val: ", ts_index_end_for_val)
-        if ts_index_end_for_val == 0:
-            ts_index_end_for_val = len(ts)
-        #print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
-        bout_length = ts_end - ts_start
-        motion_index_slice = binary_df.iloc[index_start : index_end + 1][common.INPUT_COL1_MI]
-        sum_mi = sum(motion_index_slice)
-        cnt_mi = len(motion_index_slice)
-        #print(motion_index_slice)
-        data_slice = data[ts_index_start_for_val : ts_index_end_for_val]
-        sum_data = sum(data_slice)
-        cnt_data = len(data_slice)
-        print("cur_binary_value", cur_binary_value, data_slice)
-        #print("sum: ", sum_data, " count: ", cnt_data)
-        if cnt_data == 0:
-            print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
-            print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
-        elif cur_binary_value == 0:
-            auc_0s_sum += sum_data
-            auc_0s_cnt += cnt_data
-            mi_0s_sum += sum_mi
-            mi_0s_cnt += cnt_mi
-            out_df_0s.loc[len(out_df_0s.index)] = [ts_start,
-                                                   bout_length,
-                                                   sum_mi/cnt_mi,
-                                                   sum_data,
-                                                   sum_data/cnt_data]
-        else:
-            auc_1s_sum += sum_data
-            auc_1s_cnt += cnt_data
-            mi_1s_sum += sum_mi
-            mi_1s_cnt += cnt_mi
-            out_df_1s.loc[len(out_df_1s.index)] = [ts_start,
-                                                   bout_length,
-                                                   sum_mi/cnt_mi,
-                                                   sum_data,
-                                                   sum_data/cnt_data]
+        ts_split = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
+        print("timestamp series is: ", ts_split, "ts_start: ", ts_start, "ts_end: ", ts_end)
+        for element in ts_split:
+            ts_start = element[0]
+            ts_end = element[1]
+            is_inside = element[2]
+            #TODO: process outside elements too
+            if not is_inside:
+                continue
+            ts_index_start_for_val = np.argmax(ts >= ts_start)
+            if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
+                print("ts start is out of bounds")
+                break
+            ts_index_end_for_val = np.argmax(ts > ts_end)
+            print("ts_index_end_for_val: ", ts_index_end_for_val)
+            if ts_index_end_for_val == 0:
+                ts_index_end_for_val = len(ts)
+            #print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
+            bout_length = ts_end - ts_start
+            motion_index_slice = binary_df.iloc[index_start : index_end + 1][common.INPUT_COL1_MI]
+            sum_mi = sum(motion_index_slice)
+            cnt_mi = len(motion_index_slice)
+            #print(motion_index_slice)
+            data_slice = data[ts_index_start_for_val : ts_index_end_for_val]
+            sum_data = sum(data_slice)
+            cnt_data = len(data_slice)
+            print("cur_binary_value", cur_binary_value, data_slice)
+            #print("sum: ", sum_data, " count: ", cnt_data)
+            if cnt_data == 0:
+                print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
+                print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
+            elif cur_binary_value == 0:
+                auc_0s_sum += sum_data
+                auc_0s_cnt += cnt_data
+                mi_0s_sum += sum_mi
+                mi_0s_cnt += cnt_mi
+                out_df_0s.loc[len(out_df_0s.index)] = [ts_start,
+                                                    bout_length,
+                                                    sum_mi/cnt_mi,
+                                                    sum_data,
+                                                    sum_data/cnt_data]
+            else:
+                auc_1s_sum += sum_data
+                auc_1s_cnt += cnt_data
+                mi_1s_sum += sum_mi
+                mi_1s_cnt += cnt_mi
+                out_df_1s.loc[len(out_df_1s.index)] = [ts_start,
+                                                    bout_length,
+                                                    sum_mi/cnt_mi,
+                                                    sum_data,
+                                                    sum_data/cnt_data]
 
         # Reset the index to indicate the start of a new dataset.
         index_start = -1
@@ -585,10 +592,8 @@ if __name__ == "__main__":
 ------------------------------------------------------------
 """
 class Test(unittest.TestCase):
-    def setUp(self):
-        self.param = Parameters()
-
     def bvt(self):
+        param = Parameters()
         in_col_names = [common.INPUT_COL0_TS, common.INPUT_COL1_MI, common.INPUT_COL2_FREEZE]
         ts = [0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
               20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
@@ -601,7 +606,7 @@ class Test(unittest.TestCase):
                 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
         timeshift_val = 0
         print(binary_df)
-        success, results = process(self.param, "", binary_df, timeshift_val, data, ts)
+        success, results = process(param, "", binary_df, timeshift_val, data, ts)
         self.assertTrue(success)
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
@@ -617,17 +622,58 @@ class Test(unittest.TestCase):
         #auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
         #print(auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg)
         #print(auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg)
-        data = {OUTPUT_COL0_TS:         [0.0, 15.0, 23.0, 27.0, 29.0, 35.0],
+        o_data = {OUTPUT_COL0_TS:       [0.0, 15.0, 23.0, 27.0, 29.0, 35.0],
                 OUTPUT_COL1_LEN:        [9.0, 4.0,  2.0,  0.0,  0.0,  4.0],
                 OUTPUT_COL2_MI_AVG:     [1.0, 1.0,  1.0,  1.0,  1.0,  1.0],
                 OUTPUT_COL3_DATA_AUC:   [45.0,85.0, 72.0, 27.0, 29.0, 185.0],
                 OUTPUT_COL4_DATA_AVG:   [4.5, 17.0, 24.0, 27.0, 29.0, 37.0]}
-        out_df_0s_expected = pd.DataFrame(data)
+        out_df_0s_expected = pd.DataFrame(o_data)
         self.assertTrue(out_df_0s_expected.equals(out_df_0s))
-        data = {OUTPUT_COL0_TS:         [10.0, 20.0, 26.0, 28.0, 30.0],
+        o_data = {OUTPUT_COL0_TS:       [10.0, 20.0, 26.0, 28.0, 30.0],
                 OUTPUT_COL1_LEN:        [4.0,  2.0,  0.0,  0.0,  4.0],
                 OUTPUT_COL2_MI_AVG:     [1.0,  1.0,  1.0,  1.0,  1.0],
                 OUTPUT_COL3_DATA_AUC:   [60.0, 63.0, 26.0, 28.0, 160.0],
                 OUTPUT_COL4_DATA_AVG:   [12.0, 21.0, 26.0, 28.0, 32.0]}
-        out_df_1s_expected = pd.DataFrame(data)
+        out_df_1s_expected = pd.DataFrame(o_data)
         self.assertTrue(out_df_1s_expected.equals(out_df_1s))
+
+        # Parameter that encompasses the whole duration
+        param_val = {
+            Parameters.PARAM_TIME_WINDOW_START_LIST:    [0],
+            Parameters.PARAM_TIME_WINDOW_DURATION:      [40]
+        }
+        param = Parameters()
+        PARAM_NAME = "param1"
+        df = pd.DataFrame(param_val)
+        param.set_param_value(PARAM_NAME, df)
+        success, results = process(param, PARAM_NAME, binary_df, timeshift_val, data, ts)
+        self.assertTrue(success)
+        auc_0s_sum = results[0]
+        auc_0s_cnt = results[1]
+        out_df_0s = results[2]
+        auc_1s_sum = results[3]
+        auc_1s_cnt = results[4]
+        out_df_1s = results[5]
+        self.assertEqual(auc_0s_cnt, fz.count(0))
+        self.assertEqual(auc_0s_sum, 443)
+        self.assertEqual(auc_1s_sum, 337)
+        self.assertEqual(auc_1s_cnt, fz.count(1))
+        #auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
+        #auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
+        #print(auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg)
+        #print(auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg)
+        self.assertTrue(out_df_0s_expected.equals(out_df_0s))
+        self.assertTrue(out_df_1s_expected.equals(out_df_1s))
+
+        # Restricted parameter
+        param_val = {
+            Parameters.PARAM_TIME_WINDOW_START_LIST:    [4, 6, 10, 20, 30, 40],
+            Parameters.PARAM_TIME_WINDOW_DURATION:      [2, np.nan, np.nan, np.nan, np.nan, np.nan]
+        }
+        param = Parameters()
+        PARAM_NAME = "param1"
+        df = pd.DataFrame(param_val)
+        param.set_param_value(PARAM_NAME, df)
+        success, results = process(param, PARAM_NAME, binary_df, timeshift_val, data, ts)
+        print(results[2])
+        print(results[5])

@@ -320,7 +320,11 @@ class Parameters:
         # No timestamp in the series fits within the provided time. Mark
         # the whole duration as outside.
         if len(indices) == 0:
-            ts_split.append([ts_start, ts_end, False])
+            # For empty parameter, everything is considered to be in range.
+            if param_name == "":
+                ts_split.append([ts_start, ts_end, True])
+            else:
+                ts_split.append([ts_start, ts_end, False])
             return ts_split
 
         start = ts_start
