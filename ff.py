@@ -67,6 +67,14 @@ def read_hdf5(event, filepath, key):
 
     return arr
 
+def compute_val(cnt, sum, df):
+    avg = sum/cnt
+    # std error of mean (sem)
+    sem_sum = scipy.stats.sem(df.loc[:, OUTPUT_COL3_DATA_AUC])
+    sem_avg = scipy.stats.sem(df.loc[:, OUTPUT_COL4_DATA_AVG])
+
+    return avg, sem_sum, sem_avg
+
 def main(input_dir, parameter_obj):
     path = glob.glob(os.path.join(input_dir, 'z_score_*'))
     output_dir = common.get_output_dir(input_dir, '')
@@ -123,9 +131,7 @@ def main(input_dir, parameter_obj):
 
                 # 0's
                 if auc_0s_cnt > 0:
-                    auc_0s_avg = auc_0s_sum/auc_0s_cnt
-                    sem_auc_0s_sum = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL3_DATA_AUC])
-                    sem_auc_0s_avg = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL4_DATA_AVG])
+                    auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
                     df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
                     df_0s_summary.loc[len(df_0s_summary.index)] = [auc_0s_sum,
                                                                 sem_auc_0s_sum,
@@ -140,9 +146,7 @@ def main(input_dir, parameter_obj):
 
                 # 1's
                 if auc_1s_cnt > 0:
-                    auc_1s_avg = auc_1s_sum/auc_1s_cnt
-                    sem_auc_1s_sum = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL3_DATA_AUC])
-                    sem_auc_1s_avg = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL4_DATA_AVG])
+                    auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
                     df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
                     df_1s_summary.loc[len(df_1s_summary.index)] = [auc_1s_sum,
                                                                 sem_auc_1s_sum,
@@ -607,7 +611,23 @@ class Test(unittest.TestCase):
         out_df_1s = results[5]
         self.assertEqual(auc_0s_cnt, fz.count(0))
         self.assertEqual(auc_0s_sum, 443)
-        print("out_df_0s", out_df_0s)
         self.assertEqual(auc_1s_sum, 337)
         self.assertEqual(auc_1s_cnt, fz.count(1))
-        print("out_df_1s", out_df_1s)
+        #auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
+        #auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
+        #print(auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg)
+        #print(auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg)
+        data = {OUTPUT_COL0_TS:         [0.0, 15.0, 23.0, 27.0, 29.0, 35.0],
+                OUTPUT_COL1_LEN:        [9.0, 4.0,  2.0,  0.0,  0.0,  4.0],
+                OUTPUT_COL2_MI_AVG:     [1.0, 1.0,  1.0,  1.0,  1.0,  1.0],
+                OUTPUT_COL3_DATA_AUC:   [45.0,85.0, 72.0, 27.0, 29.0, 185.0],
+                OUTPUT_COL4_DATA_AVG:   [4.5, 17.0, 24.0, 27.0, 29.0, 37.0]}
+        out_df_0s_expected = pd.DataFrame(data)
+        self.assertTrue(out_df_0s_expected.equals(out_df_0s))
+        data = {OUTPUT_COL0_TS:         [10.0, 20.0, 26.0, 28.0, 30.0],
+                OUTPUT_COL1_LEN:        [4.0,  2.0,  0.0,  0.0,  4.0],
+                OUTPUT_COL2_MI_AVG:     [1.0,  1.0,  1.0,  1.0,  1.0],
+                OUTPUT_COL3_DATA_AUC:   [60.0, 63.0, 26.0, 28.0, 160.0],
+                OUTPUT_COL4_DATA_AVG:   [12.0, 21.0, 26.0, 28.0, 32.0]}
+        out_df_1s_expected = pd.DataFrame(data)
+        self.assertTrue(out_df_1s_expected.equals(out_df_1s))
