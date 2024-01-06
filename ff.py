@@ -224,8 +224,8 @@ def process(parameter_obj,
         #print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
         ts_start = binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val
         ts_end = binary_df.iloc[index_end][common.INPUT_COL0_TS] + timeshift_val
-        #ts = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
-        print("timestamp series is: ", ts, "ts_start: ", ts_start, "ts_end: ", ts_end)
+        ts1 = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
+        print("timestamp series is: ", ts1, "ts_start: ", ts_start, "ts_end: ", ts_end)
         ts_index_start_for_val = np.argmax(ts >= ts_start)
         if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
             print("ts start is out of bounds")
