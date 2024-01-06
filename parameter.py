@@ -303,15 +303,14 @@ class Parameters:
         For example, if the timestamp series for this parameter is
         Window duration: 5s
         Timestamps: 10, 20, 30, 40
-        So, for a given timestamp of [8, 23] (i.e from 8 to 17 seconds), this routine will return
-        Within the window: [[10, 15, True], [15, 20, False], [20, 23, True]]
+        So, for a given timestamp of [8, 23] (i.e from 8 to 17 seconds), this routine will return:
+        [[10, 15, True], [15, 20, False], [20, 23, True]]
 
         Another example:
         Window duration: 5s
         Timestamps: 10, 20
-        So, for a given timestamp of [5, 35] (i.e from 5 to 35 seconds), this routine will return
-        Within the window: [[5, 10, False], [10, 15, True], [15, 20, False], [20, 25, True], [25, 35, False]]
-        Outside the window:
+        So, for a given timestamp of [5, 35] (i.e from 5 to 35 seconds), this routine will return:
+        [[5, 10, False], [10, 15, True], [15, 20, False], [20, 25, True], [25, 35, False]]
         """
         ts_split = []
         param_window_duration, ts = self.get_param_values(param_name)
@@ -330,7 +329,7 @@ class Parameters:
             #print("start: ", start, " ts[idx]: ", ts[indices[idx]])
             if start < ts[indices[idx]]:
                 is_in = False
-                end = min(ts_end, ts[idx])
+                end = min(ts_end, ts[indices[idx]])
             else:
                 is_in = True
                 end = min(ts_end, ts[indices[idx]] + param_window_duration)

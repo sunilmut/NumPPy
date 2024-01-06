@@ -11,6 +11,7 @@ from pandas.api.types import is_integer_dtype
 from guizero import App, Box, Combo, ListBox, PushButton, Text, TextBox, TitleBox
 import scipy
 import glob
+import unittest
 
 # UI related constants
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
@@ -84,6 +85,7 @@ def main(input_dir, parameter_obj):
                 common.logger.warning("Skipping CSV file (%s) as it is well formed")
                 continue
 
+            print(binary_df)
             csv_basename = (os.path.basename(csv_file)).split('.')[0]
             # Create output folder specific for this csv file.
             this_output_folder = os.path.join(output_dir, csv_basename)
@@ -93,10 +95,12 @@ def main(input_dir, parameter_obj):
 
             # We want to generate without any parameters as well. So start with
             # no parameters and append the parameter list.
-            param_name_list = [""]
+            #param_name_list = [""]
+            param_name_list = []
             param_name_list.extend(parameter_obj.get_param_name_list())
             for param in param_name_list:
                 # Process the data and write out the results
+                print("processing param: ", param)
                 success, results = process(parameter_obj,
                                            param,
                                            binary_df,
@@ -113,42 +117,43 @@ def main(input_dir, parameter_obj):
                 auc_1s_cnt = results[4]
                 out_df_1s = results[5]
 
-                auc_0s_avg = auc_0s_sum/auc_0s_cnt
-                auc_1s_avg = auc_1s_sum/auc_1s_cnt
-                print(out_df_0s)
-                print(out_df_1s)
-                sem_auc_0s_sum = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL3_DATA_AUC])
-                sem_auc_0s_avg = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL4_DATA_AVG])
-                sem_auc_1s_sum = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL3_DATA_AUC])
-                sem_auc_1s_avg = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL4_DATA_AVG])
-                print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
-                print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
-
                 param_ext = ""
                 if not param == "":
                     param_ext = "_" + param
 
                 # 0's
-                df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                df_0s_summary.loc[len(df_0s_summary.index)] = [auc_0s_sum,
-                                                            sem_auc_0s_sum,
-                                                            auc_0s_avg,
-                                                            sem_auc_0s_avg]
-                out_0_file = os.path.join(this_output_folder,
-                                          OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT)
-                df_0s_summary.to_csv(out_0_file, mode='w', index=False, header=True)
-                out_df_0s.to_csv(out_0_file, mode='a', index=False, header=True)
+                if auc_0s_cnt > 0:
+                    auc_0s_avg = auc_0s_sum/auc_0s_cnt
+                    sem_auc_0s_sum = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL3_DATA_AUC])
+                    sem_auc_0s_avg = scipy.stats.sem(out_df_0s.loc[:, OUTPUT_COL4_DATA_AVG])
+                    df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+                    df_0s_summary.loc[len(df_0s_summary.index)] = [auc_0s_sum,
+                                                                sem_auc_0s_sum,
+                                                                auc_0s_avg,
+                                                                sem_auc_0s_avg]
+                    out_0_file = os.path.join(this_output_folder,
+                                            OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT)
+                    df_0s_summary.to_csv(out_0_file, mode='w', index=False, header=True)
+                    out_df_0s.to_csv(out_0_file, mode='a', index=False, header=True)
+                    print("0 df: ", out_df_0s)
+                    print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
 
                 # 1's
-                df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                df_1s_summary.loc[len(df_1s_summary.index)] = [auc_1s_sum,
-                                                            sem_auc_1s_sum,
-                                                            auc_1s_avg,
-                                                            sem_auc_1s_avg]
-                out_1_file = os.path.join(this_output_folder,
-                                          OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT)
-                df_1s_summary.to_csv(out_1_file, mode='w', index=False, header=True)
-                out_df_1s.to_csv(out_1_file, mode='a', index=False, header=True)
+                if auc_1s_cnt > 0:
+                    auc_1s_avg = auc_1s_sum/auc_1s_cnt
+                    sem_auc_1s_sum = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL3_DATA_AUC])
+                    sem_auc_1s_avg = scipy.stats.sem(out_df_1s.loc[:, OUTPUT_COL4_DATA_AVG])
+                    df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+                    df_1s_summary.loc[len(df_1s_summary.index)] = [auc_1s_sum,
+                                                                sem_auc_1s_sum,
+                                                                auc_1s_avg,
+                                                                sem_auc_1s_avg]
+                    out_1_file = os.path.join(this_output_folder,
+                                                OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT)
+                    df_1s_summary.to_csv(out_1_file, mode='w', index=False, header=True)
+                    out_df_1s.to_csv(out_1_file, mode='a', index=False, header=True)
+                    print("1 df: ", out_df_1s)
+                    print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
 
 
 def process(parameter_obj,
@@ -215,25 +220,26 @@ def process(parameter_obj,
         #print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
         ts_start = binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val
         ts_end = binary_df.iloc[index_end][common.INPUT_COL0_TS] + timeshift_val
+        #ts = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
         print("timestamp series is: ", ts, "ts_start: ", ts_start, "ts_end: ", ts_end)
-        ts = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
         ts_index_start_for_val = np.argmax(ts >= ts_start)
-        #if ts_index_start_for_val == 0:
-        #    print("ts start index is 0")
-        #    break
+        if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
+            print("ts start is out of bounds")
+            break
         ts_index_end_for_val = np.argmax(ts > ts_end)
+        print("ts_index_end_for_val: ", ts_index_end_for_val)
         if ts_index_end_for_val == 0:
-            ts_index_end_for_val = len(ts) - 1
-        print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
+            ts_index_end_for_val = len(ts)
+        #print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
         bout_length = ts_end - ts_start
         motion_index_slice = binary_df.iloc[index_start : index_end + 1][common.INPUT_COL1_MI]
         sum_mi = sum(motion_index_slice)
         cnt_mi = len(motion_index_slice)
         #print(motion_index_slice)
-        data_slice = data[ts_index_start_for_val : ts_index_end_for_val + 1]
+        data_slice = data[ts_index_start_for_val : ts_index_end_for_val]
         sum_data = sum(data_slice)
         cnt_data = len(data_slice)
-        #print(data_slice)
+        print("cur_binary_value", cur_binary_value, data_slice)
         #print("sum: ", sum_data, " count: ", cnt_data)
         if cnt_data == 0:
             print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
@@ -566,3 +572,42 @@ if __name__ == "__main__":
     app.display()
 
     logging.shutdown()
+
+"""
+------------------------------------------------------------
+                Unit Tests
+------------------------------------------------------------
+# Run these tests using `python -m unittest ff.Test.bvt`
+------------------------------------------------------------
+"""
+class Test(unittest.TestCase):
+    def setUp(self):
+        self.param = Parameters()
+
+    def bvt(self):
+        in_col_names = [common.INPUT_COL0_TS, common.INPUT_COL1_MI, common.INPUT_COL2_FREEZE]
+        ts = [0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+              20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+        fz = [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,
+              1,  1,  1,  0,  0,  0,  1,  0,  1,  0,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0]
+        mi = [1] * 40
+        list_of_tuples = list(zip(ts, mi, fz))
+        binary_df = pd.DataFrame(list_of_tuples, columns=in_col_names)
+        data = [0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+        timeshift_val = 0
+        print(binary_df)
+        success, results = process(self.param, "", binary_df, timeshift_val, data, ts)
+        self.assertTrue(success)
+        auc_0s_sum = results[0]
+        auc_0s_cnt = results[1]
+        out_df_0s = results[2]
+        auc_1s_sum = results[3]
+        auc_1s_cnt = results[4]
+        out_df_1s = results[5]
+        self.assertEqual(auc_0s_cnt, fz.count(0))
+        self.assertEqual(auc_0s_sum, 443)
+        print("out_df_0s", out_df_0s)
+        self.assertEqual(auc_1s_sum, 337)
+        self.assertEqual(auc_1s_cnt, fz.count(1))
+        print("out_df_1s", out_df_1s)
