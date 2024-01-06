@@ -667,8 +667,8 @@ class Test(unittest.TestCase):
 
         # Restricted parameter
         param_val = {
-            Parameters.PARAM_TIME_WINDOW_START_LIST:    [4, 6, 10, 20, 30, 40],
-            Parameters.PARAM_TIME_WINDOW_DURATION:      [2, np.nan, np.nan, np.nan, np.nan, np.nan]
+            Parameters.PARAM_TIME_WINDOW_START_LIST:    [0, 10, 20, 30, 40],
+            Parameters.PARAM_TIME_WINDOW_DURATION:      [5, np.nan, np.nan, np.nan, np.nan]
         }
         param = Parameters()
         PARAM_NAME = "param1"
@@ -677,3 +677,32 @@ class Test(unittest.TestCase):
         success, results = process(param, PARAM_NAME, binary_df, timeshift_val, data, ts)
         print(results[2])
         print(results[5])
+        self.assertTrue(success)
+        auc_0s_sum = results[0]
+        auc_0s_cnt = results[1]
+        out_df_0s = results[2]
+        auc_1s_sum = results[3]
+        auc_1s_cnt = results[4]
+        out_df_1s = results[5]
+        self.assertEqual(auc_0s_cnt, 9)
+        self.assertEqual(auc_0s_sum, 87)
+        self.assertEqual(auc_1s_sum, 283)
+        self.assertEqual(auc_1s_cnt, 13)
+        #auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
+        #auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
+        #print(auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg)
+        #print(auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg)
+        o_data = {OUTPUT_COL0_TS:       [0.0,  23.0],
+                OUTPUT_COL1_LEN:        [5.0,  2.0],
+                OUTPUT_COL2_MI_AVG:     [1.0,  1.0],
+                OUTPUT_COL3_DATA_AUC:   [15.0, 72.0],
+                OUTPUT_COL4_DATA_AVG:   [2.5,  24.0]}
+        out_df_0s_expected = pd.DataFrame(o_data)
+        self.assertTrue(out_df_0s_expected.equals(out_df_0s))
+        o_data = {OUTPUT_COL0_TS:       [10.0, 20.0, 30.0],
+                OUTPUT_COL1_LEN:        [4.0,  2.0,  4.0],
+                OUTPUT_COL2_MI_AVG:     [1.0,  1.0,  1.0],
+                OUTPUT_COL3_DATA_AUC:   [60.0, 63.0, 160.0],
+                OUTPUT_COL4_DATA_AVG:   [12.0, 21.0, 32.0]}
+        out_df_1s_expected = pd.DataFrame(o_data)
+        self.assertTrue(out_df_1s_expected.equals(out_df_1s))
