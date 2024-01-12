@@ -37,12 +37,15 @@ OUTPUT_COLUMN_NAMES=[OUTPUT_COL0_TS, OUTPUT_COL1_LEN,
 # output file names
 OUTPUT_ZEROS = "0_"
 OUTPUT_ONES = "1_"
+OUTPUT_ZEROS_OUT = "0_out_"
+OUTPUT_ONES_OUT = "1_out_"
 OUTPUT_AUC = "AUC (sum)"
 OUTPUT_AUC_SEM = "AUC_SEM"
 OUTPUT_Z_SCORE = "z-score (avg)"
 OUTPUT_Z_SCORE_SEM = "z-score_SEM"
 OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
                                OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM]
+TIMESTAMP_ROUND_VALUE = 3
 
 # Globals
 parameter_obj = Parameters()
@@ -108,7 +111,7 @@ def main(input_dir, parameter_obj):
             param_name_list.extend(parameter_obj.get_param_name_list())
             for param in param_name_list:
                 # Process the data and write out the results
-                #print("processing param: ", param)
+                print("processing param: ", param)
                 success, results = process(parameter_obj,
                                            param,
                                            binary_df,
@@ -124,12 +127,18 @@ def main(input_dir, parameter_obj):
                 auc_1s_sum = results[3]
                 auc_1s_cnt = results[4]
                 out_df_1s = results[5]
+                auc_0s_sum_out = results[6]
+                auc_0s_cnt_out = results[7]
+                out_df_0s_out = results[8]
+                auc_1s_sum_out = results[9]
+                auc_1s_cnt_out = results[10]
+                out_df_1s_out = results[11]
 
                 param_ext = ""
                 if not param == "":
                     param_ext = "_" + param
 
-                # 0's
+                # 0's, in the param
                 if auc_0s_cnt > 0:
                     auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
                     df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
@@ -141,10 +150,27 @@ def main(input_dir, parameter_obj):
                                             OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT)
                     df_0s_summary.to_csv(out_0_file, mode='w', index=False, header=True)
                     out_df_0s.to_csv(out_0_file, mode='a', index=False, header=True)
-                    #print("0 df: ", out_df_0s)
-                    #print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
+                    print("0 df: ", out_df_0s)
+                    print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
 
-                # 1's
+                # 0's, outside the param
+                if auc_0s_cnt_out > 0:
+                    auc_0s_avg_out, sem_auc_0s_sum_out, sem_auc_0s_avg_out = compute_val(auc_0s_sum_out,
+                                                                                         auc_0s_cnt_out,
+                                                                                         out_df_0s_out)
+                    df_0s_out_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+                    df_0s_out_summary.loc[len(df_0s_out_summary.index)] = [auc_0s_sum_out,
+                                                                           sem_auc_0s_sum_out,
+                                                                           auc_0s_avg_out,
+                                                                           sem_auc_0s_avg_out]
+                    out_0_file = os.path.join(this_output_folder,
+                                            OUTPUT_ZEROS_OUT + csv_basename + param_ext + common.CSV_EXT)
+                    df_0s_out_summary.to_csv(out_0_file, mode='w', index=False, header=True)
+                    out_df_0s_out.to_csv(out_0_file, mode='a', index=False, header=True)
+                    print("0 df [out]: ", out_df_0s_out)
+                    print("0s [out] sum: ", auc_0s_sum_out, " avg: ", auc_0s_avg_out, " SEM_AUC: ", sem_auc_0s_sum_out, " SEM_AVG: ", sem_auc_0s_avg_out)
+
+                # 1's, in the param
                 if auc_1s_cnt > 0:
                     auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
                     df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
@@ -156,9 +182,25 @@ def main(input_dir, parameter_obj):
                                                 OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT)
                     df_1s_summary.to_csv(out_1_file, mode='w', index=False, header=True)
                     out_df_1s.to_csv(out_1_file, mode='a', index=False, header=True)
-                    #print("1 df: ", out_df_1s)
-                    #print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
+                    print("1 df: ", out_df_1s)
+                    print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
 
+                # 1's, outside the param
+                if auc_1s_cnt_out > 0:
+                    auc_1s_avg_out, sem_auc_1s_sum_out, sem_auc_1s_avg_out = compute_val(auc_1s_sum_out,
+                                                                                         auc_1s_cnt_out,
+                                                                                         out_df_1s_out)
+                    df_1s_out_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+                    df_1s_out_summary.loc[len(df_1s_out_summary.index)] = [auc_1s_sum_out,
+                                                                           sem_auc_1s_sum_out,
+                                                                           auc_1s_avg_out,
+                                                                           sem_auc_1s_avg_out]
+                    out_0_file = os.path.join(this_output_folder,
+                                            OUTPUT_ZEROS_OUT + csv_basename + param_ext + common.CSV_EXT)
+                    df_1s_out_summary.to_csv(out_0_file, mode='w', index=False, header=True)
+                    out_df_1s_out.to_csv(out_0_file, mode='a', index=False, header=True)
+                    print("1 df [out]: ", out_df_1s_out)
+                    print("1s [out] sum: ", auc_1s_sum_out, " avg: ", auc_1s_avg_out, " SEM_AUC: ", sem_auc_1s_sum_out, " SEM_AVG: ", sem_auc_1s_avg_out)
 
 def process(parameter_obj,
             param_name,
@@ -199,11 +241,22 @@ def process(parameter_obj,
     mi_0s_sum = 0
     mi_0s_cnt = 0
     out_df_0s = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    auc_0s_sum_out = 0
+    auc_0s_cnt_out = 0
+    mi_0s_sum_out = 0
+    mi_0s_cnt_out = 0
+    out_df_0s_out = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
     auc_1s_sum = 0
     auc_1s_cnt = 0
     mi_1s_sum = 0
     mi_1s_cnt = 0
     out_df_1s = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    auc_1s_sum_out = 0
+    auc_1s_cnt_out = 0
+    mi_1s_sum_out = 0
+    mi_1s_cnt_out = 0
+    out_df_1s_out = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    print("timeshift_val: ", timeshift_val)
     #print("binary file has rows", row_count)
     for index, row in binary_df.iterrows():
         if index_start == -1:
@@ -221,11 +274,11 @@ def process(parameter_obj,
         ):
             continue
 
-        #print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
-        ts_start = binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val
-        ts_end = binary_df.iloc[index_end][common.INPUT_COL0_TS] + timeshift_val
+        ts_start_without_shift = binary_df.iloc[index_start][common.INPUT_COL0_TS]
+        ts_start = round(ts_start_without_shift + timeshift_val, TIMESTAMP_ROUND_VALUE)
+        ts_end_without_shift = binary_df.iloc[index_end][common.INPUT_COL0_TS]
+        ts_end = round(ts_end_without_shift + timeshift_val, TIMESTAMP_ROUND_VALUE)
         ts_split = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
-        #print("timestamp series is: ", ts_split, "index_start: ", index_start + 5, "index_end: ", index_end + 5)
         for element in ts_split:
             ts_start = element[0]
             ts_end = element[1]
@@ -242,23 +295,27 @@ def process(parameter_obj,
                 ts_index_end_for_val = np.argmax(ts > ts_end)
             else:
                 ts_index_end_for_val = np.argmax(ts >= ts_end)
-            #print("ts_index_end_for_val: ", ts_index_end_for_val)
             if ts_index_end_for_val == 0:
                 ts_index_end_for_val = len(ts)
-            #print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
-            bout_length = ts_end - ts_start
-            motion_index_slice = binary_df.iloc[index_start : index_end + 1][common.INPUT_COL1_MI]
+
+            binary_df_ts = binary_df[common.INPUT_COL0_TS]
+            index_start = np.argmax(binary_df_ts >= ts_start_without_shift)
+            index_end = np.argmax(binary_df_ts > ts_end_without_shift)
+            if index_start == index_end:
+               index_end += 1
+            if index_end == 0:
+                index_end = len(binary_df_ts)
+
+            bout_length = round(ts_end - ts_start, TIMESTAMP_ROUND_VALUE)
+            motion_index_slice = binary_df.iloc[index_start : index_end][common.INPUT_COL1_MI]
             sum_mi = sum(motion_index_slice)
             cnt_mi = len(motion_index_slice)
-            #print(motion_index_slice)
             # If there is only one element, then include it.
             if ts_index_start_for_val == ts_index_end_for_val:
-                ts_index_end_for_val = ts_index_end_for_val + 1
+                ts_index_end_for_val += 1
             data_slice = data[ts_index_start_for_val : ts_index_end_for_val]
             sum_data = sum(data_slice)
             cnt_data = len(data_slice)
-            #print("cur_binary_value", cur_binary_value, data_slice)
-            #print("sum: ", sum_data, " count: ", cnt_data)
             if cnt_data == 0:
                 print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
                 print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
@@ -269,6 +326,16 @@ def process(parameter_obj,
                     mi_0s_sum += sum_mi
                     mi_0s_cnt += cnt_mi
                     out_df_0s.loc[len(out_df_0s.index)] = [ts_start,
+                                                        bout_length,
+                                                        sum_mi/cnt_mi,
+                                                        sum_data,
+                                                        sum_data/cnt_data]
+                else:
+                    auc_0s_sum_out += sum_data
+                    auc_0s_cnt_out += cnt_data
+                    mi_0s_sum_out += sum_mi
+                    mi_0s_cnt_out += cnt_mi
+                    out_df_0s_out.loc[len(out_df_0s_out.index)] = [ts_start,
                                                         bout_length,
                                                         sum_mi/cnt_mi,
                                                         sum_data,
@@ -284,11 +351,24 @@ def process(parameter_obj,
                                                         sum_mi/cnt_mi,
                                                         sum_data,
                                                         sum_data/cnt_data]
+                else:
+                    auc_1s_sum_out += sum_data
+                    auc_1s_cnt_out += cnt_data
+                    mi_1s_sum_out += sum_mi
+                    mi_1s_cnt_out += cnt_mi
+                    out_df_1s_out.loc[len(out_df_1s_out.index)] = [ts_start,
+                                                        bout_length,
+                                                        sum_mi/cnt_mi,
+                                                        sum_data,
+                                                        sum_data/cnt_data]
 
         # Reset the index to indicate the start of a new dataset.
         index_start = -1
 
-    return True, [auc_0s_sum, auc_0s_cnt, out_df_0s, auc_1s_sum, auc_1s_cnt, out_df_1s]
+    return True, [auc_0s_sum, auc_0s_cnt, out_df_0s,
+                  auc_1s_sum, auc_1s_cnt, out_df_1s,
+                  auc_0s_sum_out, auc_0s_cnt_out, out_df_0s_out,
+                  auc_1s_sum_out, auc_1s_cnt_out, out_df_1s_out]
 
 
 class loghandler(logging.StreamHandler):
@@ -736,11 +816,18 @@ class Test(unittest.TestCase):
         for expected_csv_file in csv_path:
             file_name = os.path.basename(expected_csv_file)
             output_csv_file = os.path.join(output_dir, file_name)
+            common.logger.debug("\nComparing output file with expected.\n\tExpected: %s,\n\tOutput:%s", expected_csv_file, output_csv_file)
             with open(expected_csv_file, 'r') as t1, open(output_csv_file, 'r') as t2:
                 expected_lines = t1.readlines()
                 output_lines = t2.readlines()
                 x = 0
+                files_match = True
                 for line in expected_lines:
                     if line != output_lines[x]:
-                        common.logger.error("{line} does not match in {output_csv_file}")
+                        common.logger.error("%s!=\n%s", line, output_lines[x])
+                        files_match = False
                     x += 1
+                if files_match:
+                    common.logger.debug("Output matches expected.")
+                else:
+                    common.logger.debug("Output does not matches expected.")
