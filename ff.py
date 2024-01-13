@@ -45,6 +45,7 @@ OUTPUT_Z_SCORE = "z-score (avg)"
 OUTPUT_Z_SCORE_SEM = "z-score_SEM"
 OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
                                OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM]
+# TODO: Get this from the parameter module
 TIMESTAMP_ROUND_VALUE = 6
 
 # Globals
