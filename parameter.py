@@ -329,6 +329,7 @@ class Parameters:
 
         start = ts_start
         idx = 0
+        delta = 0.0
         while True:
             #print("start: ", start, " ts[idx]: ", ts[indices[idx]])
             if start < ts[indices[idx]]:
@@ -339,12 +340,16 @@ class Parameters:
                 end = min(ts_end, ts[indices[idx]] + param_window_duration)
                 idx += 1
 
-            ts_split.append([start, end, is_in])
+            if is_in or end == ts_end:
+                ts_split.append([start + delta, end, is_in])
+            else:
+                ts_split.append([start + delta, end - .000001, is_in])
 
+            delta = .000001
             # If we have reached the end of the ts series and there is
             # still some left in the duration, just add the rest.
             if idx >= len(indices) and end < ts_end:
-                ts_split.append([end, ts_end, False])
+                ts_split.append([end + delta, ts_end, False])
                 end = ts_end
 
             if end == ts_end:
