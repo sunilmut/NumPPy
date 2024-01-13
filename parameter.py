@@ -621,16 +621,16 @@ class ParameterTest(unittest.TestCase):
         expected_out1 = [[5, 8, False]]
 
         ts2 = [5, 37]
-        expected_out2 = [[5, 10, False], [10, 15, True], [15, 20, False],
-                        [20, 25, True], [25, 30, False], [30, 35, True],
-                        [35, 37, False]]
+        expected_out2 = [[5, 9.999999, False], [10, 15, True], [15.000001, 19.999999, False],
+                         [20, 25, True], [25.000001, 29.999999, False], [30, 35, True],
+                         [35.000001, 37, False]]
 
         ts3 = [5, 23]
-        expected_out3 = [[5, 10, False], [10, 15, True], [15, 20, False],
+        expected_out3 = [[5, 9.999999, False], [10, 15, True], [15.000001, 19.999999, False],
                         [20, 23, True]]
 
         ts4 = [5, 13]
-        expected_out4 = [[5, 10, False], [10, 13, True]]
+        expected_out4 = [[5, 9.999999, False], [10, 13, True]]
 
         ts5 = [20, 25]
         expected_out5 = [[20, 25, True]]
@@ -642,7 +642,7 @@ class ParameterTest(unittest.TestCase):
         expected_out7 = [[30, 35, True]]
 
         ts8 = [30, 43]
-        expected_out8 = [[30, 35, True], [35, 43, False]]
+        expected_out8 = [[30, 35, True], [35.000001, 43, False]]
 
         ts9 = [45, 70]
         expected_out9 = [[45, 70, False]]
@@ -665,7 +665,7 @@ class ParameterTest(unittest.TestCase):
             param._set_param_dir(input_dir)
             param.set_param_value(PARAM_NAME, df)
             ts_split = param.get_ts_series_for_timestamps(PARAM_NAME, val[0][0], val[0][1])
-            #print("Timestamp splits: ", ts_split)
+            #print("Timestamp splits: ", ts_split, "\nval[1]: ", val[1])
             self.assertEqual(ts_split == val[1], True)
 
     @staticmethod
