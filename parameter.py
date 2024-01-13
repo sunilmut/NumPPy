@@ -342,10 +342,11 @@ class Parameters:
 
             if is_in or end == ts_end:
                 ts_split.append([start + delta, end, is_in])
+                delta = .000001
             else:
                 ts_split.append([start + delta, end - .000001, is_in])
+                delta = 0.0
 
-            delta = .000001
             # If we have reached the end of the ts series and there is
             # still some left in the duration, just add the rest.
             if idx >= len(indices) and end < ts_end:
