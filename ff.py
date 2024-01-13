@@ -197,7 +197,7 @@ def main(input_dir, parameter_obj):
                                                                            auc_1s_avg_out,
                                                                            sem_auc_1s_avg_out]
                     out_0_file = os.path.join(this_output_folder,
-                                            OUTPUT_ZEROS_OUT + csv_basename + param_ext + common.CSV_EXT)
+                                            OUTPUT_ONES_OUT + csv_basename + param_ext + common.CSV_EXT)
                     df_1s_out_summary.to_csv(out_0_file, mode='w', index=False, header=True)
                     out_df_1s_out.to_csv(out_0_file, mode='a', index=False, header=True)
                     print("1 df [out]: ", out_df_1s_out)
@@ -284,16 +284,6 @@ def process(parameter_obj,
             ts_start = element[0]
             ts_end = element[1]
             is_inside = element[2]
-            ts_index_start_for_val = np.argmax(ts >= ts_start)
-            if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
-                print("ts start is out of bounds")
-                break
-            ts_index_end_for_val = np.argmax(ts > ts_end)
-            # If there is only one element, then include it.
-            if ts_index_start_for_val == ts_index_end_for_val:
-                ts_index_end_for_val += 1
-            if ts_index_end_for_val == 0:
-                ts_index_end_for_val = len(ts)
 
             binary_df_ts = binary_df[common.INPUT_COL0_TS]
             ts_start_without_shift = round(ts_start - timeshift_val, TIMESTAMP_ROUND_VALUE)
@@ -307,12 +297,22 @@ def process(parameter_obj,
 
             ts_start = round(binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val, TIMESTAMP_ROUND_VALUE)
             ts_end = round(binary_df.iloc[index_end - 1][common.INPUT_COL0_TS] + timeshift_val, TIMESTAMP_ROUND_VALUE)
+
+            ts_index_start_for_val = np.argmax(ts >= ts_start)
+            if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
+                print("ts start is out of bounds")
+                break
+            ts_index_end_for_val = np.argmax(ts > ts_end)
+            # If there is only one element, then include it.
+            if ts_index_start_for_val == ts_index_end_for_val:
+                ts_index_end_for_val += 1
+            if ts_index_end_for_val == 0:
+                ts_index_end_for_val = len(ts)
+
             bout_length = round(ts_end - ts_start, TIMESTAMP_ROUND_VALUE)
             motion_index_slice = binary_df.iloc[index_start : index_end][common.INPUT_COL1_MI]
             sum_mi = sum(motion_index_slice)
             cnt_mi = len(motion_index_slice)
-            #print("ts_start: ", ts_start, "ts_end: ", ts_end, "index start: ", index_start, "index_end: ", index_end)
-            #print("ts_index_start_for_val: ", ts_index_start_for_val, "ts_index_end_for_val: ", ts_index_end_for_val)
             data_slice = data[ts_index_start_for_val : ts_index_end_for_val]
             sum_data = sum(data_slice)
             cnt_data = len(data_slice)
