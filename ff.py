@@ -105,8 +105,8 @@ def main(input_dir, parameter_obj):
 
             # We want to generate without any parameters as well. So start with
             # no parameters and append the parameter list.
-            #param_name_list = [""]
-            param_name_list = []
+            param_name_list = [""]
+            #param_name_list = []
             param_name_list.extend(parameter_obj.get_param_name_list())
             for param in param_name_list:
                 # Process the data and write out the results
@@ -298,7 +298,7 @@ def process(parameter_obj,
 
             ts_index_start_for_val = np.argmax(ts >= ts_start)
             if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
-                print("ts start is out of bounds")
+                common.logger.debug("ts start is out of bounds. ts_start: %f, ts[last]: %f", ts_start, ts[len(ts) - 1])
                 break
             ts_index_end_for_val = np.argmax(ts > ts_end)
             # If there is only one element, then include it.
