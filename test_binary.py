@@ -2,7 +2,6 @@
 
 import logging
 import pandas as pd
-from pandas.api.types import is_integer_dtype
 import numpy as np
 import unittest
 import common
