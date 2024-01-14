@@ -42,9 +42,9 @@ class FfTest(unittest.TestCase):
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
         out_df_0s = results[2]
-        auc_1s_sum = results[3]
-        auc_1s_cnt = results[4]
-        out_df_1s = results[5]
+        auc_1s_sum = results[6]
+        auc_1s_cnt = results[7]
+        out_df_1s = results[8]
         self.assertEqual(auc_0s_cnt, fz.count(0))
         self.assertEqual(auc_0s_sum, 443)
         self.assertEqual(auc_1s_sum, 337)
@@ -82,13 +82,14 @@ class FfTest(unittest.TestCase):
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
         out_df_0s = results[2]
-        auc_1s_sum = results[3]
-        auc_1s_cnt = results[4]
-        out_df_1s = results[5]
+        auc_1s_sum = results[6]
+        auc_1s_cnt = results[7]
+        out_df_1s = results[8]
         self.assertEqual(auc_0s_cnt, fz.count(0))
         self.assertEqual(auc_0s_sum, 443)
         self.assertEqual(auc_1s_sum, 337)
         self.assertEqual(auc_1s_cnt, fz.count(1))
+        # TODO: test for comppute val
         #auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
         #auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
         #print(auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg)
@@ -110,9 +111,9 @@ class FfTest(unittest.TestCase):
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
         out_df_0s = results[2]
-        auc_1s_sum = results[3]
-        auc_1s_cnt = results[4]
-        out_df_1s = results[5]
+        auc_1s_sum = results[6]
+        auc_1s_cnt = results[7]
+        out_df_1s = results[8]
         self.assertEqual(auc_0s_cnt, 9)
         self.assertEqual(auc_0s_sum, 87)
         self.assertEqual(auc_1s_sum, 283)

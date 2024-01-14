@@ -104,7 +104,6 @@ def main(input_dir, parameter_obj):
             # We want to generate without any parameters as well. So start with
             # no parameters and append the parameter list.
             param_name_list = [""]
-            #param_name_list = []
             param_name_list.extend(parameter_obj.get_param_name_list())
             for param in param_name_list:
                 # Process the data and write out the results
@@ -121,12 +120,12 @@ def main(input_dir, parameter_obj):
                 auc_0s_sum = results[0]
                 auc_0s_cnt = results[1]
                 out_df_0s = results[2]
-                auc_1s_sum = results[3]
-                auc_1s_cnt = results[4]
-                out_df_1s = results[5]
-                auc_0s_sum_not = results[6]
-                auc_0s_cnt_not = results[7]
-                out_df_0s_not = results[8]
+                auc_0s_sum_not = results[3]
+                auc_0s_cnt_not = results[4]
+                out_df_0s_not = results[5]
+                auc_1s_sum = results[6]
+                auc_1s_cnt = results[7]
+                out_df_1s = results[8]
                 auc_1s_sum_not = results[9]
                 auc_1s_cnt_not = results[10]
                 out_df_1s_not = results[11]
@@ -362,8 +361,8 @@ def process(parameter_obj,
         index_start = -1
 
     return True, [auc_0s_sum, auc_0s_cnt, out_df_0s,
-                  auc_1s_sum, auc_1s_cnt, out_df_1s,
                   auc_0s_sum_not, auc_0s_cnt_not, out_df_0s_not,
+                  auc_1s_sum, auc_1s_cnt, out_df_1s,
                   auc_1s_sum_not, auc_1s_cnt_not, out_df_1s_not]
 
 
