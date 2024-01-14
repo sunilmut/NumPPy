@@ -36,8 +36,7 @@ OUTPUT_COLUMN_NAMES=[OUTPUT_COL0_TS, OUTPUT_COL1_LEN,
 # output file names
 OUTPUT_ZEROS = "0_"
 OUTPUT_ONES = "1_"
-OUTPUT_ZEROS_OUT = "0_out_"
-OUTPUT_ONES_OUT = "1_out_"
+OUTPUT_NOT = "_Not"
 OUTPUT_AUC = "AUC (sum)"
 OUTPUT_AUC_SEM = "AUC_SEM"
 OUTPUT_Z_SCORE = "z-score (avg)"
@@ -164,7 +163,7 @@ def main(input_dir, parameter_obj):
                                                                            auc_0s_avg_out,
                                                                            sem_auc_0s_avg_out]
                     out_0_file = os.path.join(this_output_folder,
-                                            OUTPUT_ZEROS_OUT + csv_basename + param_ext + common.CSV_EXT)
+                                            OUTPUT_ZEROS + csv_basename + OUTPUT_NOT + param_ext + common.CSV_EXT)
                     df_0s_out_summary.to_csv(out_0_file, mode='w', index=False, header=True)
                     out_df_0s_out.to_csv(out_0_file, mode='a', index=False, header=True)
                     print("0 df [out]: ", out_df_0s_out)
@@ -196,7 +195,7 @@ def main(input_dir, parameter_obj):
                                                                            auc_1s_avg_out,
                                                                            sem_auc_1s_avg_out]
                     out_0_file = os.path.join(this_output_folder,
-                                            OUTPUT_ONES_OUT + csv_basename + param_ext + common.CSV_EXT)
+                                            OUTPUT_ONES + csv_basename + OUTPUT_NOT + param_ext + common.CSV_EXT)
                     df_1s_out_summary.to_csv(out_0_file, mode='w', index=False, header=True)
                     out_df_1s_out.to_csv(out_0_file, mode='a', index=False, header=True)
                     print("1 df [out]: ", out_df_1s_out)
