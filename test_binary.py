@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import logging
 import pandas as pd
 from pandas.api.types import is_integer_dtype
 import numpy as np
@@ -72,10 +73,15 @@ out_p1_nop = {
 }
 
 
-class TestDataProcessing(unittest.TestCase):
+class TestBinary(unittest.TestCase):
     def setUp(self):
         self.input_df1 = pd.DataFrame(input_data1)
         self.p1_df = pd.DataFrame(test_p1)
+        progress = b.loghandler()
+        logging.basicConfig(filename=b.OUTPUT_LOG_FILE,
+                            level=logging.DEBUG, format='')
+        common.logger = logging.getLogger(__name__)
+        common.logger.addHandler(progress)
 
     def validate_df(self, df, expected_data):
         expected_df = pd.DataFrame(expected_data)
@@ -107,3 +113,42 @@ class TestDataProcessing(unittest.TestCase):
         temp_out_df.reset_index(drop=True, inplace=True)
         self.validate_df(temp_out_df, out_p1)
         self.validate_df(nop_df, out_p1_nop)
+
+    def test_real_data(self):
+        input_dir = os.path.join(os.getcwd(), "test_data", "binary")
+        output_dir_base = os.path.join(os.getcwd(), "test_data", "binary_output")
+        expected_output_dir_base = os.path.join(os.getcwd(), "test_data", "binary_output_expected")
+        successfully_parsed_files, unsuccessfully_parsed_files = b.main(input_dir, False, None)
+        self.assertEqual(len(unsuccessfully_parsed_files), 0)
+        success_normalized_path = []
+        for file in successfully_parsed_files:
+            success_normalized_path.append(os.path.normpath(file))
+
+        csv_path = glob.glob(os.path.join(input_dir, '*.csv'))
+        # Validate that each of the input files were successfully parsed and matches expected
+        for input_csv_file in csv_path:
+            self.assertTrue((input_csv_file in success_normalized_path))
+            file_name_without_ext, ext = os.path.splitext(os.path.basename(input_csv_file))
+            expected_output_dir = os.path.join(expected_output_dir_base, file_name_without_ext)
+            print("Expected output dir: ", expected_output_dir)
+            output_dir = os.path.join(output_dir_base, file_name_without_ext)
+            print("Onput dir: ", output_dir)
+            csv_path = glob.glob(os.path.join(expected_output_dir, '*.csv'))
+            for expected_csv_file in csv_path:
+                file_name = os.path.basename(expected_csv_file)
+                output_csv_file = os.path.join(output_dir, file_name)
+                common.logger.debug("\nComparing output file with expected.\n\tExpected: %s,\n\tOutput:%s", expected_csv_file, output_csv_file)
+                with open(expected_csv_file, 'r') as t1, open(output_csv_file, 'r') as t2:
+                    expected_lines = t1.readlines()
+                    output_lines = t2.readlines()
+                    x = 0
+                    files_match = True
+                    for line in expected_lines:
+                        if line != output_lines[x]:
+                            common.logger.error("%s!=\n%s", line, output_lines[x])
+                            files_match = False
+                        x += 1
+                    if files_match:
+                        common.logger.debug("Output matches expected.")
+                    else:
+                        common.logger.debug("Output does not matches expected.")
