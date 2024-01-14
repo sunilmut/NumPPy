@@ -11,7 +11,6 @@ from pandas.api.types import is_integer_dtype
 from guizero import App, Box, Combo, ListBox, PushButton, Text, TextBox, TitleBox
 import scipy
 import glob
-import unittest
 
 # UI related constants
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
