@@ -38,7 +38,6 @@ class ParameterTest(unittest.TestCase):
     TEST_TRASH_DIR = "trash"
     def setUp(self):
         self.param = Parameters()
-        # TODO: Create test trash dir with Parameters and cleanup
 
     def validate_df(self, df, expected_data):
         expected_df = pd.DataFrame(expected_data)

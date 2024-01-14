@@ -43,8 +43,6 @@ OUTPUT_Z_SCORE = "z-score (avg)"
 OUTPUT_Z_SCORE_SEM = "z-score_SEM"
 OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
                                OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM]
-# TODO: Get this from the parameter module
-TIMESTAMP_ROUND_VALUE = 6
 
 # Globals
 parameter_obj = Parameters()
@@ -274,9 +272,9 @@ def process(parameter_obj,
             continue
 
         ts_start_without_shift = binary_df.iloc[index_start][common.INPUT_COL0_TS]
-        ts_start = round(ts_start_without_shift + timeshift_val, TIMESTAMP_ROUND_VALUE)
+        ts_start = round(ts_start_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
         ts_end_without_shift = binary_df.iloc[index_end][common.INPUT_COL0_TS]
-        ts_end = round(ts_end_without_shift + timeshift_val, TIMESTAMP_ROUND_VALUE)
+        ts_end = round(ts_end_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
         ts_split = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
         for element_idx, element in enumerate(ts_split):
             ts_start = element[0]
@@ -284,17 +282,17 @@ def process(parameter_obj,
             is_inside = element[2]
 
             binary_df_ts = binary_df[common.INPUT_COL0_TS]
-            ts_start_without_shift = round(ts_start - timeshift_val, TIMESTAMP_ROUND_VALUE)
+            ts_start_without_shift = round(ts_start - timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
             index_start = np.argmax(binary_df_ts >= ts_start_without_shift)
-            ts_end_without_shift = round(ts_end - timeshift_val, TIMESTAMP_ROUND_VALUE)
+            ts_end_without_shift = round(ts_end - timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
             index_end = np.argmax(binary_df_ts > ts_end_without_shift)
             if index_start == index_end:
                index_end += 1
             if index_end == 0:
                 index_end = len(binary_df_ts)
 
-            ts_start = round(binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val, TIMESTAMP_ROUND_VALUE)
-            ts_end = round(binary_df.iloc[index_end - 1][common.INPUT_COL0_TS] + timeshift_val, TIMESTAMP_ROUND_VALUE)
+            ts_start = round(binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
+            ts_end = round(binary_df.iloc[index_end - 1][common.INPUT_COL0_TS] + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
 
             ts_index_start_for_val = np.argmax(ts >= ts_start)
             if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
@@ -307,7 +305,7 @@ def process(parameter_obj,
             if ts_index_end_for_val == 0:
                 ts_index_end_for_val = len(ts)
 
-            bout_length = round(ts_end - ts_start, TIMESTAMP_ROUND_VALUE)
+            bout_length = round(ts_end - ts_start, Parameters.TIMESTAMP_ROUND_VALUE)
             motion_index_slice = binary_df.iloc[index_start : index_end][common.INPUT_COL1_MI]
             sum_mi = sum(motion_index_slice)
             cnt_mi = len(motion_index_slice)

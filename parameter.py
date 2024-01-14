@@ -43,6 +43,8 @@ class Parameters:
     MIN_TIME_DURATION_AFTER_DEFAULT = float(0)
     PARAM_WINDOW_DURATION_DEFAULT = 0
     _param_col_names = [PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
+    TIMESTAMP_ROUND_VALUE = 6
+    TIME_PRECISION = float(1)/pow(10, TIMESTAMP_ROUND_VALUE)
 
     def __init__(self):
         self.reset()
@@ -340,9 +342,9 @@ class Parameters:
 
             if is_in or end == ts_end:
                 ts_split.append([start + delta, end, is_in])
-                delta = .000001
+                delta = Parameters.TIME_PRECISION
             else:
-                ts_split.append([start + delta, end - .000001, is_in])
+                ts_split.append([start + delta, end - Parameters.TIME_PRECISION, is_in])
                 delta = 0.0
 
             # If we have reached the end of the ts series and there is
