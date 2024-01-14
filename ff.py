@@ -124,12 +124,12 @@ def main(input_dir, parameter_obj):
                 auc_1s_sum = results[3]
                 auc_1s_cnt = results[4]
                 out_df_1s = results[5]
-                auc_0s_sum_out = results[6]
-                auc_0s_cnt_out = results[7]
-                out_df_0s_out = results[8]
-                auc_1s_sum_out = results[9]
-                auc_1s_cnt_out = results[10]
-                out_df_1s_out = results[11]
+                auc_0s_sum_not = results[6]
+                auc_0s_cnt_not = results[7]
+                out_df_0s_not = results[8]
+                auc_1s_sum_not = results[9]
+                auc_1s_cnt_not = results[10]
+                out_df_1s_not = results[11]
 
                 param_ext = ""
                 if not param == "":
@@ -151,21 +151,21 @@ def main(input_dir, parameter_obj):
                     print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
 
                 # 0's, outside the param
-                if auc_0s_cnt_out > 0:
-                    auc_0s_avg_out, sem_auc_0s_sum_out, sem_auc_0s_avg_out = compute_val(auc_0s_sum_out,
-                                                                                         auc_0s_cnt_out,
-                                                                                         out_df_0s_out)
-                    df_0s_out_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_0s_out_summary.loc[len(df_0s_out_summary.index)] = [auc_0s_sum_out,
-                                                                           sem_auc_0s_sum_out,
-                                                                           auc_0s_avg_out,
-                                                                           sem_auc_0s_avg_out]
+                if auc_0s_cnt_not > 0:
+                    auc_0s_avg_not, sem_auc_0s_sum_not, sem_auc_0s_avg_not = compute_val(auc_0s_sum_not,
+                                                                                         auc_0s_cnt_not,
+                                                                                         out_df_0s_not)
+                    df_0s_not_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+                    df_0s_not_summary.loc[len(df_0s_not_summary.index)] = [auc_0s_sum_not,
+                                                                           sem_auc_0s_sum_not,
+                                                                           auc_0s_avg_not,
+                                                                           sem_auc_0s_avg_not]
                     out_0_file = os.path.join(this_output_folder,
                                             OUTPUT_ZEROS + csv_basename + OUTPUT_NOT + param_ext + common.CSV_EXT)
-                    df_0s_out_summary.to_csv(out_0_file, mode='w', index=False, header=True)
-                    out_df_0s_out.to_csv(out_0_file, mode='a', index=False, header=True)
-                    print("0 df [out]: ", out_df_0s_out)
-                    print("0s [out] sum: ", auc_0s_sum_out, " avg: ", auc_0s_avg_out, " SEM_AUC: ", sem_auc_0s_sum_out, " SEM_AVG: ", sem_auc_0s_avg_out)
+                    df_0s_not_summary.to_csv(out_0_file, mode='w', index=False, header=True)
+                    out_df_0s_not.to_csv(out_0_file, mode='a', index=False, header=True)
+                    print("0 df [out]: ", out_df_0s_not)
+                    print("0s [out] sum: ", auc_0s_sum_not, " avg: ", auc_0s_avg_not, " SEM_AUC: ", sem_auc_0s_sum_not, " SEM_AVG: ", sem_auc_0s_avg_not)
 
                 # 1's, in the param
                 if auc_1s_cnt > 0:
@@ -183,21 +183,21 @@ def main(input_dir, parameter_obj):
                     print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
 
                 # 1's, outside the param
-                if auc_1s_cnt_out > 0:
-                    auc_1s_avg_out, sem_auc_1s_sum_out, sem_auc_1s_avg_out = compute_val(auc_1s_sum_out,
-                                                                                         auc_1s_cnt_out,
-                                                                                         out_df_1s_out)
-                    df_1s_out_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_1s_out_summary.loc[len(df_1s_out_summary.index)] = [auc_1s_sum_out,
-                                                                           sem_auc_1s_sum_out,
-                                                                           auc_1s_avg_out,
-                                                                           sem_auc_1s_avg_out]
+                if auc_1s_cnt_not > 0:
+                    auc_1s_avg_not, sem_auc_1s_sum_not, sem_auc_1s_avg_not = compute_val(auc_1s_sum_not,
+                                                                                         auc_1s_cnt_not,
+                                                                                         out_df_1s_not)
+                    df_1s_not_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+                    df_1s_not_summary.loc[len(df_1s_not_summary.index)] = [auc_1s_sum_not,
+                                                                           sem_auc_1s_sum_not,
+                                                                           auc_1s_avg_not,
+                                                                           sem_auc_1s_avg_not]
                     out_0_file = os.path.join(this_output_folder,
                                             OUTPUT_ONES + csv_basename + OUTPUT_NOT + param_ext + common.CSV_EXT)
-                    df_1s_out_summary.to_csv(out_0_file, mode='w', index=False, header=True)
-                    out_df_1s_out.to_csv(out_0_file, mode='a', index=False, header=True)
-                    print("1 df [out]: ", out_df_1s_out)
-                    print("1s [out] sum: ", auc_1s_sum_out, " avg: ", auc_1s_avg_out, " SEM_AUC: ", sem_auc_1s_sum_out, " SEM_AVG: ", sem_auc_1s_avg_out)
+                    df_1s_not_summary.to_csv(out_0_file, mode='w', index=False, header=True)
+                    out_df_1s_not.to_csv(out_0_file, mode='a', index=False, header=True)
+                    print("1 df [out]: ", out_df_1s_not)
+                    print("1s [out] sum: ", auc_1s_sum_not, " avg: ", auc_1s_avg_not, " SEM_AUC: ", sem_auc_1s_sum_not, " SEM_AVG: ", sem_auc_1s_avg_not)
 
 def process(parameter_obj,
             param_name,
@@ -238,21 +238,21 @@ def process(parameter_obj,
     mi_0s_sum = 0
     mi_0s_cnt = 0
     out_df_0s = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
-    auc_0s_sum_out = 0
-    auc_0s_cnt_out = 0
-    mi_0s_sum_out = 0
-    mi_0s_cnt_out = 0
-    out_df_0s_out = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    auc_0s_sum_not = 0
+    auc_0s_cnt_not = 0
+    mi_0s_sum_not = 0
+    mi_0s_cnt_not = 0
+    out_df_0s_not = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
     auc_1s_sum = 0
     auc_1s_cnt = 0
     mi_1s_sum = 0
     mi_1s_cnt = 0
     out_df_1s = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
-    auc_1s_sum_out = 0
-    auc_1s_cnt_out = 0
-    mi_1s_sum_out = 0
-    mi_1s_cnt_out = 0
-    out_df_1s_out = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    auc_1s_sum_not = 0
+    auc_1s_cnt_not = 0
+    mi_1s_sum_not = 0
+    mi_1s_cnt_not = 0
+    out_df_1s_not = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
     print("timeshift_val: ", timeshift_val)
     #print("binary file has rows", row_count)
     for index, row in binary_df.iterrows():
@@ -327,11 +327,11 @@ def process(parameter_obj,
                                                         sum_data,
                                                         sum_data/cnt_data]
                 else:
-                    auc_0s_sum_out += sum_data
-                    auc_0s_cnt_out += cnt_data
-                    mi_0s_sum_out += sum_mi
-                    mi_0s_cnt_out += cnt_mi
-                    out_df_0s_out.loc[len(out_df_0s_out.index)] = [ts_start,
+                    auc_0s_sum_not += sum_data
+                    auc_0s_cnt_not += cnt_data
+                    mi_0s_sum_not += sum_mi
+                    mi_0s_cnt_not += cnt_mi
+                    out_df_0s_not.loc[len(out_df_0s_not.index)] = [ts_start,
                                                         bout_length,
                                                         sum_mi/cnt_mi,
                                                         sum_data,
@@ -348,11 +348,11 @@ def process(parameter_obj,
                                                         sum_data,
                                                         sum_data/cnt_data]
                 else:
-                    auc_1s_sum_out += sum_data
-                    auc_1s_cnt_out += cnt_data
-                    mi_1s_sum_out += sum_mi
-                    mi_1s_cnt_out += cnt_mi
-                    out_df_1s_out.loc[len(out_df_1s_out.index)] = [ts_start,
+                    auc_1s_sum_not += sum_data
+                    auc_1s_cnt_not += cnt_data
+                    mi_1s_sum_not += sum_mi
+                    mi_1s_cnt_not += cnt_mi
+                    out_df_1s_not.loc[len(out_df_1s_not.index)] = [ts_start,
                                                         bout_length,
                                                         sum_mi/cnt_mi,
                                                         sum_data,
@@ -363,8 +363,8 @@ def process(parameter_obj,
 
     return True, [auc_0s_sum, auc_0s_cnt, out_df_0s,
                   auc_1s_sum, auc_1s_cnt, out_df_1s,
-                  auc_0s_sum_out, auc_0s_cnt_out, out_df_0s_out,
-                  auc_1s_sum_out, auc_1s_cnt_out, out_df_1s_out]
+                  auc_0s_sum_not, auc_0s_cnt_not, out_df_0s_not,
+                  auc_1s_sum_not, auc_1s_cnt_not, out_df_1s_not]
 
 
 class loghandler(logging.StreamHandler):
