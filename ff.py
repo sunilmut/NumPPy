@@ -104,7 +104,14 @@ def main(input_dir, parameter_obj):
             # We want to generate without any parameters as well. So start with
             # no parameters and append the parameter list.
             param_name_list = [""]
-            param_name_list.extend(parameter_obj.get_param_name_list())
+            param_list = parameter_obj.get_param_name_list()
+            param_name_list.extend(param_list)
+            # If there are more than one parameter, generate output for combined
+            # parameter and ~(combined parameter). A `None` value is used to
+            # represent 'combined parameters'
+            if len(param_list) > 1:
+                param_name_list.append(None)
+            combined_param_name = ""
             for param in param_name_list:
                 # Process the data and write out the results
                 print("processing param: ", param)
@@ -131,8 +138,11 @@ def main(input_dir, parameter_obj):
                 out_df_1s_not = results[11]
 
                 param_ext = ""
-                if not param == "":
+                if param == None:
+                    param_ext = combined_param_name
+                elif not param == "":
                     param_ext = "_" + param
+                    combined_param_name += "_" + param
 
                 # 0's, in the param
                 if auc_0s_cnt > 0:
