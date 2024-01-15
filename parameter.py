@@ -165,6 +165,37 @@ class Parameters:
 
         return ts_series
 
+    def get_combined_params_ts_series(self):
+        param_list = self.get_param_name_list()
+        ts_series_combined = pd.DataFrame(columns=[Parameters.PARAM_TIME_WINDOW_START_LIST,
+                                          Parameters.PARAM_TIME_WINDOW_END_LIST])
+        for param in param_list:
+            ts_series = self.get_param_values_as_series(param)
+            ts_series_combined = pd.concat([ts_series_combined, ts_series])
+
+        ts_series_combined.sort_values(by=Parameters.PARAM_TIME_WINDOW_START_LIST,
+                                       ascending=True, inplace=True)
+
+        ts_series_out = pd.DataFrame(columns=[Parameters.PARAM_TIME_WINDOW_START_LIST,
+                                     Parameters.PARAM_TIME_WINDOW_END_LIST])
+        i = 0
+        while i < len(ts_series_combined):
+            j = i + 1
+            start = ts_series_combined.iloc[i][Parameters.PARAM_TIME_WINDOW_START_LIST]
+            end = ts_series_combined.iloc[i][Parameters.PARAM_TIME_WINDOW_END_LIST]
+            while j < len(ts_series_combined):
+                cur_start = ts_series_combined.iloc[j][Parameters.PARAM_TIME_WINDOW_START_LIST]
+                cur_end = ts_series_combined.iloc[j][Parameters.PARAM_TIME_WINDOW_END_LIST]
+                if cur_start > end:
+                    break
+                if cur_end > end:
+                    end = cur_end
+                j += 1
+            i = j
+            ts_series_out.loc[len(ts_series_out.index)] = [start, end]
+
+        return ts_series_out
+
     def set_param_value(self, param_name: str, param_df: pd.DataFrame):
         """set the parameter value for the given parameter to the provided value.
 
@@ -336,9 +367,9 @@ class Parameters:
         [[5, 10, False], [10, 15, True], [15, 20, False], [20, 25, True], [25, 35, False]]
         """
         ts_split = []
-        param_window_duration, ts = self.get_param_values(param_name)
         ts_series = self.get_param_values_as_series(param_name)
-        indices = list(filter(lambda x: (ts[x] >= ts_start and ts[x] < ts_end) or
+        indices = list(filter(lambda x: (ts_series.iloc[x][Parameters.PARAM_TIME_WINDOW_START_LIST] >= ts_start and
+                                         ts_series.iloc[x][Parameters.PARAM_TIME_WINDOW_START_LIST] < ts_end) or
                               ((ts_series.iloc[x][Parameters.PARAM_TIME_WINDOW_START_LIST] < ts_start) and
                                 ts_series.iloc[x][Parameters.PARAM_TIME_WINDOW_END_LIST] > ts_start), range(len(ts_series))))
         # No timestamp in the series fits within the provided time. Mark
@@ -355,13 +386,12 @@ class Parameters:
         idx = 0
         delta = 0.0
         while True:
-            #print("start: ", start, " ts[idx]: ", ts[indices[idx]])
-            if start < ts[indices[idx]]:
+            if start < ts_series.iloc[indices[idx]][Parameters.PARAM_TIME_WINDOW_START_LIST]:
                 is_in = False
-                end = min(ts_end, ts[indices[idx]])
+                end = min(ts_end, ts_series.iloc[indices[idx]][Parameters.PARAM_TIME_WINDOW_START_LIST])
             else:
                 is_in = True
-                end = min(ts_end, ts[indices[idx]] + param_window_duration)
+                end = min(ts_end, ts_series.iloc[indices[idx]][Parameters.PARAM_TIME_WINDOW_END_LIST])
                 idx += 1
 
             if is_in or end == ts_end:

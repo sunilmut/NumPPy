@@ -185,6 +185,43 @@ class ParameterTest(unittest.TestCase):
             #print("Timestamp splits: ", ts_split, "\nval[1]: ", val[1])
             self.assertEqual(ts_split == val[1], True)
 
+    def test_get_combined_params_ts_series(self):
+        param_val_1 = {
+            Parameters.PARAM_TIME_WINDOW_START_LIST:    [10, 20, 30, 40],
+            Parameters.PARAM_TIME_WINDOW_DURATION:      [5, np.nan, np.nan, np.nan]
+        }
+        PARAM_NAME_1 = "param_1"
+
+        param_val_2 = {
+            Parameters.PARAM_TIME_WINDOW_START_LIST:    [17, 37],
+            Parameters.PARAM_TIME_WINDOW_DURATION:      [15, np.nan]
+        }
+        PARAM_NAME_2 = "param_2"
+
+        param_val_3 = {
+            Parameters.PARAM_TIME_WINDOW_START_LIST:    [1, 15, 17, 32, 35, 36, 52, 55],
+            Parameters.PARAM_TIME_WINDOW_DURATION:      [1, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
+        }
+        PARAM_NAME_3 = "param_3"
+
+        param = Parameters()
+        input_dir = self.reset()
+        param._set_param_dir(input_dir)
+        df = pd.DataFrame(param_val_1)
+        param.set_param_value(PARAM_NAME_1, df)
+        df = pd.DataFrame(param_val_2)
+        param.set_param_value(PARAM_NAME_2, df)
+        expected_df = pd.DataFrame({Parameters.PARAM_TIME_WINDOW_START_LIST: [10.0, 17.0, 37.0],
+                                    Parameters.PARAM_TIME_WINDOW_END_LIST:   [15.0, 35.0, 52.0]})
+        combinded_df = param.get_combined_params_ts_series()
+        self.assertTrue(combinded_df.equals(expected_df))
+        df = pd.DataFrame(param_val_3)
+        param.set_param_value(PARAM_NAME_3, df)
+        expected_df = pd.DataFrame({Parameters.PARAM_TIME_WINDOW_START_LIST: [1.0, 10.0, 17.0, 55.0],
+                                    Parameters.PARAM_TIME_WINDOW_END_LIST:   [2.0, 16.0, 53.0, 56.0]})
+        combinded_df = param.get_combined_params_ts_series()
+        self.assertTrue(combinded_df.equals(expected_df))
+
     @staticmethod
     def get_test_dir():
         return os.path.join(os.getcwd(), ParameterTest.TEST_DATA_DIR)
