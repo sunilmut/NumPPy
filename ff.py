@@ -274,8 +274,11 @@ def process(parameter_obj,
         ts_start = round(ts_start_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
         ts_end_without_shift = binary_df.iloc[index_end][common.INPUT_COL0_TS]
         ts_end = round(ts_end_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
-        ts_split = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
-        for element_idx, element in enumerate(ts_split):
+        if param_name is None:
+            ts_split = parameter_obj.get_ts_series_for_combined_param(ts_start, ts_end)
+        else:
+            ts_split = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
+        for element in ts_split:
             ts_start = element[0]
             ts_end = element[1]
             is_inside = element[2]

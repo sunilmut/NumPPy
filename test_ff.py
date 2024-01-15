@@ -187,6 +187,67 @@ class FfTest(unittest.TestCase):
         out_df_1s_not_expected = pd.DataFrame(o_data)
         self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
 
+        # Test for combined paramaters
+        # Note: This test case uses the variable output values from the previous
+        #       test case of restricted parameters. Do not change the values of
+        #       those variables between these test cases.
+        param_val_1 = {
+            Parameters.PARAM_TIME_WINDOW_START_LIST:    [0, 12, 33, 41],
+            Parameters.PARAM_TIME_WINDOW_DURATION:      [2, np.nan, np.nan, np.nan]
+        }
+        PARAM_NAME_1 = "param_1"
+
+        param_val_2 = {
+            Parameters.PARAM_TIME_WINDOW_START_LIST:    [1, 10, 20, 30],
+            Parameters.PARAM_TIME_WINDOW_DURATION:      [3, np.nan, np.nan, np.nan]
+        }
+        PARAM_NAME_2 = "param_2"
+
+        param_val_3 = {
+            Parameters.PARAM_TIME_WINDOW_START_LIST:    [4, 13, 14, 23, 24, 31, 32, 40, 43, 44],
+            Parameters.PARAM_TIME_WINDOW_DURATION:      [1, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
+        }
+        PARAM_NAME_3 = "param_3"
+
+        param = Parameters()
+        df = pd.DataFrame(param_val_1)
+        param.set_param_value(PARAM_NAME_1, df)
+        df = pd.DataFrame(param_val_2)
+        param.set_param_value(PARAM_NAME_2, df)
+        df = pd.DataFrame(param_val_3)
+        param.set_param_value(PARAM_NAME_3, df)
+        expected_df = pd.DataFrame({Parameters.PARAM_TIME_WINDOW_START_LIST: [0.0, 10.0, 20.0, 30.0, 40.0],
+                                    Parameters.PARAM_TIME_WINDOW_END_LIST:   [5.0, 15.0, 25.0, 35.0, 45.0]})
+        combinded_df = param.get_combined_params_ts_series()
+        self.assertTrue(combinded_df.equals(expected_df))
+        success, results = ff.process(param, None, binary_df, timeshift_val, data, ts)
+        self.assertTrue(success)
+        auc_0s_sum = results[0]
+        auc_0s_cnt = results[1]
+        out_df_0s = results[2]
+        auc_0s_sum_not = results[3]
+        auc_0s_cnt_not = results[4]
+        out_df_0s_not = results[5]
+        auc_1s_sum = results[6]
+        auc_1s_cnt = results[7]
+        out_df_1s = results[8]
+        auc_1s_sum_not = results[9]
+        auc_1s_cnt_not = results[10]
+        out_df_1s_not = results[11]
+        self.assertEqual(auc_0s_cnt, 9)
+        self.assertEqual(auc_0s_sum, 87)
+        # The _Not's should be the rest
+        self.assertEqual(auc_0s_cnt + auc_0s_cnt_not, fz.count(0))
+        self.assertEqual(auc_0s_sum_not, 356)
+        self.assertEqual(auc_1s_sum, 283)
+        self.assertEqual(auc_1s_cnt, 13)
+        self.assertEqual(auc_1s_cnt + auc_1s_cnt_not, fz.count(1))
+        self.assertEqual(auc_1s_sum_not, 54)
+        self.assertTrue(out_df_0s_expected.equals(out_df_0s))
+        self.assertTrue(out_df_0s_not_expected.equals(out_df_0s_not))
+        self.assertTrue(out_df_1s_expected.equals(out_df_1s))
+        self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
+
     def test_real_data(self):
         input_dir = os.path.join(os.getcwd(), "test_data", "ff")
         parameter_obj = Parameters()
