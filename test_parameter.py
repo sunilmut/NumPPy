@@ -221,6 +221,11 @@ class ParameterTest(unittest.TestCase):
                                     Parameters.PARAM_TIME_WINDOW_END_LIST:   [2.0, 16.0, 53.0, 56.0]})
         combinded_df = param.get_combined_params_ts_series()
         self.assertTrue(combinded_df.equals(expected_df))
+        ts_split = param.get_ts_series_for_combined_param(0, 60)
+        expected_split = [[0, 0.999999, False], [1.0, 2.0, True], [2.000001, 9.999999, False],
+                         [10.0, 16.0, True], [16.000001, 16.999999, False], [17.0, 53.0, True],
+                         [53.000001, 54.999999, False], [55.0, 56.0, True], [56.000001, 60, False]]
+        self.assertEqual(ts_split == expected_split, True)
 
     @staticmethod
     def get_test_dir():

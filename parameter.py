@@ -330,13 +330,41 @@ class Parameters:
     def get_ts_series_for_timestamps(self,
                                      param_name: str,
                                      ts_start: float,
-                                     ts_end: float):
-        """get the timestamp series for the given parameter name and the timestamp duration.
+                                     ts_end: float) -> list:
+        """get the timestamp for the given parameter name. This routine just gets the
+           timestamp series for a given parameter and calls `get_ts_split_for_ts_series`.
+           See the doc for the other routine for details.
+        """
+        ts_split = []
+        # For empty parameter, everything is considered to be in range.
+        if param_name == "":
+            ts_split.append([ts_start, ts_end, True])
+            return ts_split
+
+        ts_series = self.get_param_values_as_series(param_name)
+        return self.get_ts_split_for_ts_series(ts_series, ts_start, ts_end)
+
+    def get_ts_series_for_combined_param(self,
+                                         ts_start: float,
+                                         ts_end: float) -> list:
+        """get the timestamp for all the paremeters combined. This routine will combine
+           the timestamp for all the parameters and then call `get_ts_split_for_ts_series`.
+           See the doc for the other routine for details.
+        """
+
+        ts_series = self.get_combined_params_ts_series()
+        return self.get_ts_split_for_ts_series(ts_series, ts_start, ts_end)
+
+    def get_ts_split_for_ts_series(self,
+                                   ts_series: list,
+                                   ts_start: float,
+                                   ts_end: float) -> list:
+        """get the timestamp split for the given ts series.
 
         Parameters
         ----------
-        param_name : str
-            The parameter name to which to apply the timestamp for
+        ts : list
+            The timestamp list
 
         ts_start : float
             The start timestamp
@@ -355,8 +383,7 @@ class Parameters:
         indication of whether the split timestamp fits within the window or outside. This is
         best explained with an example.
         For example, if the timestamp series for this parameter is
-        Window duration: 5s
-        Timestamps: 10, 20, 30, 40
+        Timestamps: [[10, 15], [20, 25], [30, 35], [40, 45]]
         So, for a given timestamp of [8, 23] (i.e from 8 to 17 seconds), this routine will return:
         [[10, 15, True], [15, 20, False], [20, 23, True]]
 
@@ -367,21 +394,17 @@ class Parameters:
         [[5, 10, False], [10, 15, True], [15, 20, False], [20, 25, True], [25, 35, False]]
         """
         ts_split = []
-        ts_series = self.get_param_values_as_series(param_name)
         start_col_name = Parameters.PARAM_TIME_WINDOW_START_LIST
         end_col_name = Parameters.PARAM_TIME_WINDOW_END_LIST
         indices = list(filter(lambda x: (ts_series.iloc[x][start_col_name] >= ts_start and
                                          ts_series.iloc[x][start_col_name] < ts_end) or
                               ((ts_series.iloc[x][start_col_name] < ts_start) and
                                 ts_series.iloc[x][end_col_name] > ts_start), range(len(ts_series))))
+
         # No timestamp in the series fits within the provided time. Mark
         # the whole duration as outside.
         if len(indices) == 0:
-            # For empty parameter, everything is considered to be in range.
-            if param_name == "":
-                ts_split.append([ts_start, ts_end, True])
-            else:
-                ts_split.append([ts_start, ts_end, False])
+            ts_split.append([ts_start, ts_end, False])
             return ts_split
 
         start = ts_start
