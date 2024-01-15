@@ -368,10 +368,12 @@ class Parameters:
         """
         ts_split = []
         ts_series = self.get_param_values_as_series(param_name)
-        indices = list(filter(lambda x: (ts_series.iloc[x][Parameters.PARAM_TIME_WINDOW_START_LIST] >= ts_start and
-                                         ts_series.iloc[x][Parameters.PARAM_TIME_WINDOW_START_LIST] < ts_end) or
-                              ((ts_series.iloc[x][Parameters.PARAM_TIME_WINDOW_START_LIST] < ts_start) and
-                                ts_series.iloc[x][Parameters.PARAM_TIME_WINDOW_END_LIST] > ts_start), range(len(ts_series))))
+        start_col_name = Parameters.PARAM_TIME_WINDOW_START_LIST
+        end_col_name = Parameters.PARAM_TIME_WINDOW_END_LIST
+        indices = list(filter(lambda x: (ts_series.iloc[x][start_col_name] >= ts_start and
+                                         ts_series.iloc[x][start_col_name] < ts_end) or
+                              ((ts_series.iloc[x][start_col_name] < ts_start) and
+                                ts_series.iloc[x][end_col_name] > ts_start), range(len(ts_series))))
         # No timestamp in the series fits within the provided time. Mark
         # the whole duration as outside.
         if len(indices) == 0:
@@ -386,12 +388,12 @@ class Parameters:
         idx = 0
         delta = 0.0
         while True:
-            if start < ts_series.iloc[indices[idx]][Parameters.PARAM_TIME_WINDOW_START_LIST]:
+            if start < ts_series.iloc[indices[idx]][start_col_name]:
                 is_in = False
-                end = min(ts_end, ts_series.iloc[indices[idx]][Parameters.PARAM_TIME_WINDOW_START_LIST])
+                end = min(ts_end, ts_series.iloc[indices[idx]][start_col_name])
             else:
                 is_in = True
-                end = min(ts_end, ts_series.iloc[indices[idx]][Parameters.PARAM_TIME_WINDOW_END_LIST])
+                end = min(ts_end, ts_series.iloc[indices[idx]][end_col_name])
                 idx += 1
 
             if is_in or end == ts_end:
