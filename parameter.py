@@ -36,6 +36,7 @@ class Parameters:
     """
 
     PARAM_TIME_WINDOW_START_LIST = "Start_Timestamp_List"
+    PARAM_TIME_WINDOW_END_LIST = "End_Timestamp_List"
     PARAM_TIME_WINDOW_DURATION = "Window_Duration_In_Sec"
     PARAMETERS_DIR_NAME = "parameters"
     TIME_DURATION_PARAMETER_FILE = "min_time.txt"
@@ -141,6 +142,28 @@ class Parameters:
         param_df = self.get_param_df_for_param(param_name)
 
         return Parameters.parse_param_df(param_df)
+
+    def get_param_values_as_series(self, param_name: str) -> (float, list):
+        """get the parameter values for the given parameter as [start, end] series
+
+        Parameters
+        ----------
+        param_name : str
+            The name of the parameter
+
+        Raises
+        ------
+        ValueError
+            If the parameter is not part of the current parameter list.
+        """
+
+        param_window_duration, ts = self.get_param_values(param_name)
+        ts_series = pd.DataFrame(columns=[Parameters.PARAM_TIME_WINDOW_START_LIST,
+                                          Parameters.PARAM_TIME_WINDOW_END_LIST])
+        for start in ts:
+            ts_series.loc[len(ts_series.index)] = [start, start + param_window_duration]
+
+        return ts_series
 
     def set_param_value(self, param_name: str, param_df: pd.DataFrame):
         """set the parameter value for the given parameter to the provided value.
@@ -314,9 +337,10 @@ class Parameters:
         """
         ts_split = []
         param_window_duration, ts = self.get_param_values(param_name)
-        #print("param name: ", param_name, "ts_start: ", ts_start, "ts_end: ", ts_end, "window dur: ", param_window_duration)
+        ts_series = self.get_param_values_as_series(param_name)
         indices = list(filter(lambda x: (ts[x] >= ts_start and ts[x] < ts_end) or
-                              ((ts[x] < ts_start) and (ts[x] + param_window_duration) > ts_start), range(len(ts))))
+                              ((ts_series.iloc[x][Parameters.PARAM_TIME_WINDOW_START_LIST] < ts_start) and
+                                ts_series.iloc[x][Parameters.PARAM_TIME_WINDOW_END_LIST] > ts_start), range(len(ts_series))))
         # No timestamp in the series fits within the provided time. Mark
         # the whole duration as outside.
         if len(indices) == 0:
