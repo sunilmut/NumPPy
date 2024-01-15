@@ -209,11 +209,55 @@ def main(input_dir, parameter_obj):
                     print("1s [out] sum: ", auc_1s_sum_not, " avg: ", auc_1s_avg_not, " SEM_AUC: ", sem_auc_1s_sum_not, " SEM_AVG: ", sem_auc_1s_avg_not)
 
 def process(parameter_obj,
-            param_name,
-            binary_df,
-            timeshift_val,
-            data,
-            ts):
+            param_name: str,
+            binary_df: pd.DataFrame,
+            timeshift_val: float,
+            data: np.asarray,
+            ts: np.asarray) -> (bool, list):
+
+    """Process the parameter.
+
+    Parameters
+    ----------
+    param_name : str
+        The name of the parameter to process.
+        "" -> Indicates a parameter that represents the full duration.
+        None -> Indicates combining all the parameters
+
+    binary_df : pd.DataFrame
+        The freeze frame binary dataframe.
+
+    timeshift_val - float
+        The timeshift value to apply to the timestamps from the binary_df
+
+    data: np.asarray
+        The data values
+
+    ts: np.asarray
+        The timestamps corresponding to the data values. The ts array should
+        have a 1:1 correspondonce to the data array.
+
+    Returns
+    ------
+    (bool, list)
+    bool -> True if the routine successfully process the parameter; False otherwise.
+
+    list:
+        list[0] -> Sum of data values within the parameters, corresponding to the 0s from the freeze frame.
+        list[1] -> Count of data values within the parameters, corresponding to the 0s from the freeze frame.
+        list[2] -> Summarized DataFrame of data values within the parameters, corresponding to the 0s from the freeze frame.
+        list[3] -> Sum of data values outside the parameters, corresponding to the 0s from the freeze frame.
+        list[4] -> Count of data values outside the parameters, corresponding to the 0s from the freeze frame.
+        list[5] -> Summarized DataFrame of data values outside the parameters, corresponding to the 0s from the freeze frame.
+
+        list[6] -> Sum of data values within the parameters, corresponding to the 1s from the freeze frame.
+        list[7] -> Count of data values within the parameters, corresponding to the 1s from the freeze frame.
+        list[8] -> Summarized DataFrame of data values within the parameters, corresponding to the 1s from the freeze frame.
+        list[9] -> Sum of data values outside the parameters, corresponding to the 1s from the freeze frame.
+        list[10] -> Count of data values outside the parameters, corresponding to the 1s from the freeze frame.
+        list[11] -> Summarized DataFrame of data values outside the parameters, corresponding to the 1s from the freeze frame.
+
+    """
 
     # Perform some basic checks on the data sets.
     if len(ts) != len(data):
