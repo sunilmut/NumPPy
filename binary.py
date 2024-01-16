@@ -328,30 +328,12 @@ def get_param_min_time_duration(parameter_obj):
 
     return t_duration_before, t_duration_after
 
-
-def parse_param_df(df):
-    value = df[Parameters.PARAM_TIME_WINDOW_DURATION].iat[0]
-    w_duration = 0
-    if not pd.isnull(value):
-        w_duration = value
-
-    ts_series = df[Parameters.PARAM_TIME_WINDOW_START_LIST]
-    ts_series.sort_values(ascending=True)
-
-    return w_duration, ts_series
-
-
-#TODO: remove these.
-def reset_parameters():
+def reset_all_parameters():
     global param_min_time_duration_before, param_window_duration
     global param_min_time_duration_after
 
     param_min_time_duration_before = param_min_time_duration_before
     param_window_duration = param_min_time_duration_after
-
-
-def reset_all_parameters():
-    reset_parameters()
 
 
 def parse_cur_param_file(parameter_obj):
