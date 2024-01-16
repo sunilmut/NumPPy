@@ -8,7 +8,7 @@ from parameter import *
 import os
 import pandas as pd
 from pandas.api.types import is_integer_dtype
-from guizero import App, Box, Combo, ListBox, PushButton, Text, TextBox, TitleBox
+from guizero import App, Box, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
 import scipy
 import glob
 
@@ -46,6 +46,9 @@ OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
 
 # Globals
 parameter_obj = Parameters()
+r_log_box = None
+files_without_timeshift = []
+result_success_list_box = None
 
 # Read the values of the given 'key' from the HDF5 file
 # into an numpy array. If an 'event' is provided, it will
@@ -76,6 +79,8 @@ def compute_val(cnt, sum, df):
     return avg, sem_sum, sem_avg
 
 def main(input_dir, parameter_obj):
+    global files_without_timeshift, result_success_list_box
+
     path = glob.glob(os.path.join(input_dir, 'z_score_*'))
     output_dir = common.get_output_dir(input_dir, '')
     for i in range(len(path)):
@@ -87,17 +92,29 @@ def main(input_dir, parameter_obj):
         csv_path = glob.glob(os.path.join(input_dir, '*.csv'))
         for csv_file in csv_path:
             timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(csv_file)
+            if timeshift_val:
+                common.logger.debug("\tUsing timeshift value of: %s", str(timeshift_val))
+            else:
+                if timeshift_val is None:
+                    timeshift_val = 0
+                    common.logger.warning("\tNo timeshift value specified")
+                else:
+                    common.logger.warning("\tIncorrect timeshift value of zero specified")
+                files_without_timeshift.append(os.path.basename(csv_file))
+
             success, binary_df = common.parse_input_file_into_df(csv_file,
                                                     common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
             if not success:
                 common.logger.warning("Skipping CSV file (%s) as it is well formed")
+                result_unsuccess_list_box.append(os.path.basename(csv_file))
                 continue
 
-            #print(binary_df)
+            if result_success_list_box is not None:
+                result_success_list_box.append(os.path.basename(csv_file))
             csv_basename = (os.path.basename(csv_file)).split('.')[0]
             # Create output folder specific for this csv file.
             this_output_folder = os.path.join(output_dir, csv_basename)
-            #common.logger.debug("Output folder: %s", this_output_folder)
+            common.logger.debug("Output folder: %s", this_output_folder)
             if not os.path.isdir(this_output_folder):
                 os.mkdir(this_output_folder)
 
@@ -114,7 +131,7 @@ def main(input_dir, parameter_obj):
             combined_param_name = ""
             for param in param_name_list:
                 # Process the data and write out the results
-                print("processing param: ", param)
+                common.logger.debug("processing param: %s", param)
                 success, results = process(parameter_obj,
                                            param,
                                            binary_df,
@@ -435,6 +452,8 @@ class loghandler(logging.StreamHandler):
         """
         try:
             msg = self.format(record)
+            if r_log_box is not None:
+                r_log_box.value += msg
             print(msg)
             self.flush()
         except (KeyboardInterrupt, SystemExit):
@@ -510,31 +529,22 @@ def select_input_dir(parameter_obj):
             parameter_obj.get_currently_selected_param())
         refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
+def reset_result_box():
+    result_success_list_box.clear()
+    result_unsuccess_list_box.clear()
+    result_withoutshift_list_box.clear()
+    files_without_timeshift.clear()
+    r_log_box.clear()
+
 def ui_process_cmd(parameter_obj):
     if not common.get_input_dir():
         app.warn(
             "Uh oh!", "No input folder specified. Please select an input folder and run again!")
         return
 
-    """
-    # Reset the result box before processing so that the new values of the
-    # processing results can be shown.
     reset_result_box()
-
-    # Update the min time duration value in the file with the value
-    # from the UI so that it sticks.
-    # p.s: The main process loop will read this value from the file. So
-    #      the update should be done prior to processing the files.
-    update_min_t_in_file(min_time_duration_before_box.value,
-                         min_time_duration_after_box.value)
-    successfully_parsed_files, unsuccessfully_parsed_files = main(
-        input_dir, False, None)
-    refresh_result_text_box(successfully_parsed_files,
-                            unsuccessfully_parsed_files)
-
-    rwin.show()
-    """
     main(common.get_input_dir(), parameter_obj)
+    rwin.show()
 
 def open_params_file(parameter_obj):
     param_file = parameter_obj.get_param_file_from_name(parameter_obj.get_currently_selected_param())
@@ -719,6 +729,47 @@ if __name__ == "__main__":
     process_button = PushButton(app, text="Process", command=ui_process_cmd,
                                 args=[parameter_obj], width=26)
     process_button.tk.config(font=("Verdana bold", 14))
+
+    # New Result window
+    rwin = Window(app, title="Result Window",
+                  visible=False, height=700, width=800)
+
+    # Title box
+    rwin_title = Text(rwin, text="Results",
+                      size=16, font="Arial Bold", width=25)
+    rwin_title.bg = "white"
+    line_r(rwin)
+    result_text_box = Text(rwin, text="")
+    line_r(rwin)
+
+    # Grid to hold the various lists
+    rlist_box = Box(rwin, layout="grid")
+    cnt = 0
+    rwin_success_title = Text(
+        rlist_box, text="Successful files:", grid=[0, cnt])
+    rwin_unsuccess_title = Text(
+        rlist_box, text="Unsuccessful files:", grid=[5, cnt])
+    rwin_without_shift = Text(
+        rlist_box, text="Files without shift:", grid=[10, cnt])
+    cnt += 1
+    result_success_list_box = ListBox(
+        rlist_box, [], scrollbar=True, grid=[0, cnt])
+    result_unsuccess_list_box = ListBox(
+        rlist_box, [], scrollbar=True, grid=[5, cnt])
+    result_withoutshift_list_box = ListBox(
+        rlist_box, [], scrollbar=True, grid=[10, cnt])
+    cnt += 1
+    line_r(rwin)
+
+    # Details log message box
+    r_log_title_box = Text(rwin, text="Detailed log messages:")
+    r_log_box = TextBox(rwin, text="", height=200, width=500,
+                        multiline=True, scrollbar=True)
+    # Non editable
+    r_log_box.disable()
+
+    # Results window will be showed once files have been processed
+    rwin.hide()
 
     # Display the app
     app.display()
