@@ -1044,9 +1044,8 @@ if __name__ == "__main__":
     separate_files = False
     output_folder = None
 
-    # TODO: Fix this help.
     try:
-        opts, args = getopt.getopt(argv, "vhco:d:i:s")
+        opts, args = getopt.getopt(argv, "i:vhcso:")
     except getopt.GetoptError as e:
         common.logger.error("USAGE ERROR: %s", e)
         print_help()
