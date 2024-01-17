@@ -11,6 +11,7 @@ from pandas.api.types import is_integer_dtype
 from guizero import App, Box, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
 import scipy
 import glob
+import subprocess
 
 # UI related constants
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
@@ -49,6 +50,7 @@ parameter_obj = Parameters()
 r_log_box = None
 files_without_timeshift = []
 result_success_list_box = None
+output_dir = None
 
 # Read the values of the given 'key' from the HDF5 file
 # into an numpy array. If an 'event' is provided, it will
@@ -79,7 +81,7 @@ def compute_val(cnt, sum, df):
     return avg, sem_sum, sem_avg
 
 def main(input_dir, parameter_obj):
-    global files_without_timeshift, result_success_list_box
+    global files_without_timeshift, result_success_list_box, output_dir
 
     path = glob.glob(os.path.join(input_dir, 'z_score_*'))
     output_dir = common.get_output_dir(input_dir, '')
@@ -529,6 +531,23 @@ def select_input_dir(parameter_obj):
             parameter_obj.get_currently_selected_param())
         refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
+def open_output_folder():
+    global output_dir
+
+    if output_dir is None:
+        app.warn(
+            "Uh oh!", "Output folder dose not exist! Select input folder and process first.")
+        return
+
+    # Normalize the path to deal with backslash/frontslash
+    norm_path = os.path.normpath(output_dir)
+    if sys.platform == "win32":
+        subprocess.Popen(f'explorer /open,{norm_path}')
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", norm_path])
+    else:
+        subprocess.Popen(["xdg-open", norm_path])
+
 def reset_result_box():
     result_success_list_box.clear()
     result_unsuccess_list_box.clear()
@@ -657,7 +676,7 @@ if __name__ == "__main__":
         sys.exit()
 
     # Main app
-    app = App("", height=600, width=900)
+    app = App("", height=650, width=900)
 
     # App name box
     title = Text(app, text="Z-Score Splitting App",
@@ -729,6 +748,13 @@ if __name__ == "__main__":
     process_button = PushButton(app, text="Process", command=ui_process_cmd,
                                 args=[parameter_obj], width=26)
     process_button.tk.config(font=("Verdana bold", 14))
+    line()
+
+    # Browse output folder button
+    browse_output_folder_button = PushButton(
+        app, command=open_output_folder, text="Browse output folder", width=20)
+    browse_output_folder_button.tk.config(font=("Verdana bold", 10))
+    line()
 
     # New Result window
     rwin = Window(app, title="Result Window",
