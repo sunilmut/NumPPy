@@ -248,7 +248,6 @@ class FfTest(unittest.TestCase):
         self.assertTrue(out_df_1s_expected.equals(out_df_1s))
         self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
 
-    # TODO: shorten the input hdf5 files.
     def test_real_data(self):
         input_dir = os.path.join(os.getcwd(), "test_data", "ff")
         parameter_obj = Parameters()
