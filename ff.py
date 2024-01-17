@@ -89,7 +89,6 @@ def main(input_dir, parameter_obj):
     for i in range(len(path)):
         basename = (os.path.basename(path[i])).split('.')[0]
         name_1 = basename.split('_')[-1]
-        # TODO: Should NaN be handled?
         z_score = read_hdf5('', path[i], 'data')
         if np.isnan(z_score).any():
             common.logger.warning("%s file has NaN (not a number) values. Currently, unsupported", path[i])
