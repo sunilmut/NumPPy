@@ -50,6 +50,7 @@ parameter_obj = Parameters()
 r_log_box = None
 files_without_timeshift = []
 result_success_list_box = None
+result_unsuccess_list_box = None
 output_dir = None
 
 # Read the values of the given 'key' from the HDF5 file
@@ -90,7 +91,15 @@ def main(input_dir, parameter_obj):
         name_1 = basename.split('_')[-1]
         # TODO: Should NaN be handled?
         z_score = read_hdf5('', path[i], 'data')
+        if np.isnan(z_score).any():
+            common.logger.warning("%s file has NaN (not a number) values. Currently, unsupported", path[i])
+            continue
+
         ts = read_hdf5('timeCorrection_' + name_1, input_dir, 'timestampNew')
+        if np.isnan(ts).any():
+            common.logger.warning("%s file has NaN (not a number) values. Currently, unsupported", ('timeCorrection_' + name_1))
+            continue
+
         csv_path = glob.glob(os.path.join(input_dir, '*.csv'))
         for csv_file in csv_path:
             timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(csv_file)
@@ -108,7 +117,8 @@ def main(input_dir, parameter_obj):
                                                     common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
             if not success:
                 common.logger.warning("Skipping CSV file (%s) as it is well formed")
-                result_unsuccess_list_box.append(os.path.basename(csv_file))
+                if result_unsuccess_list_box is not None:
+                    result_unsuccess_list_box.append(os.path.basename(csv_file))
                 continue
 
             if result_success_list_box is not None:
@@ -679,7 +689,7 @@ if __name__ == "__main__":
     app = App("", height=650, width=900)
 
     # App name box
-    title = Text(app, text="Z-Score Splitting App",
+    title = Text(app, text="Photometry Splitting App",
                  size=16, font="Arial Bold", width=30)
     title.bg = "white"
     line()
