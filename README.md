@@ -26,7 +26,7 @@ on your system
 In the opened command prompt, run:
 
 ```
-pip3 install guizero numpy pandas xlrd xlsxwriter matplotlib openpyxl nested_dict
+pip3 install guizero numpy pandas xlrd xlsxwriter matplotlib openpyxl nested_dict h5py scipy pathlib
 ```
 
 ## Update the code:
@@ -75,6 +75,16 @@ To get verbose output log fie:
 ```
 python colorsort.py -v
 ```
-
 **Note**
 Close the output file prior to running.
+
+## Run Photometry data processing app
+In the opened command prompt (or open a command prompt), run:
+```python
+python dff.py
+```
+
+To run the app in verbose mode (to get more logs), run:
+```python
+python dff.py -v
+```
