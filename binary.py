@@ -676,20 +676,7 @@ def main(input_folder_or_file, separate_files, output_folder):
                      input_folder_or_file)
         print_help()
 
-    # TODO: Use the common method.
-    # If an output folder is specified, use it.
-    # Else, output folder is '<parent of input file or folder>\output', create it
-    if not output_folder:
-        output_folder = os.path.dirname(input_folder_or_file)
-        base_name = os.path.basename(input_folder_or_file)
-        if separate_files:
-            output_folder = os.path.join(output_folder, base_name)
-        else:
-            output_folder = os.path.join(
-                output_folder, base_name + OUTPUT_DIR_NAME)
-            if not os.path.isdir(output_folder):
-                os.mkdir(output_folder)
-
+    output_folder = common.get_output_dir(input_dir, output_folder, separate_files)
     common.set_input_dir(input_dir)
     common.logger.debug("Input folder: %s", os.path.normpath(input_dir))
     output_dir = os.path.normpath(output_folder)

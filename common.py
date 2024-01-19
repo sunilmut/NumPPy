@@ -104,14 +104,18 @@ def select_input_dir(app):
 # Returns an output folder and create the dir, if needed.
 # If an output dir is specified, use it.
 # Else, output folder is '<parent of input file or folder>\output', create it
-def get_output_dir(input_dir, output_dir):
+def get_output_dir(input_dir, output_dir, separate_files: bool):
     if output_dir:
         return output_dir
     output_folder = os.path.dirname(input_dir)
     base_name = os.path.basename(input_dir)
-    output_folder = os.path.join(output_folder, base_name + OUTPUT_DIR_NAME)
-    if not os.path.isdir(output_folder):
-        os.mkdir(output_folder)
+    if separate_files:
+        output_folder = os.path.join(output_folder, base_name)
+    else:
+        output_folder = os.path.join(
+            output_folder, base_name + OUTPUT_DIR_NAME)
+        if not os.path.isdir(output_folder):
+            os.mkdir(output_folder)
 
     return output_folder
 
