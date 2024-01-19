@@ -6,19 +6,19 @@ import os
 import pandas as pd
 import glob
 import unittest
-import ff
+import dff
 
 """
 ------------------------------------------------------------
-            Unit tests for the ff module
+            Unit tests for the dff module
 ------------------------------------------------------------
-# Run these tests using `python -m unittest test_ff`
+# Run these tests using `python -m unittest test_dff`
 ------------------------------------------------------------
 """
 class FfTest(unittest.TestCase):
     def setUp(self):
-        progress = ff.loghandler()
-        logging.basicConfig(filename=ff.OUTPUT_LOG_FILE,
+        progress = dff.loghandler()
+        logging.basicConfig(filename=dff.OUTPUT_LOG_FILE,
                             level=logging.DEBUG, format='')
         common.logger = logging.getLogger(__name__)
         common.logger.addHandler(progress)
@@ -38,7 +38,7 @@ class FfTest(unittest.TestCase):
                 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
         timeshift_val = 0
         print(binary_df)
-        success, results = ff.process(param, "", binary_df, timeshift_val, data, ts)
+        success, results = dff.process(param, "", binary_df, timeshift_val, data, ts)
         self.assertTrue(success)
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
@@ -62,26 +62,26 @@ class FfTest(unittest.TestCase):
         self.assertEqual(auc_1s_sum_not, 0)
         self.assertEqual(auc_1s_cnt_not, 0)
         self.assertTrue(out_df_1s_not.empty)
-        auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = ff.compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
-        auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = ff.compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
+        auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = dff.compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
+        auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = dff.compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
         self.assertEqual(round(auc_0s_avg, 3), 0.056)
         self.assertEqual(round(sem_auc_0s_sum, 3), 24.167)
         self.assertEqual(round(sem_auc_0s_avg, 3), 4.572)
         self.assertEqual(round(auc_1s_avg, 3), 0.045)
         self.assertEqual(round(sem_auc_1s_sum, 3), 24.408)
         self.assertEqual(round(sem_auc_1s_avg, 3), 3.441)
-        o_data = {ff.OUTPUT_COL0_TS:       [0.0, 15.0, 23.0, 27.0, 29.0, 35.0],
-                  ff.OUTPUT_COL1_LEN:      [9.0, 4.0,  2.0,  0.0,  0.0,  4.0],
-                  ff.OUTPUT_COL2_MI_AVG:   [1.0, 1.0,  1.0,  1.0,  1.0,  1.0],
-                  ff.OUTPUT_COL3_DATA_AUC: [45.0,85.0, 72.0, 27.0, 29.0, 185.0],
-                  ff.OUTPUT_COL4_DATA_AVG: [4.5, 17.0, 24.0, 27.0, 29.0, 37.0]}
+        o_data = {dff.OUTPUT_COL0_TS:       [0.0, 15.0, 23.0, 27.0, 29.0, 35.0],
+                  dff.OUTPUT_COL1_LEN:      [9.0, 4.0,  2.0,  0.0,  0.0,  4.0],
+                  dff.OUTPUT_COL2_MI_AVG:   [1.0, 1.0,  1.0,  1.0,  1.0,  1.0],
+                  dff.OUTPUT_COL3_DATA_AUC: [45.0,85.0, 72.0, 27.0, 29.0, 185.0],
+                  dff.OUTPUT_COL4_DATA_AVG: [4.5, 17.0, 24.0, 27.0, 29.0, 37.0]}
         out_df_0s_expected = pd.DataFrame(o_data)
         self.assertTrue(out_df_0s_expected.equals(out_df_0s))
-        o_data = {ff.OUTPUT_COL0_TS:       [10.0, 20.0, 26.0, 28.0, 30.0],
-                  ff.OUTPUT_COL1_LEN:      [4.0,  2.0,  0.0,  0.0,  4.0],
-                  ff.OUTPUT_COL2_MI_AVG:   [1.0,  1.0,  1.0,  1.0,  1.0],
-                  ff.OUTPUT_COL3_DATA_AUC: [60.0, 63.0, 26.0, 28.0, 160.0],
-                  ff.OUTPUT_COL4_DATA_AVG: [12.0, 21.0, 26.0, 28.0, 32.0]}
+        o_data = {dff.OUTPUT_COL0_TS:       [10.0, 20.0, 26.0, 28.0, 30.0],
+                  dff.OUTPUT_COL1_LEN:      [4.0,  2.0,  0.0,  0.0,  4.0],
+                  dff.OUTPUT_COL2_MI_AVG:   [1.0,  1.0,  1.0,  1.0,  1.0],
+                  dff.OUTPUT_COL3_DATA_AUC: [60.0, 63.0, 26.0, 28.0, 160.0],
+                  dff.OUTPUT_COL4_DATA_AVG: [12.0, 21.0, 26.0, 28.0, 32.0]}
         out_df_1s_expected = pd.DataFrame(o_data)
         self.assertTrue(out_df_1s_expected.equals(out_df_1s))
 
@@ -94,7 +94,7 @@ class FfTest(unittest.TestCase):
         PARAM_NAME = "param1"
         df = pd.DataFrame(param_val)
         param.set_param_value(PARAM_NAME, df)
-        success, results = ff.process(param, PARAM_NAME, binary_df, timeshift_val, data, ts)
+        success, results = dff.process(param, PARAM_NAME, binary_df, timeshift_val, data, ts)
         self.assertTrue(success)
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
@@ -136,7 +136,7 @@ class FfTest(unittest.TestCase):
         PARAM_NAME = "param1"
         df = pd.DataFrame(param_val)
         param.set_param_value(PARAM_NAME, df)
-        success, results = ff.process(param, PARAM_NAME, binary_df, timeshift_val, data, ts)
+        success, results = dff.process(param, PARAM_NAME, binary_df, timeshift_val, data, ts)
         self.assertTrue(success)
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
@@ -159,44 +159,44 @@ class FfTest(unittest.TestCase):
         self.assertEqual(auc_1s_cnt, 13)
         self.assertEqual(auc_1s_cnt + auc_1s_cnt_not, fz.count(1))
         self.assertEqual(auc_1s_sum_not, 54)
-        o_data = {ff.OUTPUT_COL0_TS:       [0.0,  23.0],
-                  ff.OUTPUT_COL1_LEN:      [5.0,  2.0],
-                  ff.OUTPUT_COL2_MI_AVG:   [1.0,  1.0],
-                  ff.OUTPUT_COL3_DATA_AUC: [15.0, 72.0],
-                  ff.OUTPUT_COL4_DATA_AVG: [2.5,  24.0]}
+        o_data = {dff.OUTPUT_COL0_TS:       [0.0,  23.0],
+                  dff.OUTPUT_COL1_LEN:      [5.0,  2.0],
+                  dff.OUTPUT_COL2_MI_AVG:   [1.0,  1.0],
+                  dff.OUTPUT_COL3_DATA_AUC: [15.0, 72.0],
+                  dff.OUTPUT_COL4_DATA_AVG: [2.5,  24.0]}
         out_df_0s_expected = pd.DataFrame(o_data)
         self.assertTrue(out_df_0s_expected.equals(out_df_0s))
-        o_data = {ff.OUTPUT_COL0_TS:       [6.0,  15.0, 27.0, 29.0, 35.0],
-                  ff.OUTPUT_COL1_LEN:      [3.0,  4.0,  0.0,  0.0,  4.0],
-                  ff.OUTPUT_COL2_MI_AVG:   [1.0,  1.0,  1.0,  1.0,  1.0],
-                  ff.OUTPUT_COL3_DATA_AUC: [30.0, 85.0, 27.0, 29.0, 185.0],
-                  ff.OUTPUT_COL4_DATA_AVG: [7.5,  17.0, 27.0, 29.0, 37.0]}
+        o_data = {dff.OUTPUT_COL0_TS:       [6.0,  15.0, 27.0, 29.0, 35.0],
+                  dff.OUTPUT_COL1_LEN:      [3.0,  4.0,  0.0,  0.0,  4.0],
+                  dff.OUTPUT_COL2_MI_AVG:   [1.0,  1.0,  1.0,  1.0,  1.0],
+                  dff.OUTPUT_COL3_DATA_AUC: [30.0, 85.0, 27.0, 29.0, 185.0],
+                  dff.OUTPUT_COL4_DATA_AVG: [7.5,  17.0, 27.0, 29.0, 37.0]}
         out_df_0s_not_expected = pd.DataFrame(o_data)
         self.assertTrue(out_df_0s_not_expected.equals(out_df_0s_not))
-        o_data = {ff.OUTPUT_COL0_TS:       [10.0, 20.0, 30.0],
-                  ff.OUTPUT_COL1_LEN:      [4.0,  2.0,  4.0],
-                  ff.OUTPUT_COL2_MI_AVG:   [1.0,  1.0,  1.0],
-                  ff.OUTPUT_COL3_DATA_AUC: [60.0, 63.0, 160.0],
-                  ff.OUTPUT_COL4_DATA_AVG: [12.0, 21.0, 32.0]}
+        o_data = {dff.OUTPUT_COL0_TS:       [10.0, 20.0, 30.0],
+                  dff.OUTPUT_COL1_LEN:      [4.0,  2.0,  4.0],
+                  dff.OUTPUT_COL2_MI_AVG:   [1.0,  1.0,  1.0],
+                  dff.OUTPUT_COL3_DATA_AUC: [60.0, 63.0, 160.0],
+                  dff.OUTPUT_COL4_DATA_AVG: [12.0, 21.0, 32.0]}
         out_df_1s_expected = pd.DataFrame(o_data)
         self.assertTrue(out_df_1s_expected.equals(out_df_1s))
-        o_data = {ff.OUTPUT_COL0_TS:       [26.0, 28.0],
-                  ff.OUTPUT_COL1_LEN:      [0.0,  0.0],
-                  ff.OUTPUT_COL2_MI_AVG:   [1.0,  1.0],
-                  ff.OUTPUT_COL3_DATA_AUC: [26.0, 28.0],
-                  ff.OUTPUT_COL4_DATA_AVG: [26.0, 28.0]}
+        o_data = {dff.OUTPUT_COL0_TS:       [26.0, 28.0],
+                  dff.OUTPUT_COL1_LEN:      [0.0,  0.0],
+                  dff.OUTPUT_COL2_MI_AVG:   [1.0,  1.0],
+                  dff.OUTPUT_COL3_DATA_AUC: [26.0, 28.0],
+                  dff.OUTPUT_COL4_DATA_AVG: [26.0, 28.0]}
         out_df_1s_not_expected = pd.DataFrame(o_data)
         self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
-        auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = ff.compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
-        auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = ff.compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
+        auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = dff.compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
+        auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = dff.compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
         self.assertEqual(round(auc_0s_avg, 3), 0.103)
         self.assertEqual(round(sem_auc_0s_sum, 3), 28.500)
         self.assertEqual(round(sem_auc_0s_avg, 3), 10.75)
         self.assertEqual(round(auc_1s_avg, 3), 0.046)
         self.assertEqual(round(sem_auc_1s_sum, 3), 32.845)
         self.assertEqual(round(sem_auc_1s_avg, 3), 5.783)
-        auc_0s_avg_not, sem_auc_0s_sum_not, sem_auc_0s_avg_not = ff.compute_val(auc_0s_sum_not, auc_0s_cnt_not, out_df_0s_not)
-        auc_1s_avg_not, sem_auc_1s_sum_not, sem_auc_1s_avg_not = ff.compute_val(auc_1s_sum_not, auc_1s_cnt_not, out_df_1s_not)
+        auc_0s_avg_not, sem_auc_0s_sum_not, sem_auc_0s_avg_not = dff.compute_val(auc_0s_sum_not, auc_0s_cnt_not, out_df_0s_not)
+        auc_1s_avg_not, sem_auc_1s_sum_not, sem_auc_1s_avg_not = dff.compute_val(auc_1s_sum_not, auc_1s_cnt_not, out_df_1s_not)
         self.assertEqual(round(auc_0s_avg_not, 3), 0.045)
         self.assertEqual(round(sem_auc_0s_sum_not, 3), 30.474)
         self.assertEqual(round(sem_auc_0s_avg_not, 3), 5.114)
@@ -237,7 +237,7 @@ class FfTest(unittest.TestCase):
                                     Parameters.PARAM_TIME_WINDOW_END_LIST:   [5.0, 15.0, 25.0, 35.0, 45.0]})
         combinded_df = param.get_combined_params_ts_series()
         self.assertTrue(combinded_df.equals(expected_df))
-        success, results = ff.process(param, None, binary_df, timeshift_val, data, ts)
+        success, results = dff.process(param, None, binary_df, timeshift_val, data, ts)
         self.assertTrue(success)
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
@@ -266,15 +266,15 @@ class FfTest(unittest.TestCase):
         self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
 
     def test_real_data(self):
-        input_dir = os.path.join(os.getcwd(), "test_data", "ff")
+        input_dir = os.path.join(os.getcwd(), "test_data", "dff")
         parameter_obj = Parameters()
         try:
             parameter_obj.parse(input_dir)
         except ValueError as e:
             common.logger.warning(e)
-        ff.main(input_dir, parameter_obj)
-        expected_output_dir = os.path.join(os.getcwd(), "test_data", "ff_output_expected", "binary")
-        output_dir = os.path.join(os.getcwd(), "test_data", "ff_output", "binary")
+        dff.main(input_dir, parameter_obj)
+        expected_output_dir = os.path.join(os.getcwd(), "test_data", "dff_output_expected", "binary")
+        output_dir = os.path.join(os.getcwd(), "test_data", "dff_output", "binary")
         csv_path = glob.glob(os.path.join(expected_output_dir, '*.csv'))
         # Validate that the files in the output dir match the expected output dir
         for expected_csv_file in csv_path:

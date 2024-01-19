@@ -79,12 +79,12 @@ python colorsort.py -v
 ## Run Photometry data processing app
 In the opened command prompt (or open a command prompt), run:
 ```python
-python ff.py
+python dff.py
 ```
 
 To run the app in verbose mode (to get more logs), run:
 ```python
-python ff.py -v
+python dff.py -v
 ```
 
 **Note**

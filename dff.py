@@ -480,7 +480,7 @@ def print_help():
 
     print("\nHelp/Usage:\n")
     print(
-        "python ff.py -i <input folder or .csv file> -o <output_directory> -v -h -c\n"
+        "python dff.py -i <input folder or .csv file> -o <output_directory> -v -h -c\n"
     )
     print("where:")
     print("-i (required): input folder or .csv file.")
@@ -490,13 +490,13 @@ def print_help():
     print("-c (optional): run in console (no UI) mode")
     print("\nExamples:\n")
     print("\nProcess input file:")
-    print("\tpython ff.py -i input.csv")
+    print("\tpython dff.py -i input.csv")
     print("\nProcess all the csv files from the input folder:")
-    print("\tpython ff.py -i c:\\data\\input")
+    print("\tpython dff.py -i c:\\data\\input")
     print(
         "\nProcess all the csv files from the input folder and use the output folder:"
     )
-    print("\tpython ff.py -i c:\\data\\input -o c:\\data\\output")
+    print("\tpython dff.py -i c:\\data\\input -o c:\\data\\output")
     print("\nNotes:")
     print("\tClose the output file prior to running.")
     sys.exit()
