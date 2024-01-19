@@ -76,5 +76,16 @@ To get verbose output log fie:
 python colorsort.py -v
 ```
 
+## Run Photometry data processing app
+In the opened command prompt (or open a command prompt), run:
+```python
+python ff.py
+```
+
+To run the app in verbose mode (to get more logs), run:
+```python
+python ff.py -v
+```
+
 **Note**
 Close the output file prior to running.
