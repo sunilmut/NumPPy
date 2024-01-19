@@ -62,10 +62,14 @@ class FfTest(unittest.TestCase):
         self.assertEqual(auc_1s_sum_not, 0)
         self.assertEqual(auc_1s_cnt_not, 0)
         self.assertTrue(out_df_1s_not.empty)
-        #auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
-        #auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
-        #print(auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg)
-        #print(auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg)
+        auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = ff.compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
+        auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = ff.compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
+        self.assertEqual(round(auc_0s_avg, 3), 0.056)
+        self.assertEqual(round(sem_auc_0s_sum, 3), 24.167)
+        self.assertEqual(round(sem_auc_0s_avg, 3), 4.572)
+        self.assertEqual(round(auc_1s_avg, 3), 0.045)
+        self.assertEqual(round(sem_auc_1s_sum, 3), 24.408)
+        self.assertEqual(round(sem_auc_1s_avg, 3), 3.441)
         o_data = {ff.OUTPUT_COL0_TS:       [0.0, 15.0, 23.0, 27.0, 29.0, 35.0],
                   ff.OUTPUT_COL1_LEN:      [9.0, 4.0,  2.0,  0.0,  0.0,  4.0],
                   ff.OUTPUT_COL2_MI_AVG:   [1.0, 1.0,  1.0,  1.0,  1.0,  1.0],
@@ -114,13 +118,14 @@ class FfTest(unittest.TestCase):
         self.assertEqual(auc_1s_sum_not, 0)
         self.assertEqual(auc_1s_cnt_not, 0)
         self.assertTrue(out_df_1s_not.empty)
-        # TODO: test for comppute val
-        #auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
-        #auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
-        #print(auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg)
-        #print(auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg)
         self.assertTrue(out_df_0s_expected.equals(out_df_0s))
         self.assertTrue(out_df_1s_expected.equals(out_df_1s))
+        self.assertEqual(round(auc_0s_avg, 3), 0.056)
+        self.assertEqual(round(sem_auc_0s_sum, 3), 24.167)
+        self.assertEqual(round(sem_auc_0s_avg, 3), 4.572)
+        self.assertEqual(round(auc_1s_avg, 3), 0.045)
+        self.assertEqual(round(sem_auc_1s_sum, 3), 24.408)
+        self.assertEqual(round(sem_auc_1s_avg, 3), 3.441)
 
         # Restricted parameter
         param_val = {
@@ -154,10 +159,6 @@ class FfTest(unittest.TestCase):
         self.assertEqual(auc_1s_cnt, 13)
         self.assertEqual(auc_1s_cnt + auc_1s_cnt_not, fz.count(1))
         self.assertEqual(auc_1s_sum_not, 54)
-        #auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
-        #auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
-        #print(auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg)
-        #print(auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg)
         o_data = {ff.OUTPUT_COL0_TS:       [0.0,  23.0],
                   ff.OUTPUT_COL1_LEN:      [5.0,  2.0],
                   ff.OUTPUT_COL2_MI_AVG:   [1.0,  1.0],
@@ -186,6 +187,22 @@ class FfTest(unittest.TestCase):
                   ff.OUTPUT_COL4_DATA_AVG: [26.0, 28.0]}
         out_df_1s_not_expected = pd.DataFrame(o_data)
         self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
+        auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = ff.compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
+        auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = ff.compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
+        self.assertEqual(round(auc_0s_avg, 3), 0.103)
+        self.assertEqual(round(sem_auc_0s_sum, 3), 28.500)
+        self.assertEqual(round(sem_auc_0s_avg, 3), 10.75)
+        self.assertEqual(round(auc_1s_avg, 3), 0.046)
+        self.assertEqual(round(sem_auc_1s_sum, 3), 32.845)
+        self.assertEqual(round(sem_auc_1s_avg, 3), 5.783)
+        auc_0s_avg_not, sem_auc_0s_sum_not, sem_auc_0s_avg_not = ff.compute_val(auc_0s_sum_not, auc_0s_cnt_not, out_df_0s_not)
+        auc_1s_avg_not, sem_auc_1s_sum_not, sem_auc_1s_avg_not = ff.compute_val(auc_1s_sum_not, auc_1s_cnt_not, out_df_1s_not)
+        self.assertEqual(round(auc_0s_avg_not, 3), 0.045)
+        self.assertEqual(round(sem_auc_0s_sum_not, 3), 30.474)
+        self.assertEqual(round(sem_auc_0s_avg_not, 3), 5.114)
+        self.assertEqual(round(auc_1s_avg_not, 3), 0.037)
+        self.assertEqual(round(sem_auc_1s_sum_not, 3), 1.0)
+        self.assertEqual(round(sem_auc_1s_avg_not, 3), 1.0)
 
         # Test for combined paramaters
         # Note: This test case uses the variable output values from the previous
