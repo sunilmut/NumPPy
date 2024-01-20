@@ -29,7 +29,7 @@ OUTPUT_COL0_TS = 'Start time (sec)'
 OUTPUT_COL1_LEN = 'Bout length (sec)'
 OUTPUT_COL2_MI_AVG = 'Motion Index (avg)'
 OUTPUT_COL3_DATA_AUC = 'AUC (data)'
-OUTPUT_COL4_DATA_AVG = 'z-score'
+OUTPUT_COL4_DATA_AVG = 'dff'
 OUTPUT_COLUMN_NAMES=[OUTPUT_COL0_TS, OUTPUT_COL1_LEN,
                      OUTPUT_COL2_MI_AVG, OUTPUT_COL3_DATA_AUC,
                      OUTPUT_COL4_DATA_AVG]
@@ -40,8 +40,8 @@ OUTPUT_ONES = "1_"
 OUTPUT_NOT = "_Not"
 OUTPUT_AUC = "AUC (sum)"
 OUTPUT_AUC_SEM = "AUC_SEM"
-OUTPUT_Z_SCORE = "z-score (avg)"
-OUTPUT_Z_SCORE_SEM = "z-score_SEM"
+OUTPUT_Z_SCORE = "dff (avg)"
+OUTPUT_Z_SCORE_SEM = "dff_SEM"
 OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
                                OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM]
 
@@ -84,7 +84,7 @@ def compute_val(cnt, sum, df):
 def main(input_dir, parameter_obj):
     global files_without_timeshift, result_success_list_box, output_dir
 
-    path = glob.glob(os.path.join(input_dir, 'z_score_*')) + glob.glob(os.path.join(input_dir, 'dff_*'))
+    path = glob.glob(os.path.join(input_dir, 'dff_*'))
     output_dir = common.get_output_dir(input_dir, '', False)
     for i in range(len(path)):
         basename = (os.path.basename(path[i])).split('.')[0]
