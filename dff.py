@@ -33,6 +33,8 @@ OUTPUT_COL4_DATA_AVG = 'dff'
 OUTPUT_COLUMN_NAMES=[OUTPUT_COL0_TS, OUTPUT_COL1_LEN,
                      OUTPUT_COL2_MI_AVG, OUTPUT_COL3_DATA_AUC,
                      OUTPUT_COL4_DATA_AVG]
+# Number of decimal precision
+OUTPUT_VALUE_PRECISION = 5
 
 # output file names
 OUTPUT_ZEROS = "0_"
@@ -74,10 +76,10 @@ def read_hdf5(event, filepath, key):
     return arr
 
 def compute_val(sum, cnt, df):
-    avg = sum/cnt
+    avg = round(sum/cnt, OUTPUT_VALUE_PRECISION)
     # std error of mean (sem)
-    sem_sum = scipy.stats.sem(df.loc[:, OUTPUT_COL3_DATA_AUC])
-    sem_avg = scipy.stats.sem(df.loc[:, OUTPUT_COL4_DATA_AVG])
+    sem_sum = round(scipy.stats.sem(df.loc[:, OUTPUT_COL3_DATA_AUC]), OUTPUT_VALUE_PRECISION)
+    sem_avg = round(scipy.stats.sem(df.loc[:, OUTPUT_COL4_DATA_AVG]), OUTPUT_VALUE_PRECISION)
 
     return avg, sem_sum, sem_avg
 
@@ -400,9 +402,11 @@ def process(parameter_obj,
             motion_index_slice = binary_df.iloc[index_start : index_end][common.INPUT_COL1_MI]
             sum_mi = sum(motion_index_slice)
             cnt_mi = len(motion_index_slice)
+            mi_avg = round(sum_mi/cnt_mi, OUTPUT_VALUE_PRECISION)
             data_slice = data[ts_index_start_for_val : ts_index_end_for_val]
-            sum_data = sum(data_slice)
+            sum_data = round(sum(data_slice), OUTPUT_VALUE_PRECISION)
             cnt_data = len(data_slice)
+            data_avg = round(sum_data/cnt_data, OUTPUT_VALUE_PRECISION)
             if cnt_data == 0:
                 print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
                 print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
@@ -414,9 +418,9 @@ def process(parameter_obj,
                     mi_0s_cnt += cnt_mi
                     out_df_0s.loc[len(out_df_0s.index)] = [ts_start,
                                                         bout_length,
-                                                        sum_mi/cnt_mi,
+                                                        mi_avg,
                                                         sum_data,
-                                                        sum_data/cnt_data]
+                                                        data_avg]
                 else:
                     auc_0s_sum_not += sum_data
                     auc_0s_cnt_not += cnt_data
@@ -424,9 +428,9 @@ def process(parameter_obj,
                     mi_0s_cnt_not += cnt_mi
                     out_df_0s_not.loc[len(out_df_0s_not.index)] = [ts_start,
                                                         bout_length,
-                                                        sum_mi/cnt_mi,
+                                                        mi_avg,
                                                         sum_data,
-                                                        sum_data/cnt_data]
+                                                        data_avg]
             else:
                 if is_inside:
                     auc_1s_sum += sum_data
@@ -435,9 +439,9 @@ def process(parameter_obj,
                     mi_1s_cnt += cnt_mi
                     out_df_1s.loc[len(out_df_1s.index)] = [ts_start,
                                                         bout_length,
-                                                        sum_mi/cnt_mi,
+                                                        mi_avg,
                                                         sum_data,
-                                                        sum_data/cnt_data]
+                                                        data_avg]
                 else:
                     auc_1s_sum_not += sum_data
                     auc_1s_cnt_not += cnt_data
@@ -445,9 +449,9 @@ def process(parameter_obj,
                     mi_1s_cnt_not += cnt_mi
                     out_df_1s_not.loc[len(out_df_1s_not.index)] = [ts_start,
                                                         bout_length,
-                                                        sum_mi/cnt_mi,
+                                                        mi_avg,
                                                         sum_data,
-                                                        sum_data/cnt_data]
+                                                        data_avg]
 
         # Reset the index to indicate the start of a new dataset.
         index_start = -1
