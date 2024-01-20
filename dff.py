@@ -84,7 +84,7 @@ def compute_val(cnt, sum, df):
 def main(input_dir, parameter_obj):
     global files_without_timeshift, result_success_list_box, output_dir
 
-    path = glob.glob(os.path.join(input_dir, 'z_score_*'))
+    path = glob.glob(os.path.join(input_dir, 'z_score_*')) + glob.glob(os.path.join(input_dir, 'dff_*'))
     output_dir = common.get_output_dir(input_dir, '', False)
     for i in range(len(path)):
         basename = (os.path.basename(path[i])).split('.')[0]
