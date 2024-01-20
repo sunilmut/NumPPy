@@ -15,7 +15,7 @@ import dff
 # Run these tests using `python -m unittest test_dff`
 ------------------------------------------------------------
 """
-class FfTest(unittest.TestCase):
+class DffTest(unittest.TestCase):
     def setUp(self):
         progress = dff.loghandler()
         logging.basicConfig(filename=dff.OUTPUT_LOG_FILE,
@@ -296,3 +296,13 @@ class FfTest(unittest.TestCase):
                 else:
                     common.logger.debug("Output does not matches expected.")
                 self.assertTrue(files_match)
+
+    #def test_generate_data_file(self):
+    #    input_dir = os.path.join(os.getcwd(), "test_data", "dff")
+    #    dff_file = os.path.join(input_dir, "dff_BLA.hdf5")
+    #    z_score = dff.read_hdf5('', dff_file, 'data')
+    #    ts_file = os.path.join(input_dir, "timeCorrection_BLA.hdf5")
+    #    timestamp = dff.read_hdf5('', ts_file, 'timestampNew')
+    #    df = pd.DataFrame({'timestamp': timestamp, 'dff': z_score})
+    #    output_file = os.path.join(input_dir, "dff_output\\test\\data.csv")
+    #    df.to_csv(output_file, index=False, header=True)
