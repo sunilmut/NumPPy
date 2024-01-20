@@ -340,9 +340,12 @@ def parse_cur_param_file(parameter_obj):
     """
     Parse the paramter file
     """
+    global param_min_time_duration_before, param_min_time_duration_after
 
     update_min_t_in_file(min_time_duration_before_box.value,
                          min_time_duration_after_box.value)
+    param_min_time_duration_before = min_time_duration_before_box.value
+    param_min_time_duration_after = min_time_duration_after_box.value
 
     currently_selected_param = parameter_obj.get_currently_selected_param()
     if not currently_selected_param:
