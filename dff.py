@@ -73,7 +73,7 @@ def read_hdf5(event, filepath, key):
 
     return arr
 
-def compute_val(cnt, sum, df):
+def compute_val(sum, cnt, df):
     avg = sum/cnt
     # std error of mean (sem)
     sem_sum = scipy.stats.sem(df.loc[:, OUTPUT_COL3_DATA_AUC])
