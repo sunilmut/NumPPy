@@ -272,7 +272,7 @@ class FfTest(unittest.TestCase):
             parameter_obj.parse(input_dir)
         except ValueError as e:
             common.logger.warning(e)
-        dff.main(input_dir, parameter_obj)
+        dff.main(input_dir, parameter_obj, True)
         expected_output_dir = os.path.join(os.getcwd(), "test_data", "dff_output_expected", "binary")
         output_dir = os.path.join(os.getcwd(), "test_data", "dff_output", "binary")
         csv_path = glob.glob(os.path.join(expected_output_dir, '*.csv'))

@@ -81,7 +81,9 @@ def compute_val(cnt, sum, df):
 
     return avg, sem_sum, sem_avg
 
-def main(input_dir, parameter_obj):
+def main(input_dir: str,
+         parameter_obj: Parameters,
+         separate_not_file_for_each_param: bool):
     global files_without_timeshift, result_success_list_box, output_dir
 
     path = glob.glob(os.path.join(input_dir, 'dff_*'))
@@ -141,6 +143,7 @@ def main(input_dir, parameter_obj):
                 param_name_list.append(None)
             combined_param_name = ""
             for param in param_name_list:
+                generate_not_file = False
                 # Process the data and write out the results
                 common.logger.debug("processing param: %s", param)
                 success, results = process(parameter_obj,
@@ -151,6 +154,10 @@ def main(input_dir, parameter_obj):
                                            ts)
                 if not success:
                     continue
+
+                # Always generate NOT file for combined parametes (i.e. param == None)
+                if separate_not_file_for_each_param or (param is None):
+                    generate_not_file = True
 
                 auc_0s_sum = results[0]
                 auc_0s_cnt = results[1]
@@ -188,7 +195,7 @@ def main(input_dir, parameter_obj):
                     print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
 
                 # 0's, outside the param
-                if auc_0s_cnt_not > 0:
+                if auc_0s_cnt_not > 0 and generate_not_file:
                     auc_0s_avg_not, sem_auc_0s_sum_not, sem_auc_0s_avg_not = compute_val(auc_0s_sum_not,
                                                                                          auc_0s_cnt_not,
                                                                                          out_df_0s_not)
@@ -220,7 +227,7 @@ def main(input_dir, parameter_obj):
                     print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
 
                 # 1's, outside the param
-                if auc_1s_cnt_not > 0:
+                if auc_1s_cnt_not > 0 and generate_not_file:
                     auc_1s_avg_not, sem_auc_1s_sum_not, sem_auc_1s_avg_not = compute_val(auc_1s_sum_not,
                                                                                          auc_1s_cnt_not,
                                                                                          out_df_1s_not)
@@ -571,7 +578,7 @@ def ui_process_cmd(parameter_obj):
         return
 
     reset_result_box()
-    main(common.get_input_dir(), parameter_obj)
+    main(common.get_input_dir(), parameter_obj, False)
     rwin.show()
 
 def open_params_file(parameter_obj):
@@ -681,7 +688,7 @@ if __name__ == "__main__":
             print_help()
 
     if console_mode:
-        main(input_dir, parameter_obj)
+        main(input_dir, parameter_obj, True)
         sys.exit()
 
     # Main app
