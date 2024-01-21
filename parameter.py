@@ -397,7 +397,7 @@ class Parameters:
         start_col_name = Parameters.PARAM_TIME_WINDOW_START_LIST
         end_col_name = Parameters.PARAM_TIME_WINDOW_END_LIST
         indices = list(filter(lambda x: (ts_series.iloc[x][start_col_name] >= ts_start and
-                                         ts_series.iloc[x][start_col_name] < ts_end) or
+                                         ts_series.iloc[x][start_col_name] <= ts_end) or
                               ((ts_series.iloc[x][start_col_name] < ts_start) and
                                 ts_series.iloc[x][end_col_name] > ts_start), range(len(ts_series))))
 
@@ -413,7 +413,7 @@ class Parameters:
         while True:
             if start < ts_series.iloc[indices[idx]][start_col_name]:
                 is_in = False
-                end = min(ts_end, ts_series.iloc[indices[idx]][start_col_name])
+                end = min(ts_end, ts_series.iloc[indices[idx]][start_col_name] - Parameters.TIME_PRECISION)
             else:
                 is_in = True
                 end = min(ts_end, ts_series.iloc[indices[idx]][end_col_name])
@@ -422,17 +422,21 @@ class Parameters:
             if is_in or end == ts_end:
                 ts_split.append([start + delta, end, is_in])
                 delta = Parameters.TIME_PRECISION
+                if end == ts_end:
+                    break
             else:
-                ts_split.append([start + delta, end - Parameters.TIME_PRECISION, is_in])
+                ts_split.append([start + delta, end, is_in])
+                end += Parameters.TIME_PRECISION
+                #print(ts_split)
                 delta = 0.0
 
             # If we have reached the end of the ts series and there is
             # still some left in the duration, just add the rest.
             if idx >= len(indices) and end < ts_end:
                 ts_split.append([end + delta, ts_end, False])
-                end = ts_end
+                end = ts_end + Parameters.TIME_PRECISION
 
-            if end == ts_end:
+            if end > ts_end or idx >= len(indices):
                 break
 
             start = end

@@ -347,6 +347,7 @@ def process(parameter_obj,
             ts_split = parameter_obj.get_ts_series_for_combined_param(ts_start, ts_end)
         else:
             ts_split = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
+        print("ts_start: ", ts_start, "ts_end: ", ts_end, "\nts_split: ", ts_split)
         for element in ts_split:
             ts_start = element[0]
             ts_end = element[1]
