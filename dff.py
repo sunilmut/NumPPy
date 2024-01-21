@@ -8,7 +8,17 @@ from parameter import *
 import os
 import pandas as pd
 from pandas.api.types import is_integer_dtype
-from guizero import App, Box, Combo, ListBox, PushButton, Text, TextBox, TitleBox, Window
+from guizero import (
+    App,
+    Box,
+    Combo,
+    ListBox,
+    PushButton,
+    Text,
+    TextBox,
+    TitleBox,
+    Window,
+)
 import scipy
 import glob
 import subprocess
@@ -25,14 +35,18 @@ PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
 
 # Other constants
 OUTPUT_LOG_FILE = "output.txt"
-OUTPUT_COL0_TS = 'Start time (sec)'
-OUTPUT_COL1_LEN = 'Bout length (sec)'
-OUTPUT_COL2_MI_AVG = 'Motion Index (avg)'
-OUTPUT_COL3_DATA_AUC = 'AUC (dff)'
-OUTPUT_COL4_DATA_AVG = 'dff'
-OUTPUT_COLUMN_NAMES=[OUTPUT_COL0_TS, OUTPUT_COL1_LEN,
-                     OUTPUT_COL2_MI_AVG, OUTPUT_COL3_DATA_AUC,
-                     OUTPUT_COL4_DATA_AVG]
+OUTPUT_COL0_TS = "Start time (sec)"
+OUTPUT_COL1_LEN = "Bout length (sec)"
+OUTPUT_COL2_MI_AVG = "Motion Index (avg)"
+OUTPUT_COL3_DATA_AUC = "AUC (dff)"
+OUTPUT_COL4_DATA_AVG = "dff"
+OUTPUT_COLUMN_NAMES = [
+    OUTPUT_COL0_TS,
+    OUTPUT_COL1_LEN,
+    OUTPUT_COL2_MI_AVG,
+    OUTPUT_COL3_DATA_AUC,
+    OUTPUT_COL4_DATA_AVG,
+]
 # Number of decimal precision
 OUTPUT_VALUE_PRECISION = 5
 
@@ -52,54 +66,64 @@ result_success_list_box = None
 result_unsuccess_list_box = None
 output_dir = None
 
+
 # Read the values of the given 'key' from the HDF5 file
 # into an numpy array. If an 'event' is provided, it will
 # be appended to the filepath.
 def read_hdf5(event, filepath, key):
     if event:
-        event = event.replace("\\","_")
-        event = event.replace("/","_")
-        op = os.path.join(filepath, event + '.hdf5')
+        event = event.replace("\\", "_")
+        event = event.replace("/", "_")
+        op = os.path.join(filepath, event + ".hdf5")
     else:
         op = filepath
 
     if os.path.exists(op):
-        with h5py.File(op, 'r') as f:
+        with h5py.File(op, "r") as f:
             arr = np.asarray(f[key])
     else:
         common.logger.error(f"{op}.hdf5 file does not exist")
-        raise Exception('{}.hdf5 file does not exist'.op)
+        raise Exception("{}.hdf5 file does not exist".op)
 
     return arr
 
+
 def compute_avg(sum, cnt):
-    avg = round(sum/cnt, OUTPUT_VALUE_PRECISION)
+    avg = round(sum / cnt, OUTPUT_VALUE_PRECISION)
 
     return avg
 
-def main(input_dir: str,
-         parameter_obj: Parameters,
-         separate_not_file_for_each_param: bool):
+
+def main(
+    input_dir: str, parameter_obj: Parameters, separate_not_file_for_each_param: bool
+):
     global files_without_timeshift, result_success_list_box, output_dir
 
-    path = glob.glob(os.path.join(input_dir, 'dff_*'))
-    output_dir = common.get_output_dir(input_dir, '', False)
+    path = glob.glob(os.path.join(input_dir, "dff_*"))
+    output_dir = common.get_output_dir(input_dir, "", False)
     for i in range(len(path)):
-        basename = (os.path.basename(path[i])).split('.')[0]
-        name_1 = basename.split('_')[-1]
-        z_score = read_hdf5('', path[i], 'data')
+        basename = (os.path.basename(path[i])).split(".")[0]
+        name_1 = basename.split("_")[-1]
+        z_score = read_hdf5("", path[i], "data")
         if np.isnan(z_score).any():
-            common.logger.warning("%s file has NaN (not a number) values. Currently, unsupported", path[i])
+            common.logger.warning(
+                "%s file has NaN (not a number) values. Currently, unsupported", path[i]
+            )
             continue
 
-        ts = read_hdf5('timeCorrection_' + name_1, input_dir, 'timestampNew')
+        ts = read_hdf5("timeCorrection_" + name_1, input_dir, "timestampNew")
         if np.isnan(ts).any():
-            common.logger.warning("%s file has NaN (not a number) values. Currently, unsupported", ('timeCorrection_' + name_1))
+            common.logger.warning(
+                "%s file has NaN (not a number) values. Currently, unsupported",
+                ("timeCorrection_" + name_1),
+            )
             continue
 
-        csv_path = glob.glob(os.path.join(input_dir, '*.csv'))
+        csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
         for csv_file in csv_path:
-            timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(csv_file)
+            timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(
+                csv_file
+            )
             if timeshift_val:
                 common.logger.info("Using timeshift value of: %s", str(timeshift_val))
             else:
@@ -107,11 +131,14 @@ def main(input_dir: str,
                     timeshift_val = 0
                     common.logger.warning("\tNo timeshift value specified")
                 else:
-                    common.logger.warning("\tIncorrect timeshift value of zero specified")
+                    common.logger.warning(
+                        "\tIncorrect timeshift value of zero specified"
+                    )
                 files_without_timeshift.append(os.path.basename(csv_file))
 
-            success, binary_df = common.parse_input_file_into_df(csv_file,
-                                                    common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed)
+            success, binary_df = common.parse_input_file_into_df(
+                csv_file, common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed
+            )
             if not success:
                 common.logger.warning("Skipping CSV file (%s) as it is well formed")
                 if result_unsuccess_list_box is not None:
@@ -120,7 +147,7 @@ def main(input_dir: str,
 
             if result_success_list_box is not None:
                 result_success_list_box.append(os.path.basename(csv_file))
-            csv_basename = (os.path.basename(csv_file)).split('.')[0]
+            csv_basename = (os.path.basename(csv_file)).split(".")[0]
             # Create output folder specific for this csv file.
             this_output_folder = os.path.join(output_dir, csv_basename)
             common.logger.info("Output folder: %s", this_output_folder)
@@ -142,12 +169,9 @@ def main(input_dir: str,
                 generate_not_file = False
                 # Process the data and write out the results
                 common.logger.info("processing param: %s", param)
-                success, results = process(parameter_obj,
-                                           param,
-                                           binary_df,
-                                           timeshift_val,
-                                           z_score,
-                                           ts)
+                success, results = process(
+                    parameter_obj, param, binary_df, timeshift_val, z_score, ts
+                )
                 if not success:
                     continue
 
@@ -179,23 +203,41 @@ def main(input_dir: str,
                 if auc_0s_cnt > 0:
                     auc_0s_avg = compute_avg(auc_0s_sum, auc_0s_cnt)
                     df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_0s_summary.loc[len(df_0s_summary.index)] = [auc_0s_sum, auc_0s_avg]
-                    out_0_file = os.path.join(this_output_folder,
-                                            OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT)
-                    df_0s_summary.to_csv(out_0_file, mode='w', index=False, header=True)
-                    out_df_0s.to_csv(out_0_file, mode='a', index=False, header=True)
+                    df_0s_summary.loc[len(df_0s_summary.index)] = [
+                        auc_0s_sum,
+                        auc_0s_avg,
+                    ]
+                    out_0_file = os.path.join(
+                        this_output_folder,
+                        OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT,
+                    )
+                    df_0s_summary.to_csv(out_0_file, mode="w", index=False, header=True)
+                    out_df_0s.to_csv(out_0_file, mode="a", index=False, header=True)
                     print("0 df: ", out_df_0s)
                     print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg)
 
                 # 0's, outside the param
                 if auc_0s_cnt_not > 0 and generate_not_file:
                     auc_0s_avg_not = compute_avg(auc_0s_sum_not, auc_0s_cnt_not)
-                    df_0s_not_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_0s_not_summary.loc[len(df_0s_not_summary.index)] = [auc_0s_sum_not, auc_0s_avg_not]
-                    out_0_file = os.path.join(this_output_folder,
-                                            OUTPUT_ZEROS + csv_basename + OUTPUT_NOT + param_ext + common.CSV_EXT)
-                    df_0s_not_summary.to_csv(out_0_file, mode='w', index=False, header=True)
-                    out_df_0s_not.to_csv(out_0_file, mode='a', index=False, header=True)
+                    df_0s_not_summary = pd.DataFrame(
+                        columns=OUTPUT_SUMMARY_COLUMN_NAMES
+                    )
+                    df_0s_not_summary.loc[len(df_0s_not_summary.index)] = [
+                        auc_0s_sum_not,
+                        auc_0s_avg_not,
+                    ]
+                    out_0_file = os.path.join(
+                        this_output_folder,
+                        OUTPUT_ZEROS
+                        + csv_basename
+                        + OUTPUT_NOT
+                        + param_ext
+                        + common.CSV_EXT,
+                    )
+                    df_0s_not_summary.to_csv(
+                        out_0_file, mode="w", index=False, header=True
+                    )
+                    out_df_0s_not.to_csv(out_0_file, mode="a", index=False, header=True)
                     print("0 df [out]: ", out_df_0s_not)
                     print("0s [out] sum: ", auc_0s_sum_not, " avg: ", auc_0s_avg_not)
 
@@ -203,33 +245,53 @@ def main(input_dir: str,
                 if auc_1s_cnt > 0:
                     auc_1s_avg = compute_avg(auc_1s_sum, auc_1s_cnt)
                     df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_1s_summary.loc[len(df_1s_summary.index)] = [auc_1s_sum, auc_1s_avg]
-                    out_1_file = os.path.join(this_output_folder,
-                                                OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT)
-                    df_1s_summary.to_csv(out_1_file, mode='w', index=False, header=True)
-                    out_df_1s.to_csv(out_1_file, mode='a', index=False, header=True)
+                    df_1s_summary.loc[len(df_1s_summary.index)] = [
+                        auc_1s_sum,
+                        auc_1s_avg,
+                    ]
+                    out_1_file = os.path.join(
+                        this_output_folder,
+                        OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT,
+                    )
+                    df_1s_summary.to_csv(out_1_file, mode="w", index=False, header=True)
+                    out_df_1s.to_csv(out_1_file, mode="a", index=False, header=True)
                     print("1 df: ", out_df_1s)
                     print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg)
 
                 # 1's, outside the param
                 if auc_1s_cnt_not > 0 and generate_not_file:
                     auc_1s_avg_not = compute_avg(auc_1s_sum_not, auc_1s_cnt_not)
-                    df_1s_not_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_1s_not_summary.loc[len(df_1s_not_summary.index)] = [auc_1s_sum_not, auc_1s_avg_not]
-                    out_0_file = os.path.join(this_output_folder,
-                                            OUTPUT_ONES + csv_basename + OUTPUT_NOT + param_ext + common.CSV_EXT)
-                    df_1s_not_summary.to_csv(out_0_file, mode='w', index=False, header=True)
-                    out_df_1s_not.to_csv(out_0_file, mode='a', index=False, header=True)
+                    df_1s_not_summary = pd.DataFrame(
+                        columns=OUTPUT_SUMMARY_COLUMN_NAMES
+                    )
+                    df_1s_not_summary.loc[len(df_1s_not_summary.index)] = [
+                        auc_1s_sum_not,
+                        auc_1s_avg_not,
+                    ]
+                    out_0_file = os.path.join(
+                        this_output_folder,
+                        OUTPUT_ONES
+                        + csv_basename
+                        + OUTPUT_NOT
+                        + param_ext
+                        + common.CSV_EXT,
+                    )
+                    df_1s_not_summary.to_csv(
+                        out_0_file, mode="w", index=False, header=True
+                    )
+                    out_df_1s_not.to_csv(out_0_file, mode="a", index=False, header=True)
                     print("1 df [out]: ", out_df_1s_not)
                     print("1s [out] sum: ", auc_1s_sum_not, " avg: ", auc_1s_avg_not)
 
-def process(parameter_obj,
-            param_name: str,
-            binary_df: pd.DataFrame,
-            timeshift_val: float,
-            data: np.asarray,
-            ts: np.asarray) -> (bool, list):
 
+def process(
+    parameter_obj,
+    param_name: str,
+    binary_df: pd.DataFrame,
+    timeshift_val: float,
+    data: np.asarray,
+    ts: np.asarray,
+) -> (bool, list):
     """Process the parameter.
 
     Parameters
@@ -276,9 +338,11 @@ def process(parameter_obj,
 
     # Perform some basic checks on the data sets.
     if len(ts) != len(data):
-        common.logger.error("Timestamp series length(%d) does not match data series length(%d)",
-                            len(ts),
-                            len(data))
+        common.logger.error(
+            "Timestamp series length(%d) does not match data series length(%d)",
+            len(ts),
+            len(data),
+        )
         return False
 
     if not binary_df[common.INPUT_COL0_TS].is_monotonic:
@@ -332,20 +396,25 @@ def process(parameter_obj,
 
         # If there is a transition of the freeze value, compute the variables.
         # Note: The last row is also considered as the end of transition.
-        if (
-            index < row_count - 1 and
-            (cur_binary_value == binary_df.iloc[index + 1][common.INPUT_COL2_FREEZE])
+        if index < row_count - 1 and (
+            cur_binary_value == binary_df.iloc[index + 1][common.INPUT_COL2_FREEZE]
         ):
             continue
 
         ts_start_without_shift = binary_df.iloc[index_start][common.INPUT_COL0_TS]
-        ts_start = round(ts_start_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
+        ts_start = round(
+            ts_start_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
+        )
         ts_end_without_shift = binary_df.iloc[index_end][common.INPUT_COL0_TS]
-        ts_end = round(ts_end_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
+        ts_end = round(
+            ts_end_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
+        )
         if param_name is None:
             ts_split = parameter_obj.get_ts_series_for_combined_param(ts_start, ts_end)
         else:
-            ts_split = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
+            ts_split = parameter_obj.get_ts_series_for_timestamps(
+                param_name, ts_start, ts_end
+            )
         common.logger.debug("ts_start: %f, ts_end: %f", ts_start, ts_end)
         common.logger.debug("ts_split: %s", ts_split)
         for element in ts_split:
@@ -354,23 +423,35 @@ def process(parameter_obj,
             is_inside = element[2]
 
             binary_df_ts = binary_df[common.INPUT_COL0_TS]
-            ts_start_without_shift = round(ts_start - timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
+            ts_start_without_shift = round(
+                ts_start - timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
+            )
             index_start = np.argmax(binary_df_ts >= ts_start_without_shift)
-            ts_end_without_shift = round(ts_end - timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
+            ts_end_without_shift = round(
+                ts_end - timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
+            )
             index_end = np.argmax(binary_df_ts > ts_end_without_shift)
             if index_start == index_end:
-               index_end += 1
+                index_end += 1
             if index_end == 0:
                 index_end = len(binary_df_ts)
 
-            ts_start = round(binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val,
-                             Parameters.TIMESTAMP_ROUND_VALUE)
-            ts_end = round(binary_df.iloc[index_end - 1][common.INPUT_COL0_TS] + timeshift_val,
-                           Parameters.TIMESTAMP_ROUND_VALUE)
+            ts_start = round(
+                binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val,
+                Parameters.TIMESTAMP_ROUND_VALUE,
+            )
+            ts_end = round(
+                binary_df.iloc[index_end - 1][common.INPUT_COL0_TS] + timeshift_val,
+                Parameters.TIMESTAMP_ROUND_VALUE,
+            )
 
             ts_index_start_for_val = np.argmax(ts >= ts_start)
             if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
-                common.logger.debug("ts start is out of bounds. ts_start: %f, ts[last]: %f", ts_start, ts[len(ts) - 1])
+                common.logger.debug(
+                    "ts start is out of bounds. ts_start: %f, ts[last]: %f",
+                    ts_start,
+                    ts[len(ts) - 1],
+                )
                 break
             ts_index_end_for_val = np.argmax(ts > ts_end)
             # If there is only one element, then include it.
@@ -380,74 +461,98 @@ def process(parameter_obj,
                 ts_index_end_for_val = len(ts)
 
             bout_length = round(ts_end - ts_start, Parameters.TIMESTAMP_ROUND_VALUE)
-            motion_index_slice = binary_df.iloc[index_start : index_end][common.INPUT_COL1_MI]
+            motion_index_slice = binary_df.iloc[index_start:index_end][
+                common.INPUT_COL1_MI
+            ]
             sum_mi = sum(motion_index_slice)
             cnt_mi = len(motion_index_slice)
-            mi_avg = round(sum_mi/cnt_mi, OUTPUT_VALUE_PRECISION)
-            data_slice = data[ts_index_start_for_val : ts_index_end_for_val]
+            mi_avg = round(sum_mi / cnt_mi, OUTPUT_VALUE_PRECISION)
+            data_slice = data[ts_index_start_for_val:ts_index_end_for_val]
             sum_data = round(sum(data_slice), OUTPUT_VALUE_PRECISION)
             cnt_data = len(data_slice)
-            data_avg = round(sum_data/cnt_data, OUTPUT_VALUE_PRECISION)
+            data_avg = round(sum_data / cnt_data, OUTPUT_VALUE_PRECISION)
             if cnt_data == 0:
                 common.logger.debug("ts split with no elements:")
-                common.logger.debug("\tindex start: %d, index end: %d, length: %d",
-                                    index_start,
-                                    index_end,
-                                    index_end - index_start + 1)
-                common.logger.debug("\tts index start: %d, end: %d, length: %d",
-                                    ts_index_start_for_val,
-                                    ts_index_end_for_val,
-                                    ts_index_end_for_val - ts_index_start_for_val + 1)
+                common.logger.debug(
+                    "\tindex start: %d, index end: %d, length: %d",
+                    index_start,
+                    index_end,
+                    index_end - index_start + 1,
+                )
+                common.logger.debug(
+                    "\tts index start: %d, end: %d, length: %d",
+                    ts_index_start_for_val,
+                    ts_index_end_for_val,
+                    ts_index_end_for_val - ts_index_start_for_val + 1,
+                )
             elif cur_binary_value == 0:
                 if is_inside:
                     auc_0s_sum += sum_data
                     auc_0s_cnt += cnt_data
                     mi_0s_sum += sum_mi
                     mi_0s_cnt += cnt_mi
-                    out_df_0s.loc[len(out_df_0s.index)] = [ts_start,
-                                                        bout_length,
-                                                        mi_avg,
-                                                        sum_data,
-                                                        data_avg]
+                    out_df_0s.loc[len(out_df_0s.index)] = [
+                        ts_start,
+                        bout_length,
+                        mi_avg,
+                        sum_data,
+                        data_avg,
+                    ]
                 else:
                     auc_0s_sum_not += sum_data
                     auc_0s_cnt_not += cnt_data
                     mi_0s_sum_not += sum_mi
                     mi_0s_cnt_not += cnt_mi
-                    out_df_0s_not.loc[len(out_df_0s_not.index)] = [ts_start,
-                                                        bout_length,
-                                                        mi_avg,
-                                                        sum_data,
-                                                        data_avg]
+                    out_df_0s_not.loc[len(out_df_0s_not.index)] = [
+                        ts_start,
+                        bout_length,
+                        mi_avg,
+                        sum_data,
+                        data_avg,
+                    ]
             else:
                 if is_inside:
                     auc_1s_sum += sum_data
                     auc_1s_cnt += cnt_data
                     mi_1s_sum += sum_mi
                     mi_1s_cnt += cnt_mi
-                    out_df_1s.loc[len(out_df_1s.index)] = [ts_start,
-                                                        bout_length,
-                                                        mi_avg,
-                                                        sum_data,
-                                                        data_avg]
+                    out_df_1s.loc[len(out_df_1s.index)] = [
+                        ts_start,
+                        bout_length,
+                        mi_avg,
+                        sum_data,
+                        data_avg,
+                    ]
                 else:
                     auc_1s_sum_not += sum_data
                     auc_1s_cnt_not += cnt_data
                     mi_1s_sum_not += sum_mi
                     mi_1s_cnt_not += cnt_mi
-                    out_df_1s_not.loc[len(out_df_1s_not.index)] = [ts_start,
-                                                        bout_length,
-                                                        mi_avg,
-                                                        sum_data,
-                                                        data_avg]
+                    out_df_1s_not.loc[len(out_df_1s_not.index)] = [
+                        ts_start,
+                        bout_length,
+                        mi_avg,
+                        sum_data,
+                        data_avg,
+                    ]
 
         # Reset the index to indicate the start of a new dataset.
         index_start = -1
 
-    return True, [round(auc_0s_sum, OUTPUT_VALUE_PRECISION), auc_0s_cnt, out_df_0s,
-                  round(auc_0s_sum_not, OUTPUT_VALUE_PRECISION), auc_0s_cnt_not, out_df_0s_not,
-                  round(auc_1s_sum, OUTPUT_VALUE_PRECISION), auc_1s_cnt, out_df_1s,
-                  round(auc_1s_sum_not, OUTPUT_VALUE_PRECISION), auc_1s_cnt_not, out_df_1s_not]
+    return True, [
+        round(auc_0s_sum, OUTPUT_VALUE_PRECISION),
+        auc_0s_cnt,
+        out_df_0s,
+        round(auc_0s_sum_not, OUTPUT_VALUE_PRECISION),
+        auc_0s_cnt_not,
+        out_df_0s_not,
+        round(auc_1s_sum, OUTPUT_VALUE_PRECISION),
+        auc_1s_cnt,
+        out_df_1s,
+        round(auc_1s_sum_not, OUTPUT_VALUE_PRECISION),
+        auc_1s_cnt_not,
+        out_df_1s_not,
+    ]
 
 
 class loghandler(logging.StreamHandler):
@@ -500,6 +605,7 @@ def print_help():
     print("\tClose the output file prior to running.")
     sys.exit()
 
+
 """
 ------------------------------------------------------------
                 UI related stuff
@@ -507,6 +613,8 @@ def print_help():
 """
 
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
+
+
 def refresh_param_names_combo_box(parameter_obj):
     param_name_list = parameter_obj.get_param_name_list()
     param_names_combo_box.clear()
@@ -514,6 +622,7 @@ def refresh_param_names_combo_box(parameter_obj):
         param_names_combo_box.append(param_name)
 
     param_names_combo_box.show()
+
 
 def select_input_dir(parameter_obj):
     input_dir = common.select_input_dir(app)
@@ -524,37 +633,47 @@ def select_input_dir(parameter_obj):
 
     input_dir_text_box.value = os.path.basename(input_dir)
     input_dir_text_box.width = min(
-        len(input_dir_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH)
+        len(input_dir_text_box.value), INPUT_FOLDER_NAME_BOX_MAX_WIDTH
+    )
 
     # Reset all current values of the parameters and refresh the parameter
     # UI section with the reset values (this will ensure the UI will show
     # the default values even in cases when there are no parameters specified
     # in the input folder).
-    param_window_duration, param_start_timestamp_series = parameter_obj.get_default_parameter_values()
+    (
+        param_window_duration,
+        param_start_timestamp_series,
+    ) = parameter_obj.get_default_parameter_values()
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
     param_name_list = parameter_obj.get_param_name_list()
     refresh_param_names_combo_box(parameter_obj)
     if len(param_name_list):
-        param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(
-            parameter_obj.get_currently_selected_param())
+        (
+            param_window_duration,
+            param_start_timestamp_series,
+        ) = parameter_obj.get_param_values(parameter_obj.get_currently_selected_param())
         refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+
 
 def open_output_folder():
     global output_dir
 
     if output_dir is None:
         app.warn(
-            "Uh oh!", "Output folder dose not exist! Select input folder and process first.")
+            "Uh oh!",
+            "Output folder dose not exist! Select input folder and process first.",
+        )
         return
 
     # Normalize the path to deal with backslash/frontslash
     norm_path = os.path.normpath(output_dir)
     if sys.platform == "win32":
-        subprocess.Popen(f'explorer /open,{norm_path}')
+        subprocess.Popen(f"explorer /open,{norm_path}")
     elif sys.platform == "darwin":
         subprocess.Popen(["open", norm_path])
     else:
         subprocess.Popen(["xdg-open", norm_path])
+
 
 def reset_result_box():
     result_success_list_box.clear()
@@ -563,24 +682,30 @@ def reset_result_box():
     files_without_timeshift.clear()
     r_log_box.clear()
 
+
 def ui_process_cmd(parameter_obj):
     if not common.get_input_dir():
         app.warn(
-            "Uh oh!", "No input folder specified. Please select an input folder and run again!")
+            "Uh oh!",
+            "No input folder specified. Please select an input folder and run again!",
+        )
         return
 
     reset_result_box()
     main(common.get_input_dir(), parameter_obj, False)
     rwin.show()
 
+
 def open_params_file(parameter_obj):
-    param_file = parameter_obj.get_param_file_from_name(parameter_obj.get_currently_selected_param())
+    param_file = parameter_obj.get_param_file_from_name(
+        parameter_obj.get_currently_selected_param()
+    )
     if not os.path.isfile(param_file):
-        app.warn(
-            "Uh oh!", "Parameters file " + param_file + " is not a file!")
+        app.warn("Uh oh!", "Parameters file " + param_file + " is not a file!")
         return
 
     common.open_file(param_file)
+
 
 def parse_cur_param_file(parameter_obj):
     """
@@ -594,23 +719,30 @@ def parse_cur_param_file(parameter_obj):
     try:
         parameter_obj.parse(common.get_input_dir())
         parameter_obj.set_currently_selected_param(currently_selected_param)
-        param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(currently_selected_param)
+        (
+            param_window_duration,
+            param_start_timestamp_series,
+        ) = parameter_obj.get_param_values(currently_selected_param)
     except ValueError as e:
         common.logger.error(e)
 
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
+
 def set_time_window_duration_box_value(param_window_duration):
     time_window_duration_box.value = param_window_duration
+
 
 def refresh_ts_list_box(ts_series):
     ts_series_list_box.clear()
     for val in ts_series:
         ts_series_list_box.append(val)
 
+
 def refresh_param_values_ui(param_window_duration, param_start_timestamp_series):
     set_time_window_duration_box_value(param_window_duration)
     refresh_ts_list_box(param_start_timestamp_series)
+
 
 def select_param(selected_param_value):
     """
@@ -628,7 +760,10 @@ def select_param(selected_param_value):
     except:
         common.logger.error("Parameter name(%s) not found in list; unexpected")
 
-    param_window_duration, param_start_timestamp_series = parameter_obj.get_param_values(cur_selected_param)
+    (
+        param_window_duration,
+        param_start_timestamp_series,
+    ) = parameter_obj.get_param_values(cur_selected_param)
     refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
 
 
@@ -636,14 +771,21 @@ def line():
     """
     Line for the main app
     """
-    Text(app, "------------------------------------------------------------------------------------------------------")
+    Text(
+        app,
+        "------------------------------------------------------------------------------------------------------",
+    )
 
 
 def line_r(rwin):
     """
     Line for results window
     """
-    Text(rwin, "-------------------------------------------------------------------------------------")
+    Text(
+        rwin,
+        "-------------------------------------------------------------------------------------",
+    )
+
 
 if __name__ == "__main__":
     """
@@ -651,8 +793,7 @@ if __name__ == "__main__":
     """
 
     progress = loghandler()
-    logging.basicConfig(filename=OUTPUT_LOG_FILE,
-                        level=logging.INFO, format='')
+    logging.basicConfig(filename=OUTPUT_LOG_FILE, level=logging.INFO, format="")
     common.logger = logging.getLogger(__name__)
     common.logger.addHandler(progress)
     argv = sys.argv[1:]
@@ -687,18 +828,25 @@ if __name__ == "__main__":
     app = App("", height=650, width=900)
 
     # App name box
-    title = Text(app, text="Photometry Splitting App",
-                 size=16, font="Arial Bold", width=30)
+    title = Text(
+        app, text="Photometry Splitting App", size=16, font="Arial Bold", width=30
+    )
     title.bg = "white"
     line()
 
     # Select input folder button
-    Text(app, "Select Input Folder --> Check Parameters --> Process",
-         font="Verdana bold")
+    Text(
+        app, "Select Input Folder --> Check Parameters --> Process", font="Verdana bold"
+    )
 
     line()
     input_dir_button = PushButton(
-        app, command=select_input_dir, args=[parameter_obj], text="Input Folder", width=26)
+        app,
+        command=select_input_dir,
+        args=[parameter_obj],
+        text="Input Folder",
+        width=26,
+    )
     input_dir_button.tk.config(font=("Verdana bold", 14))
     # Box to display the input folder
     line()
@@ -714,12 +862,19 @@ if __name__ == "__main__":
     param_box = Box(app, layout="grid")
     cnt = 0
     param_title_box = TitleBox(param_box, text="", grid=[0, cnt])
-    param_title = Text(param_title_box, text="Parameters",
-                       size=10, font="Arial Bold", align="left", color="orange")
+    param_title = Text(
+        param_title_box,
+        text="Parameters",
+        size=10,
+        font="Arial Bold",
+        align="left",
+        color="orange",
+    )
 
     # Parameter names combo box (grid high to keep it on the right side)
     param_names_combo_box = Combo(
-        param_box, options=[], grid=[5, cnt], command=select_param)
+        param_box, options=[], grid=[5, cnt], command=select_param
+    )
     param_names_combo_box.clear()
     param_names_combo_box.text_color = "orange"
     param_names_combo_box.font = "Arial Bold"
@@ -728,49 +883,70 @@ if __name__ == "__main__":
 
     # Boxes related to showing parameters
     time_window_duration_label_box = Text(
-        param_box, text=PARAM_UI_TIME_WINDOW_DURATION_TEXT, grid=[0, cnt], align="left")
-    time_window_duration_box = TextBox(
-        param_box, text="", grid=[1, cnt], align="left")
+        param_box, text=PARAM_UI_TIME_WINDOW_DURATION_TEXT, grid=[0, cnt], align="left"
+    )
+    time_window_duration_box = TextBox(param_box, text="", grid=[1, cnt], align="left")
     # Non editable
     time_window_duration_box.disable()
     cnt += 1
 
-    ts_series_list_label_box = Text(param_box, text=PARAM_UI_TIME_WINDOW_START_TIMES,
-                                    grid=[0, cnt], align="left")
+    ts_series_list_label_box = Text(
+        param_box, text=PARAM_UI_TIME_WINDOW_START_TIMES, grid=[0, cnt], align="left"
+    )
     ts_series_list_box = ListBox(
-        param_box, pd.Series(dtype=np.float64), scrollbar=True, grid=[1, cnt],
-        align="left", width=80, height=125)
+        param_box,
+        pd.Series(dtype=np.float64),
+        scrollbar=True,
+        grid=[1, cnt],
+        align="left",
+        width=80,
+        height=125,
+    )
     cnt += 1
 
     # Open & update parameters file button
     center_box = Box(app, layout="grid")
-    open_params_button = PushButton(center_box, command=open_params_file, args=[parameter_obj],
-                                    text="Open parameters file", grid=[0, 1], width=17, align="left")
+    open_params_button = PushButton(
+        center_box,
+        command=open_params_file,
+        args=[parameter_obj],
+        text="Open parameters file",
+        grid=[0, 1],
+        width=17,
+        align="left",
+    )
     open_params_button.tk.config(font=("Verdana bold", 10))
-    update_params_button = PushButton(center_box, text="Refresh", command=parse_cur_param_file,
-                                       args=[parameter_obj], grid=[1, 1], width=17, align="left")
+    update_params_button = PushButton(
+        center_box,
+        text="Refresh",
+        command=parse_cur_param_file,
+        args=[parameter_obj],
+        grid=[1, 1],
+        width=17,
+        align="left",
+    )
     update_params_button.tk.config(font=("Verdana bold", 10))
     line()
 
     # Process input button
-    process_button = PushButton(app, text="Process", command=ui_process_cmd,
-                                args=[parameter_obj], width=26)
+    process_button = PushButton(
+        app, text="Process", command=ui_process_cmd, args=[parameter_obj], width=26
+    )
     process_button.tk.config(font=("Verdana bold", 14))
     line()
 
     # Browse output folder button
     browse_output_folder_button = PushButton(
-        app, command=open_output_folder, text="Browse output folder", width=20)
+        app, command=open_output_folder, text="Browse output folder", width=20
+    )
     browse_output_folder_button.tk.config(font=("Verdana bold", 10))
     line()
 
     # New Result window
-    rwin = Window(app, title="Result Window",
-                  visible=False, height=700, width=800)
+    rwin = Window(app, title="Result Window", visible=False, height=700, width=800)
 
     # Title box
-    rwin_title = Text(rwin, text="Results",
-                      size=16, font="Arial Bold", width=25)
+    rwin_title = Text(rwin, text="Results", size=16, font="Arial Bold", width=25)
     rwin_title.bg = "white"
     line_r(rwin)
     result_text_box = Text(rwin, text="")
@@ -779,26 +955,23 @@ if __name__ == "__main__":
     # Grid to hold the various lists
     rlist_box = Box(rwin, layout="grid")
     cnt = 0
-    rwin_success_title = Text(
-        rlist_box, text="Successful files:", grid=[0, cnt])
-    rwin_unsuccess_title = Text(
-        rlist_box, text="Unsuccessful files:", grid=[5, cnt])
-    rwin_without_shift = Text(
-        rlist_box, text="Files without shift:", grid=[10, cnt])
+    rwin_success_title = Text(rlist_box, text="Successful files:", grid=[0, cnt])
+    rwin_unsuccess_title = Text(rlist_box, text="Unsuccessful files:", grid=[5, cnt])
+    rwin_without_shift = Text(rlist_box, text="Files without shift:", grid=[10, cnt])
     cnt += 1
-    result_success_list_box = ListBox(
-        rlist_box, [], scrollbar=True, grid=[0, cnt])
-    result_unsuccess_list_box = ListBox(
-        rlist_box, [], scrollbar=True, grid=[5, cnt])
+    result_success_list_box = ListBox(rlist_box, [], scrollbar=True, grid=[0, cnt])
+    result_unsuccess_list_box = ListBox(rlist_box, [], scrollbar=True, grid=[5, cnt])
     result_withoutshift_list_box = ListBox(
-        rlist_box, [], scrollbar=True, grid=[10, cnt])
+        rlist_box, [], scrollbar=True, grid=[10, cnt]
+    )
     cnt += 1
     line_r(rwin)
 
     # Details log message box
     r_log_title_box = Text(rwin, text="Detailed log messages:")
-    r_log_box = TextBox(rwin, text="", height=200, width=500,
-                        multiline=True, scrollbar=True)
+    r_log_box = TextBox(
+        rwin, text="", height=200, width=500, multiline=True, scrollbar=True
+    )
     # Non editable
     r_log_box.disable()
 

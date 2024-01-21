@@ -27,6 +27,7 @@ CSV_EXT = ".csv"
 logger = None
 input_dir = ""
 
+
 def parse_input_file_into_df(input_file, skip_num_initial_rows):
     """
     Parse the input file
@@ -35,8 +36,7 @@ def parse_input_file_into_df(input_file, skip_num_initial_rows):
     dataframe - Parsed dataframe
     """
     in_col_names = [INPUT_COL0_TS, INPUT_COL1_MI, INPUT_COL2_FREEZE]
-    df = pd.read_csv(input_file, names=in_col_names,
-                     skiprows=skip_num_initial_rows)
+    df = pd.read_csv(input_file, names=in_col_names, skiprows=skip_num_initial_rows)
 
     # Do some basic format checking. All input fields are expected
     # to be numeric in nature.
@@ -60,32 +60,39 @@ def parse_input_file_into_df(input_file, skip_num_initial_rows):
     return True, df
 
 
-
 def get_timeshift_from_input_file(input_file):
     global logger
 
     timeshift_val = None
     num_rows_processed = 0
-    with open(input_file, 'r') as read_obj:
+    with open(input_file, "r") as read_obj:
         csv_reader = reader(read_obj)
         row1 = next(csv_reader)
-        if row1 and len(row1) >= 2 and (row1[0] == TIMESHIFT_HEADER or row1[0] == TIMESHIFT_HEADER_ALT):
+        if (
+            row1
+            and len(row1) >= 2
+            and (row1[0] == TIMESHIFT_HEADER or row1[0] == TIMESHIFT_HEADER_ALT)
+        ):
             num_rows_processed += 1
             try:
                 timeshift_val = float(row1[1])
             except ValueError:
                 logger.error(
-                    "Timeshift value (%s) is not numerical, ignoring it!", row1[1])
+                    "Timeshift value (%s) is not numerical, ignoring it!", row1[1]
+                )
 
     return timeshift_val, num_rows_processed
 
+
 def get_input_dir():
     return input_dir
+
 
 def set_input_dir(dir):
     global input_dir
 
     input_dir = dir
+
 
 def select_input_dir(app):
     global input_dir
@@ -101,6 +108,7 @@ def select_input_dir(app):
     input_dir = os.path.normpath(input_dir_temp)
     return input_dir
 
+
 # Returns an output folder and create the dir, if needed.
 # If an output dir is specified, use it.
 # Else, output folder is '<parent of input file or folder>\output', create it
@@ -112,12 +120,12 @@ def get_output_dir(input_dir, output_dir, separate_files: bool):
     if separate_files:
         output_folder = os.path.join(output_folder, base_name)
     else:
-        output_folder = os.path.join(
-            output_folder, base_name + OUTPUT_DIR_NAME)
+        output_folder = os.path.join(output_folder, base_name + OUTPUT_DIR_NAME)
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
 
     return output_folder
+
 
 def open_file(filename):
     if sys.platform == "win32":

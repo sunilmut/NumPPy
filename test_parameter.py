@@ -17,25 +17,22 @@ from parameter import Parameters
 ------------------------------------------------------------
 """
 param1 = {
-    Parameters.PARAM_TIME_WINDOW_START_LIST:    [100, 200, 300, 400, 500],
-    Parameters.PARAM_TIME_WINDOW_DURATION:      [30, np.nan, np.nan, np.nan, np.nan]
+    Parameters.PARAM_TIME_WINDOW_START_LIST: [100, 200, 300, 400, 500],
+    Parameters.PARAM_TIME_WINDOW_DURATION: [30, np.nan, np.nan, np.nan, np.nan],
 }
 
 param2 = {
-    Parameters.PARAM_TIME_WINDOW_START_LIST:    [1.0, 2, 3, 4.0, 5],
-    Parameters.PARAM_TIME_WINDOW_DURATION:      [30, np.nan, np.nan, np.nan, np.nan]
+    Parameters.PARAM_TIME_WINDOW_START_LIST: [1.0, 2, 3, 4.0, 5],
+    Parameters.PARAM_TIME_WINDOW_DURATION: [30, np.nan, np.nan, np.nan, np.nan],
 }
 
-min_time_duration_validation_set = [
-    [5, 10],
-    [1.0, 2],
-    [20.0, 30.0],
-    [0, 0]
-]
+min_time_duration_validation_set = [[5, 10], [1.0, 2], [20.0, 30.0], [0, 0]]
+
 
 class ParameterTest(unittest.TestCase):
     TEST_DATA_DIR = "test_data"
     TEST_TRASH_DIR = "trash"
+
     def setUp(self):
         self.param = Parameters()
 
@@ -58,23 +55,30 @@ class ParameterTest(unittest.TestCase):
 
         # Min time duration values should be set to default valuse without any
         # min time duration parameter present.
-        (param_file_exists,
-         min_time_duration_before,
-         min_time_duration_after) = expected_param.get_min_time_duration_values()
+        (
+            param_file_exists,
+            min_time_duration_before,
+            min_time_duration_after,
+        ) = expected_param.get_min_time_duration_values()
         self.assertEqual(param_file_exists == False, True)
-        self.assertEqual(min_time_duration_before == Parameters.MIN_TIME_DURATION_BEFORE_DEFAULT,
-                         True)
-        self.assertEqual(min_time_duration_after == Parameters.MIN_TIME_DURATION_AFTER_DEFAULT,
-                         True)
+        self.assertEqual(
+            min_time_duration_before == Parameters.MIN_TIME_DURATION_BEFORE_DEFAULT,
+            True,
+        )
+        self.assertEqual(
+            min_time_duration_after == Parameters.MIN_TIME_DURATION_AFTER_DEFAULT, True
+        )
 
         # Set some min time duration values, parse and make sure they match
         for row in min_time_duration_validation_set:
             validate_param = Parameters()
             expected_param.set_min_time_duration_values(row[0], row[1])
             validate_param.parse(input_dir)
-            (param_file_exists,
-            min_time_duration_before,
-            min_time_duration_after) = expected_param.get_min_time_duration_values()
+            (
+                param_file_exists,
+                min_time_duration_before,
+                min_time_duration_after,
+            ) = expected_param.get_min_time_duration_values()
             self.assertEqual(param_file_exists == True, True)
             self.assertEqual(min_time_duration_before == row[0], True)
             self.assertEqual(min_time_duration_after == row[1], True)
@@ -131,20 +135,30 @@ class ParameterTest(unittest.TestCase):
 
     def test_get_ts_series_for_timestamps(self):
         param_val = {
-            Parameters.PARAM_TIME_WINDOW_START_LIST:    [10, 20, 30],
-            Parameters.PARAM_TIME_WINDOW_DURATION:      [5, np.nan, np.nan]
+            Parameters.PARAM_TIME_WINDOW_START_LIST: [10, 20, 30],
+            Parameters.PARAM_TIME_WINDOW_DURATION: [5, np.nan, np.nan],
         }
         ts1 = [5, 8]
         expected_out1 = [[5, 8, False]]
 
         ts2 = [5, 37]
-        expected_out2 = [[5, 9.999999, False], [10, 15, True], [15.000001, 19.999999, False],
-                         [20, 25, True], [25.000001, 29.999999, False], [30, 35, True],
-                         [35.000001, 37, False]]
+        expected_out2 = [
+            [5, 9.999999, False],
+            [10, 15, True],
+            [15.000001, 19.999999, False],
+            [20, 25, True],
+            [25.000001, 29.999999, False],
+            [30, 35, True],
+            [35.000001, 37, False],
+        ]
 
         ts3 = [5, 23]
-        expected_out3 = [[5, 9.999999, False], [10, 15, True], [15.000001, 19.999999, False],
-                        [20, 23, True]]
+        expected_out3 = [
+            [5, 9.999999, False],
+            [10, 15, True],
+            [15.000001, 19.999999, False],
+            [20, 23, True],
+        ]
 
         ts4 = [5, 13]
         expected_out4 = [[5, 9.999999, False], [10, 13, True]]
@@ -167,40 +181,58 @@ class ParameterTest(unittest.TestCase):
         ts10 = [25, 30]
         expected_out10 = [[25, 29.999999, False], [30, 30, True]]
 
-        expected_ts = [[ts1, expected_out1], [ts2, expected_out2],
-                       [ts3, expected_out3], [ts4, expected_out4],
-                       [ts5, expected_out5], [ts6, expected_out6],
-                       [ts7, expected_out7], [ts8, expected_out8],
-                       [ts9, expected_out9], [ts10, expected_out10]]
+        expected_ts = [
+            [ts1, expected_out1],
+            [ts2, expected_out2],
+            [ts3, expected_out3],
+            [ts4, expected_out4],
+            [ts5, expected_out5],
+            [ts6, expected_out6],
+            [ts7, expected_out7],
+            [ts8, expected_out8],
+            [ts9, expected_out9],
+            [ts10, expected_out10],
+        ]
         param = Parameters()
         PARAM_NAME = "param"
         df = pd.DataFrame(param_val)
-        #print(param_val)
+        # print(param_val)
         for val in expected_ts:
-            #print("timestamp duration: ", val[0])
+            # print("timestamp duration: ", val[0])
             input_dir = self.reset()
             param._set_param_dir(input_dir)
             param.set_param_value(PARAM_NAME, df)
-            ts_split = param.get_ts_series_for_timestamps(PARAM_NAME, val[0][0], val[0][1])
-            print("Timestamp splits: ", ts_split, "\nval[1]: ", val[1])
+            ts_split = param.get_ts_series_for_timestamps(
+                PARAM_NAME, val[0][0], val[0][1]
+            )
+            # print("Timestamp splits: ", ts_split, "\nval[1]: ", val[1])
             self.assertEqual(ts_split == val[1], True)
 
     def test_get_combined_params_ts_series(self):
         param_val_1 = {
-            Parameters.PARAM_TIME_WINDOW_START_LIST:    [10, 20, 30, 40],
-            Parameters.PARAM_TIME_WINDOW_DURATION:      [5, np.nan, np.nan, np.nan]
+            Parameters.PARAM_TIME_WINDOW_START_LIST: [10, 20, 30, 40],
+            Parameters.PARAM_TIME_WINDOW_DURATION: [5, np.nan, np.nan, np.nan],
         }
         PARAM_NAME_1 = "param_1"
 
         param_val_2 = {
-            Parameters.PARAM_TIME_WINDOW_START_LIST:    [17, 37],
-            Parameters.PARAM_TIME_WINDOW_DURATION:      [15, np.nan]
+            Parameters.PARAM_TIME_WINDOW_START_LIST: [17, 37],
+            Parameters.PARAM_TIME_WINDOW_DURATION: [15, np.nan],
         }
         PARAM_NAME_2 = "param_2"
 
         param_val_3 = {
-            Parameters.PARAM_TIME_WINDOW_START_LIST:    [1, 15, 17, 32, 35, 36, 52, 55],
-            Parameters.PARAM_TIME_WINDOW_DURATION:      [1, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
+            Parameters.PARAM_TIME_WINDOW_START_LIST: [1, 15, 17, 32, 35, 36, 52, 55],
+            Parameters.PARAM_TIME_WINDOW_DURATION: [
+                1,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+            ],
         }
         PARAM_NAME_3 = "param_3"
 
@@ -211,20 +243,36 @@ class ParameterTest(unittest.TestCase):
         param.set_param_value(PARAM_NAME_1, df)
         df = pd.DataFrame(param_val_2)
         param.set_param_value(PARAM_NAME_2, df)
-        expected_df = pd.DataFrame({Parameters.PARAM_TIME_WINDOW_START_LIST: [10.0, 17.0, 37.0],
-                                    Parameters.PARAM_TIME_WINDOW_END_LIST:   [15.0, 35.0, 52.0]})
+        expected_df = pd.DataFrame(
+            {
+                Parameters.PARAM_TIME_WINDOW_START_LIST: [10.0, 17.0, 37.0],
+                Parameters.PARAM_TIME_WINDOW_END_LIST: [15.0, 35.0, 52.0],
+            }
+        )
         combinded_df = param.get_combined_params_ts_series()
         self.assertTrue(combinded_df.equals(expected_df))
         df = pd.DataFrame(param_val_3)
         param.set_param_value(PARAM_NAME_3, df)
-        expected_df = pd.DataFrame({Parameters.PARAM_TIME_WINDOW_START_LIST: [1.0, 10.0, 17.0, 55.0],
-                                    Parameters.PARAM_TIME_WINDOW_END_LIST:   [2.0, 16.0, 53.0, 56.0]})
+        expected_df = pd.DataFrame(
+            {
+                Parameters.PARAM_TIME_WINDOW_START_LIST: [1.0, 10.0, 17.0, 55.0],
+                Parameters.PARAM_TIME_WINDOW_END_LIST: [2.0, 16.0, 53.0, 56.0],
+            }
+        )
         combinded_df = param.get_combined_params_ts_series()
         self.assertTrue(combinded_df.equals(expected_df))
         ts_split = param.get_ts_series_for_combined_param(0, 60)
-        expected_split = [[0, 0.999999, False], [1.0, 2.0, True], [2.000001, 9.999999, False],
-                         [10.0, 16.0, True], [16.000001, 16.999999, False], [17.0, 53.0, True],
-                         [53.000001, 54.999999, False], [55.0, 56.0, True], [56.000001, 60, False]]
+        expected_split = [
+            [0, 0.999999, False],
+            [1.0, 2.0, True],
+            [2.000001, 9.999999, False],
+            [10.0, 16.0, True],
+            [16.000001, 16.999999, False],
+            [17.0, 53.0, True],
+            [53.000001, 54.999999, False],
+            [55.0, 56.0, True],
+            [56.000001, 60, False],
+        ]
         self.assertEqual(ts_split == expected_split, True)
 
     @staticmethod

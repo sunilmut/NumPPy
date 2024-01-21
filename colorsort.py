@@ -15,7 +15,8 @@ from guizero import App, CheckBox, PushButton, Text, TextBox
 import matplotlib
 import openpyxl
 from enum import Enum
-#from openpyxl import styles
+
+# from openpyxl import styles
 import subprocess
 
 # constants
@@ -65,7 +66,7 @@ depending on the object type.
 
 
 class Type(Enum):
-    XLRD = 1,
+    XLRD = (1,)
     OPENPYXL = 2
 
 
@@ -108,15 +109,15 @@ def hex_from_bgx(wb, bgx):
             hx = matplotlib.colors.to_hex((r / 255, g / 255, b / 255))
             return hx
         case Type.OPENPYXL:
-            #hx = hex(bgx)
-            #(r, g, b) = tuple(int(hx[i:i+2], 16) for i in (0, 2, 4))
-            #hx = matplotlib.colors.to_hex((r / 255, g / 255, b / 255))
-            #Colors = styles.colors.COLOR_INDEX
-            #result = str(Colors[hx])
+            # hx = hex(bgx)
+            # (r, g, b) = tuple(int(hx[i:i+2], 16) for i in (0, 2, 4))
+            # hx = matplotlib.colors.to_hex((r / 255, g / 255, b / 255))
+            # Colors = styles.colors.COLOR_INDEX
+            # result = str(Colors[hx])
             # result = "#"+result[2:]
             # TODO: Haven't yet figured out how to convert color index
             #       to hex color. Just return 'white' for now.
-            return '#FFFFFF'
+            return "#FFFFFF"
 
 
 def sheet_cols_rows(sheet):
@@ -138,13 +139,14 @@ def sheet_cell_details(sheet, wb, r, c):
             xfx = sheet.cell_xf_index(r, c)
             xf = wb.xf_list[xfx]
             bgx = xf.background.pattern_colour_index
-            empty_or_ws = ((col_type == xlrd.XL_CELL_EMPTY)
-                           or (cell_obj == '') or bgx == 64)
+            empty_or_ws = (
+                (col_type == xlrd.XL_CELL_EMPTY) or (cell_obj == "") or bgx == 64
+            )
             return empty_or_ws, bgx, cell_obj.value
         case Type.OPENPYXL:
             cell = sheet.cell(r + 1, c + 1)
             bgx = int(str(cell.fill.start_color.index), base=16)
-            empty_or_ws = (bgx == 0)
+            empty_or_ws = bgx == 0
             return empty_or_ws, bgx, cell.value
 
 
@@ -168,7 +170,7 @@ def parse_input_workbook(in_wb, sheet_num, break_on_white):
     global input_dic_parsed, cur_column_per_color
 
     sheet, name = sheet_by_index(in_wb, sheet_num)
-    logging.info('Processing sheet: %s' % name)
+    logging.info("Processing sheet: %s" % name)
     # Get the total number of rows and columns in this sheet
     rows, cols = sheet_cols_rows(sheet)
     logging.debug("Max Rows: %d, cols: %d", rows, cols)
@@ -179,15 +181,13 @@ def parse_input_workbook(in_wb, sheet_num, break_on_white):
         white_space_encountered = False
         for row in range(0, rows):
             # Get cell details of [row, col]
-            empty_or_ws, bgx, value = sheet_cell_details(
-                sheet, in_wb, row, col)
+            empty_or_ws, bgx, value = sheet_cell_details(sheet, in_wb, row, col)
             if empty_or_ws:
-                logging.debug('[%d,%d] empty cell' % (row + 1, col + 1))
+                logging.debug("[%d,%d] empty cell" % (row + 1, col + 1))
                 white_space_encountered = True
                 continue  # skip empty cells
             if break_on_white and white_space_encountered and last_non_white_bgx != -1:
-                logging.debug('breaking on white for color: %d' %
-                              (last_non_white_bgx))
+                logging.debug("breaking on white for color: %d" % (last_non_white_bgx))
                 cur_column_per_color[last_non_white_bgx] += 1
             last_non_white_bgx = bgx
             white_space_encountered = False
@@ -198,7 +198,7 @@ def parse_input_workbook(in_wb, sheet_num, break_on_white):
                 cur_column_per_color[bgx] = -1
             column = cur_column_per_color[bgx]
             column += 1
-            logging.debug('[%d ,%d] bgx: %d' % (row + 1, col + 1, bgx))
+            logging.debug("[%d ,%d] bgx: %d" % (row + 1, col + 1, bgx))
             input_dic_parsed[sheet_num][bgx][column].append(value)
         # logging.debug('colors in this col %s', color_seen_in_this_col)
         # for all the colors that were there in this column, increment
@@ -207,7 +207,7 @@ def parse_input_workbook(in_wb, sheet_num, break_on_white):
         for colors in color_seen_in_this_col:
             cur_column_per_color[colors] += 1
         logging.debug("current column per color %s" % (cur_column_per_color))
-    logging.debug('parsed dict %s' % (input_dic_parsed))
+    logging.debug("parsed dict %s" % (input_dic_parsed))
 
 
 def generate_output(out_wb, in_wb):
@@ -217,17 +217,17 @@ def generate_output(out_wb, in_wb):
     cell_format = out_wb.add_format()
     for sheet_num in input_dic_parsed:
         for color in list(input_dic_parsed[sheet_num]):
-            logging.debug('color %s, sheet_num: %d', color, sheet_num)
+            logging.debug("color %s, sheet_num: %d", color, sheet_num)
             if color not in cur_column_per_color.keys():
                 cur_column_per_color[color] = 0
             # print 'Color code: %s, col is %s' % (color, col)
             for column in input_dic_parsed[sheet_num][color]:
                 row = 0
                 for value in input_dic_parsed[sheet_num][color][column]:
-                    logging.debug('column %s, value: %s' % (column, value))
+                    logging.debug("column %s, value: %s" % (column, value))
                     sheet_name = "Sheet" + str(color_to_sheet_num_map[color])
                     sheet = out_wb.get_worksheet_by_name(sheet_name)
-                    if (row == 0):
+                    if row == 0:
                         # first entry is the input sheet name
                         name = sheet_by_index(in_wb, sheet_num)[1]
                         sheet.write(row, column, name, cell_format)
@@ -237,13 +237,15 @@ def generate_output(out_wb, in_wb):
 
 
 def write_output_file(out_wb):
-    while (True):
+    while True:
         try:
             out_wb.close()
             break
         except xlsxwriter.exceptions.FileCreateError:
             s_continue = app.yesno(
-                "Permssion Denied", "Output file is open in Excel and cannot be edited. Please close the file in Excel.\nRetry after closing?\nClick yes to retry or no to abort operation")
+                "Permssion Denied",
+                "Output file is open in Excel and cannot be edited. Please close the file in Excel.\nRetry after closing?\nClick yes to retry or no to abort operation",
+            )
 
             if s_continue != True:
                 return False
@@ -253,7 +255,7 @@ def write_output_file(out_wb):
 
 def bg_to_hex(rgb):
     (r, g, b) = rgb
-    return ('#{:X}{:X}{:X}').format(r, g, b)
+    return ("#{:X}{:X}{:X}").format(r, g, b)
 
 
 def sort(input_file, output_file, break_on_ws):
@@ -262,8 +264,9 @@ def sort(input_file, output_file, break_on_ws):
     input_dic_parsed.clear()
     cur_column_per_color.clear()
 
-    logger.info("Processing input file: %s, break on whitespace: %d",
-                input_file, break_on_ws)
+    logger.info(
+        "Processing input file: %s, break on whitespace: %d", input_file, break_on_ws
+    )
 
     color_to_sheet_num_map.clear()
     ext = os.path.splitext(os.path.basename(input_file))[1]
@@ -272,15 +275,14 @@ def sort(input_file, output_file, break_on_ws):
     elif ext == ".xlsx":
         in_wb = openpyxl.load_workbook(input_file)
     else:
-        logger.error(
-            "Unsupported extension (%s). Only .xls or xlsx supported.", ext)
+        logger.error("Unsupported extension (%s). Only .xls or xlsx supported.", ext)
         return False
 
     for sheet_num in range(0, num_sheets(in_wb)):
         parse_input_workbook(in_wb, sheet_num, break_on_ws)
 
     out_wb = xlsxwriter.Workbook(output_file)
-    logging.info('Total distinct sheets = %s', len(input_dic_parsed))
+    logging.info("Total distinct sheets = %s", len(input_dic_parsed))
     color_sheet_map_count = 1
     for sheet_num in input_dic_parsed:
         for color in input_dic_parsed[sheet_num]:
@@ -292,7 +294,7 @@ def sort(input_file, output_file, break_on_ws):
                 color_sheet_map_count += 1
 
     generate_output(out_wb, in_wb)
-    logging.info('Output file written: %s' % output_file)
+    logging.info("Output file written: %s" % output_file)
     return write_output_file(out_wb)
 
 
@@ -304,7 +306,10 @@ def sort(input_file, output_file, break_on_ws):
 
 
 def line():
-    Text(app, "--------------------------------------------------------------------------")
+    Text(
+        app,
+        "--------------------------------------------------------------------------",
+    )
 
 
 def select_input_file():
@@ -314,18 +319,17 @@ def select_input_file():
         open_folder = input_folder
     else:
         open_folder = "."
-    input_file = app.select_file(folder=open_folder, filetypes=[
-                                 ("Excel files", ".xlsx .xls")])
+    input_file = app.select_file(
+        folder=open_folder, filetypes=[("Excel files", ".xlsx .xls")]
+    )
     if not input_file:
         return
 
     # Remember the input folder for next time.
     input_folder = os.path.dirname(input_file)
-    file_name_without_ext, ext = os.path.splitext(
-        os.path.basename(input_file))
+    file_name_without_ext, ext = os.path.splitext(os.path.basename(input_file))
     input_file_text_box.value = os.path.basename(input_file)
-    output_file = os.path.join(
-        input_folder, "o_" + file_name_without_ext + ".xlsx")
+    output_file = os.path.join(input_folder, "o_" + file_name_without_ext + ".xlsx")
     open_output_file_button.enabled = False
 
 
@@ -346,22 +350,27 @@ def set_open_output_file_after_sort():
     else:
         open_output_file_once_sorted = False
 
+
 def open_file(filename):
     if sys.platform == "win32":
         os.startfile(filename)
     else:
-        opener ="open" if sys.platform == "darwin" else "xdg-open"
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
         subprocess.call([opener, filename])
+
 
 def open_output_file():
     global output_file
 
     if not output_file:
         app.warn(
-            "Uh oh!", "Output file does not exist yet. Please select an input file and sort to create an output file first!")
+            "Uh oh!",
+            "Output file does not exist yet. Please select an input file and sort to create an output file first!",
+        )
         return
 
     open_file(output_file)
+
 
 def sort_cick():
     global input_file, output_file, break_on_white
@@ -369,7 +378,9 @@ def sort_cick():
     open_output_file_button.enabled = False
     if not input_file:
         app.warn(
-            "Uh oh!", "No input file selected to color sort. Please select an input excel file and try again.")
+            "Uh oh!",
+            "No input file selected to color sort. Please select an input excel file and try again.",
+        )
         return
 
     if sort(input_file, output_file, break_on_white) == True:
@@ -407,16 +418,16 @@ if __name__ == "__main__":
         else:
             print_help()
 
-    logging.basicConfig(filename=OUTPUT_LOG_FILE,
-                        level=log_level, filemode='w+', format='')
+    logging.basicConfig(
+        filename=OUTPUT_LOG_FILE, level=log_level, filemode="w+", format=""
+    )
     logger = logging.getLogger(__name__)
 
     # Main app
-    app = App("",  height=450, width=400)
+    app = App("", height=450, width=400)
 
     # App name box
-    title = Text(app, text="Excel color sort",
-                 size=16, font="Arial Bold", width=30)
+    title = Text(app, text="Excel color sort", size=16, font="Arial Bold", width=30)
     title.bg = "white"
     line()
 
@@ -424,7 +435,8 @@ if __name__ == "__main__":
     Text(app, "Select Excel File --> Sort", font="Verdana bold")
     line()
     input_file_button = PushButton(
-        app, command=select_input_file, text="Select Excel File", width=26)
+        app, command=select_input_file, text="Select Excel File", width=26
+    )
     input_file_button.tk.config(font=("Verdana bold", 10))
     input_file_button.bg = "#ff9933"
     input_file_button.text_color = "white"
@@ -440,22 +452,28 @@ if __name__ == "__main__":
     line()
 
     # Process input button
-    process_button = PushButton(
-        app, text="Color Sort", command=sort_cick, width=26)
+    process_button = PushButton(app, text="Color Sort", command=sort_cick, width=26)
     process_button.tk.config(font=("Verdana bold", 14))
     process_button.bg = "#0099cc"
     process_button.text_color = "white"
     break_on_ws_checkbox = CheckBox(
-        app, text="Break on whitespace into next column", command=break_on_whitespace_selection)
+        app,
+        text="Break on whitespace into next column",
+        command=break_on_whitespace_selection,
+    )
     break_on_ws_checkbox.value = break_on_white
     open_output_file_after_sort_checkbox = CheckBox(
-        app, text="Automatically open output file", command=set_open_output_file_after_sort)
+        app,
+        text="Automatically open output file",
+        command=set_open_output_file_after_sort,
+    )
     open_output_file_after_sort_checkbox.value = open_output_file_once_sorted
     line()
 
     # Browse output folder button
     open_output_file_button = PushButton(
-        app, command=open_output_file, text="Open output file", width=20)
+        app, command=open_output_file, text="Open output file", width=20
+    )
     open_output_file_button.tk.config(font=("Verdana bold", 10))
     open_output_file_button.enabled = False
     line()

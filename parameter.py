@@ -9,6 +9,7 @@ from pathlib import Path
 
 CSV_EXT = ".csv"
 
+
 class Parameters:
     """
     A class used to represent and parse Parameters.
@@ -22,7 +23,7 @@ class Parameters:
     _param_name_list : str
         the list of parameters
     _param_df_list : str
-        the list of parameter dataframe, one for each parameter
+        the list of parameter DataFrame, one for each parameter
     _param_window_duration : float
         the parameter window duration (default 0)
     _param_dir : str
@@ -45,7 +46,7 @@ class Parameters:
     PARAM_WINDOW_DURATION_DEFAULT = 0
     _param_col_names = [PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
     TIMESTAMP_ROUND_VALUE = 6
-    TIME_PRECISION = float(1)/pow(10, TIMESTAMP_ROUND_VALUE)
+    TIME_PRECISION = float(1) / pow(10, TIMESTAMP_ROUND_VALUE)
 
     def __init__(self):
         self.reset()
@@ -85,9 +86,16 @@ class Parameters:
             if not os.path.isfile(param_file):
                 continue
 
-            param_file_name_without_ext = os.path.splitext(os.path.basename(param_file))[0]
+            param_file_name_without_ext = os.path.splitext(
+                os.path.basename(param_file)
+            )[0]
             self._param_name_list.append(param_file_name_without_ext)
-            param_df = pd.read_csv(param_file, names=Parameters.get_param_column_names(), header=None, skiprows=1)
+            param_df = pd.read_csv(
+                param_file,
+                names=Parameters.get_param_column_names(),
+                header=None,
+                skiprows=1,
+            )
             self._param_df_list.append(param_df)
 
         if len(self._param_name_list) > 0:
@@ -102,7 +110,7 @@ class Parameters:
         return self._cur_selected_param
 
     def set_currently_selected_param(self, param_name: str):
-        """set the currently selected paramter to the provided value
+        """set the currently selected parameter to the provided value
 
         Parameters
         ----------
@@ -117,12 +125,13 @@ class Parameters:
         if param_name in self._param_name_list:
             self._cur_selected_param = param_name
         else:
-            raise ValueError("Parameter", param_name, "is not part of valid parameter list!")
+            raise ValueError(
+                "Parameter", param_name, "is not part of valid parameter list!"
+            )
 
     def get_param_name_list(self):
         """get the list of parameter names"""
         return self._param_name_list
-
 
     def get_param_values(self, param_name: str) -> (float, list):
         """get the parameter values for the given parameter
@@ -158,8 +167,12 @@ class Parameters:
         """
 
         param_window_duration, ts = self.get_param_values(param_name)
-        ts_series = pd.DataFrame(columns=[Parameters.PARAM_TIME_WINDOW_START_LIST,
-                                          Parameters.PARAM_TIME_WINDOW_END_LIST])
+        ts_series = pd.DataFrame(
+            columns=[
+                Parameters.PARAM_TIME_WINDOW_START_LIST,
+                Parameters.PARAM_TIME_WINDOW_END_LIST,
+            ]
+        )
         for start in ts:
             ts_series.loc[len(ts_series.index)] = [start, start + param_window_duration]
 
@@ -167,25 +180,38 @@ class Parameters:
 
     def get_combined_params_ts_series(self):
         param_list = self.get_param_name_list()
-        ts_series_combined = pd.DataFrame(columns=[Parameters.PARAM_TIME_WINDOW_START_LIST,
-                                          Parameters.PARAM_TIME_WINDOW_END_LIST])
+        ts_series_combined = pd.DataFrame(
+            columns=[
+                Parameters.PARAM_TIME_WINDOW_START_LIST,
+                Parameters.PARAM_TIME_WINDOW_END_LIST,
+            ]
+        )
         for param in param_list:
             ts_series = self.get_param_values_as_series(param)
             ts_series_combined = pd.concat([ts_series_combined, ts_series])
 
-        ts_series_combined.sort_values(by=Parameters.PARAM_TIME_WINDOW_START_LIST,
-                                       ascending=True, inplace=True)
+        ts_series_combined.sort_values(
+            by=Parameters.PARAM_TIME_WINDOW_START_LIST, ascending=True, inplace=True
+        )
 
-        ts_series_out = pd.DataFrame(columns=[Parameters.PARAM_TIME_WINDOW_START_LIST,
-                                     Parameters.PARAM_TIME_WINDOW_END_LIST])
+        ts_series_out = pd.DataFrame(
+            columns=[
+                Parameters.PARAM_TIME_WINDOW_START_LIST,
+                Parameters.PARAM_TIME_WINDOW_END_LIST,
+            ]
+        )
         i = 0
         while i < len(ts_series_combined):
             j = i + 1
             start = ts_series_combined.iloc[i][Parameters.PARAM_TIME_WINDOW_START_LIST]
             end = ts_series_combined.iloc[i][Parameters.PARAM_TIME_WINDOW_END_LIST]
             while j < len(ts_series_combined):
-                cur_start = ts_series_combined.iloc[j][Parameters.PARAM_TIME_WINDOW_START_LIST]
-                cur_end = ts_series_combined.iloc[j][Parameters.PARAM_TIME_WINDOW_END_LIST]
+                cur_start = ts_series_combined.iloc[j][
+                    Parameters.PARAM_TIME_WINDOW_START_LIST
+                ]
+                cur_end = ts_series_combined.iloc[j][
+                    Parameters.PARAM_TIME_WINDOW_END_LIST
+                ]
                 if cur_start > end:
                     break
                 if cur_end > end:
@@ -204,8 +230,8 @@ class Parameters:
         param_name : str
             The name of the parameter
 
-        param_df: pd.Dataframe
-            The dataframe value for this parameter.
+        param_df: pd.DataFrame
+            The DataFrame value for this parameter.
         """
         self._param_name_list.append(param_name)
         self._param_df_list.append(param_df)
@@ -221,12 +247,12 @@ class Parameters:
         self.self._param_window_duration = time_window
 
     def get_param_df(self):
-        """get all the parameter dataframe values for all of the parameters"""
+        """get all the parameter DataFrame values for all of the parameters"""
 
         return self._param_df_list
 
     def get_param_df_for_param(self, param_name: str) -> pd.DataFrame:
-        """get the parameter dataframe values for the given parameter
+        """get the parameter DataFrame values for the given parameter
 
         Parameters
         ----------
@@ -247,7 +273,7 @@ class Parameters:
         return self._param_df_list[param_index]
 
     def get_param_file_from_name(self, param_name: str) -> str:
-        """get the parameter dataframe values for the given parameter
+        """get the parameter DataFrame values for the given parameter
 
         Parameters
         ----------
@@ -265,7 +291,7 @@ class Parameters:
 
         Returns
         ----------
-        Returns the default time window duration and the default timeseries dataframe
+        Returns the default time window duration and the default timeseries DataFrame
         """
 
         return Parameters.PARAM_WINDOW_DURATION_DEFAULT, pd.Series(dtype=np.float64)
@@ -290,12 +316,16 @@ class Parameters:
         time duration before and min time duration after
         """
 
-        return self._param_file_exists, float(self._min_time_duration_before), float(self._min_time_duration_after)
+        return (
+            self._param_file_exists,
+            float(self._min_time_duration_before),
+            float(self._min_time_duration_after),
+        )
 
-    def set_min_time_duration_values(self,
-                                     min_time_duration_before: float,
-                                     min_time_duration_after: float):
-        """set the parameter dataframe values for the given parameter and also
+    def set_min_time_duration_values(
+        self, min_time_duration_before: float, min_time_duration_after: float
+    ):
+        """set the parameter DataFrame values for the given parameter and also
         write the values to the min time duration paraemeter file.
 
         Parameters
@@ -324,16 +354,19 @@ class Parameters:
                 self._min_time_duration_before = min_time_duration_before
                 self._min_time_duration_after = min_time_duration_after
         except IOError:
-            raise ValueError("Min time duration file", param_min_t_file, "cannot be created or written to.")
+            raise ValueError(
+                "Min time duration file",
+                param_min_t_file,
+                "cannot be created or written to.",
+            )
             pass
 
-    def get_ts_series_for_timestamps(self,
-                                     param_name: str,
-                                     ts_start: float,
-                                     ts_end: float) -> list:
+    def get_ts_series_for_timestamps(
+        self, param_name: str, ts_start: float, ts_end: float
+    ) -> list:
         """get the timestamp for the given parameter name. This routine just gets the
-           timestamp series for a given parameter and calls `get_ts_split_for_ts_series`.
-           See the doc for the other routine for details.
+        timestamp series for a given parameter and calls `get_ts_split_for_ts_series`.
+        See the doc for the other routine for details.
         """
         ts_split = []
         # For empty parameter, everything is considered to be in range.
@@ -344,21 +377,18 @@ class Parameters:
         ts_series = self.get_param_values_as_series(param_name)
         return self.get_ts_split_for_ts_series(ts_series, ts_start, ts_end)
 
-    def get_ts_series_for_combined_param(self,
-                                         ts_start: float,
-                                         ts_end: float) -> list:
-        """get the timestamp for all the paremeters combined. This routine will combine
-           the timestamp for all the parameters and then call `get_ts_split_for_ts_series`.
-           See the doc for the other routine for details.
+    def get_ts_series_for_combined_param(self, ts_start: float, ts_end: float) -> list:
+        """get the timestamp for all the parameters combined. This routine will combine
+        the timestamp for all the parameters and then call `get_ts_split_for_ts_series`.
+        See the doc for the other routine for details.
         """
 
         ts_series = self.get_combined_params_ts_series()
         return self.get_ts_split_for_ts_series(ts_series, ts_start, ts_end)
 
-    def get_ts_split_for_ts_series(self,
-                                   ts_series: list,
-                                   ts_start: float,
-                                   ts_end: float) -> list:
+    def get_ts_split_for_ts_series(
+        self, ts_series: list, ts_start: float, ts_end: float
+    ) -> list:
         """get the timestamp split for the given ts series.
 
         Parameters
@@ -396,10 +426,19 @@ class Parameters:
         ts_split = []
         start_col_name = Parameters.PARAM_TIME_WINDOW_START_LIST
         end_col_name = Parameters.PARAM_TIME_WINDOW_END_LIST
-        indices = list(filter(lambda x: (ts_series.iloc[x][start_col_name] >= ts_start and
-                                         ts_series.iloc[x][start_col_name] <= ts_end) or
-                              ((ts_series.iloc[x][start_col_name] < ts_start) and
-                                ts_series.iloc[x][end_col_name] > ts_start), range(len(ts_series))))
+        indices = list(
+            filter(
+                lambda x: (
+                    ts_series.iloc[x][start_col_name] >= ts_start
+                    and ts_series.iloc[x][start_col_name] <= ts_end
+                )
+                or (
+                    (ts_series.iloc[x][start_col_name] < ts_start)
+                    and ts_series.iloc[x][end_col_name] > ts_start
+                ),
+                range(len(ts_series)),
+            )
+        )
 
         # No timestamp in the series fits within the provided time. Mark
         # the whole duration as outside.
@@ -413,7 +452,11 @@ class Parameters:
         while True:
             if start < ts_series.iloc[indices[idx]][start_col_name]:
                 is_in = False
-                end = min(ts_end, ts_series.iloc[indices[idx]][start_col_name] - Parameters.TIME_PRECISION)
+                end = min(
+                    ts_end,
+                    ts_series.iloc[indices[idx]][start_col_name]
+                    - Parameters.TIME_PRECISION,
+                )
             else:
                 is_in = True
                 end = min(ts_end, ts_series.iloc[indices[idx]][end_col_name])
@@ -454,12 +497,12 @@ class Parameters:
 
     @staticmethod
     def parse_param_df(df) -> (float, list):
-        """Parses the dataframe into the window duration and the time series.
+        """Parses the DataFrame into the window duration and the time series.
 
         Parameters
         ----------
-        df : pandas.dataframe
-            The dataframe to parse.
+        df : pandas.DataFrame
+            The DataFrame to parse.
 
         Returns
         ----------
@@ -531,8 +574,13 @@ class Parameters:
                             break
                     except ValueError:
                         raise ValueError(
-                            "Min time duration", line, "from file", param_min_t_file,
-                            "cannot be converted to a number. Using default of", t_duration)
+                            "Min time duration",
+                            line,
+                            "from file",
+                            param_min_t_file,
+                            "cannot be converted to a number. Using default of",
+                            t_duration,
+                        )
                 min_t_file.close()
         except IOError:
             self._param_file_exists = False
@@ -548,7 +596,11 @@ class Parameters:
         """
 
         if not os.path.isdir(self._param_dir):
-            raise ValueError("Parameter folder", self._param_dir, "does not exist!", )
+            raise ValueError(
+                "Parameter folder",
+                self._param_dir,
+                "does not exist!",
+            )
 
         for index, param_name in enumerate(self._param_name_list):
             param_file_name = self._get_file_name_for_param(param_name)
