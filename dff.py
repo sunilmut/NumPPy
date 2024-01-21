@@ -387,8 +387,14 @@ def process(parameter_obj,
             cnt_data = len(data_slice)
             data_avg = round(sum_data/cnt_data, OUTPUT_VALUE_PRECISION)
             if cnt_data == 0:
-                print("\nindex start ", index_start, "index_end ", index_end, "length ", index_end - index_start + 1)
-                print("ts index start: ", ts_index_start_for_val, " end: ", ts_index_end_for_val)
+                common.logger.debug("ts split with no elements:")
+                common.logger.debug("\tindex start: %d, index end: %d, length: %d",
+                                    index_start, index_end,
+                                    index_end - index_start + 1)
+                common.logger.debug("\tts index start: %d, end: %d, length: %d",
+                                    ts_index_start_for_val,
+                                    ts_index_end_for_val,
+                                    ts_index_end_for_val - ts_index_start_for_val + 1)
             elif cur_binary_value == 0:
                 if is_inside:
                     auc_0s_sum += sum_data
