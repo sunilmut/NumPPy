@@ -92,10 +92,11 @@ class TestBinary(unittest.TestCase):
     def setUp(self):
         self.input_df1 = pd.DataFrame(input_data1)
         self.p1_df = pd.DataFrame(test_p1)
-        progress = b.loghandler()
         logging.basicConfig(filename=b.OUTPUT_LOG_FILE, level=logging.DEBUG, format="")
         common.logger = logging.getLogger(__name__)
-        common.logger.addHandler(progress)
+        if not common.logger.handlers:
+            progress = b.loghandler()
+            common.logger.addHandler(progress)
 
     def validate_df(self, df, expected_data):
         expected_df = pd.DataFrame(expected_data)

@@ -19,12 +19,13 @@ import dff
 
 class DffTest(unittest.TestCase):
     def setUp(self):
-        progress = dff.loghandler()
         logging.basicConfig(
             filename=dff.OUTPUT_LOG_FILE, level=logging.DEBUG, format=""
         )
         common.logger = logging.getLogger(__name__)
-        common.logger.addHandler(progress)
+        if not common.logger.handlers:
+            progress = dff.loghandler()
+            common.logger.addHandler(progress)
 
     def test_bvt(self):
         # Whole duration parameter
