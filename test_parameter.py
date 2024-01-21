@@ -8,6 +8,8 @@ import unittest
 import shutil
 from pathlib import Path
 from parameter import Parameters
+import logging
+import sys
 
 """
 ------------------------------------------------------------
@@ -35,6 +37,12 @@ class ParameterTest(unittest.TestCase):
 
     def setUp(self):
         self.param = Parameters()
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.DEBUG)
+
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.DEBUG)
+        self.logger.addHandler(handler)
 
     def validate_df(self, df, expected_data):
         expected_df = pd.DataFrame(expected_data)
@@ -196,16 +204,17 @@ class ParameterTest(unittest.TestCase):
         param = Parameters()
         PARAM_NAME = "param"
         df = pd.DataFrame(param_val)
-        # print(param_val)
+        self.logger.debug("testing parameter: %s", param_val)
         for val in expected_ts:
-            # print("timestamp duration: ", val[0])
+            self.logger.debug("timestamp duration: %s", val[0])
             input_dir = self.reset()
             param._set_param_dir(input_dir)
             param.set_param_value(PARAM_NAME, df)
             ts_split = param.get_ts_series_for_timestamps(
                 PARAM_NAME, val[0][0], val[0][1]
             )
-            # print("Timestamp splits: ", ts_split, "\nval[1]: ", val[1])
+            self.logger.debug("Timestamp splits: %s", ts_split)
+            self.logger.debug("val[1]: %s", val[1])
             self.assertEqual(ts_split == val[1], True)
 
     def test_get_combined_params_ts_series(self):
