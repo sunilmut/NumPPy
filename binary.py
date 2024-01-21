@@ -1026,7 +1026,7 @@ if __name__ == "__main__":
 
     progress = loghandler()
     logging.basicConfig(filename=OUTPUT_LOG_FILE,
-                        level=logging.DEBUG, format='')
+                        level=logging.INFO, format='')
     common.logger = logging.getLogger(__name__)
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     progress.setFormatter(formatter)
@@ -1049,7 +1049,7 @@ if __name__ == "__main__":
         elif opt in ("-o"):
             output_folder = arg
         elif opt in ("-v"):
-            logging.basicConfig(level=logging.DEBUG)
+            logging.getLogger().setLevel(logging.DEBUG)
         elif opt in ("-s"):
             separate_files = True
         elif opt in ("-c"):

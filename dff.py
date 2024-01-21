@@ -101,7 +101,7 @@ def main(input_dir: str,
         for csv_file in csv_path:
             timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(csv_file)
             if timeshift_val:
-                common.logger.debug("\tUsing timeshift value of: %s", str(timeshift_val))
+                common.logger.info("Using timeshift value of: %s", str(timeshift_val))
             else:
                 if timeshift_val is None:
                     timeshift_val = 0
@@ -123,7 +123,7 @@ def main(input_dir: str,
             csv_basename = (os.path.basename(csv_file)).split('.')[0]
             # Create output folder specific for this csv file.
             this_output_folder = os.path.join(output_dir, csv_basename)
-            common.logger.debug("Output folder: %s", this_output_folder)
+            common.logger.info("Output folder: %s", this_output_folder)
             if not os.path.isdir(this_output_folder):
                 os.mkdir(this_output_folder)
 
@@ -141,7 +141,7 @@ def main(input_dir: str,
             for param in param_name_list:
                 generate_not_file = False
                 # Process the data and write out the results
-                common.logger.debug("processing param: %s", param)
+                common.logger.info("processing param: %s", param)
                 success, results = process(parameter_obj,
                                            param,
                                            binary_df,
@@ -322,7 +322,6 @@ def process(parameter_obj,
     mi_1s_cnt_not = 0
     out_df_1s_not = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
     print("timeshift_val: ", timeshift_val)
-    #print("binary file has rows", row_count)
     for index, row in binary_df.iterrows():
         if index_start == -1:
             index_start = index
@@ -347,7 +346,8 @@ def process(parameter_obj,
             ts_split = parameter_obj.get_ts_series_for_combined_param(ts_start, ts_end)
         else:
             ts_split = parameter_obj.get_ts_series_for_timestamps(param_name, ts_start, ts_end)
-        print("ts_start: ", ts_start, "ts_end: ", ts_end, "\nts_split: ", ts_split)
+        common.logger.debug("ts_start: %f, ts_end: %f", ts_start, ts_end)
+        common.logger.debug("ts_split: %s", ts_split)
         for element in ts_split:
             ts_start = element[0]
             ts_end = element[1]
@@ -643,7 +643,7 @@ if __name__ == "__main__":
 
     progress = loghandler()
     logging.basicConfig(filename=OUTPUT_LOG_FILE,
-                        level=logging.DEBUG, format='')
+                        level=logging.INFO, format='')
     common.logger = logging.getLogger(__name__)
     common.logger.addHandler(progress)
     argv = sys.argv[1:]
@@ -664,7 +664,7 @@ if __name__ == "__main__":
         elif opt in ("-o"):
             output_folder = arg
         elif opt in ("-v"):
-            logging.basicConfig(level=logging.DEBUG)
+            logging.getLogger().setLevel(logging.DEBUG)
         elif opt in ("-c"):
             console_mode = True
         else:
