@@ -419,13 +419,12 @@ class Parameters:
                 end = min(ts_end, ts_series.iloc[indices[idx]][end_col_name])
                 idx += 1
 
+            ts_split.append([start + delta, end, is_in])
             if is_in or end == ts_end:
-                ts_split.append([start + delta, end, is_in])
                 delta = Parameters.TIME_PRECISION
                 if end == ts_end:
                     break
             else:
-                ts_split.append([start + delta, end, is_in])
                 end += Parameters.TIME_PRECISION
                 #print(ts_split)
                 delta = 0.0
