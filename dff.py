@@ -363,8 +363,10 @@ def process(parameter_obj,
             if index_end == 0:
                 index_end = len(binary_df_ts)
 
-            ts_start = round(binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
-            ts_end = round(binary_df.iloc[index_end - 1][common.INPUT_COL0_TS] + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE)
+            ts_start = round(binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val,
+                             Parameters.TIMESTAMP_ROUND_VALUE)
+            ts_end = round(binary_df.iloc[index_end - 1][common.INPUT_COL0_TS] + timeshift_val,
+                           Parameters.TIMESTAMP_ROUND_VALUE)
 
             ts_index_start_for_val = np.argmax(ts >= ts_start)
             if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
@@ -389,7 +391,8 @@ def process(parameter_obj,
             if cnt_data == 0:
                 common.logger.debug("ts split with no elements:")
                 common.logger.debug("\tindex start: %d, index end: %d, length: %d",
-                                    index_start, index_end,
+                                    index_start,
+                                    index_end,
                                     index_end - index_start + 1)
                 common.logger.debug("\tts index start: %d, end: %d, length: %d",
                                     ts_index_start_for_val,
