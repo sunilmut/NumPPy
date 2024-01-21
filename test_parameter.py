@@ -40,9 +40,10 @@ class ParameterTest(unittest.TestCase):
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
 
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setLevel(logging.DEBUG)
-        self.logger.addHandler(handler)
+        if not self.logger.handlers:
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setLevel(logging.DEBUG)
+            self.logger.addHandler(handler)
 
     def validate_df(self, df, expected_data):
         expected_df = pd.DataFrame(expected_data)
