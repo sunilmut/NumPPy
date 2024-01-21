@@ -420,22 +420,21 @@ class Parameters:
                 idx += 1
 
             ts_split.append([start + delta, end, is_in])
-            if is_in or end == ts_end:
+            if is_in:
                 delta = Parameters.TIME_PRECISION
                 if end == ts_end:
                     break
             else:
                 end += Parameters.TIME_PRECISION
-                #print(ts_split)
                 delta = 0.0
+                if end > ts_end:
+                    break
 
             # If we have reached the end of the ts series and there is
             # still some left in the duration, just add the rest.
-            if idx >= len(indices) and end < ts_end:
-                ts_split.append([end + delta, ts_end, False])
-                end = ts_end + Parameters.TIME_PRECISION
-
-            if end > ts_end or idx >= len(indices):
+            if idx >= len(indices):
+                if end < ts_end:
+                    ts_split.append([end + delta, ts_end, False])
                 break
 
             start = end
