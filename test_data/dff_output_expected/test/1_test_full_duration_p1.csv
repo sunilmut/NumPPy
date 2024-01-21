@@ -1,6 +1,6 @@
-AUC (sum),AUC_SEM,dff (avg),dff_SEM
--14326.522710000001,231.2757,-0.55053,0.1641
-Start time (sec),Bout length (sec),Motion Index (avg),AUC (data),dff
+AUC (sum),dff (avg)
+-14326.52271,-0.55053
+Start time (sec),Bout length (sec),Motion Index (avg),AUC (dff),dff
 11.87,1.6,0.4708,593.94934,0.36483
 17.26,0.6,0.563,310.34298,0.50793
 18.47,1.53,0.51667,-897.9293,-0.5767

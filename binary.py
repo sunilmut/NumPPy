@@ -1028,6 +1028,8 @@ if __name__ == "__main__":
     logging.basicConfig(filename=OUTPUT_LOG_FILE,
                         level=logging.DEBUG, format='')
     common.logger = logging.getLogger(__name__)
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    progress.setFormatter(formatter)
     common.logger.addHandler(progress)
     argv = sys.argv[1:]
     console_mode = False

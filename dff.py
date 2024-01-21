@@ -28,7 +28,7 @@ OUTPUT_LOG_FILE = "output.txt"
 OUTPUT_COL0_TS = 'Start time (sec)'
 OUTPUT_COL1_LEN = 'Bout length (sec)'
 OUTPUT_COL2_MI_AVG = 'Motion Index (avg)'
-OUTPUT_COL3_DATA_AUC = 'AUC (data)'
+OUTPUT_COL3_DATA_AUC = 'AUC (dff)'
 OUTPUT_COL4_DATA_AVG = 'dff'
 OUTPUT_COLUMN_NAMES=[OUTPUT_COL0_TS, OUTPUT_COL1_LEN,
                      OUTPUT_COL2_MI_AVG, OUTPUT_COL3_DATA_AUC,
@@ -41,11 +41,8 @@ OUTPUT_ZEROS = "0_"
 OUTPUT_ONES = "1_"
 OUTPUT_NOT = "_Not"
 OUTPUT_AUC = "AUC (sum)"
-OUTPUT_AUC_SEM = "AUC_SEM"
 OUTPUT_Z_SCORE = "dff (avg)"
-OUTPUT_Z_SCORE_SEM = "dff_SEM"
-OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_AUC_SEM,
-                               OUTPUT_Z_SCORE, OUTPUT_Z_SCORE_SEM]
+OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_Z_SCORE]
 
 # Globals
 parameter_obj = Parameters()
@@ -75,13 +72,10 @@ def read_hdf5(event, filepath, key):
 
     return arr
 
-def compute_val(sum, cnt, df):
+def compute_avg(sum, cnt):
     avg = round(sum/cnt, OUTPUT_VALUE_PRECISION)
-    # std error of mean (sem)
-    sem_sum = round(scipy.stats.sem(df.loc[:, OUTPUT_COL3_DATA_AUC]), OUTPUT_VALUE_PRECISION)
-    sem_avg = round(scipy.stats.sem(df.loc[:, OUTPUT_COL4_DATA_AVG]), OUTPUT_VALUE_PRECISION)
 
-    return avg, sem_sum, sem_avg
+    return avg
 
 def main(input_dir: str,
          parameter_obj: Parameters,
@@ -183,67 +177,51 @@ def main(input_dir: str,
 
                 # 0's, in the param
                 if auc_0s_cnt > 0:
-                    auc_0s_avg, sem_auc_0s_sum, sem_auc_0s_avg = compute_val(auc_0s_sum, auc_0s_cnt, out_df_0s)
+                    auc_0s_avg = compute_avg(auc_0s_sum, auc_0s_cnt)
                     df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_0s_summary.loc[len(df_0s_summary.index)] = [auc_0s_sum,
-                                                                sem_auc_0s_sum,
-                                                                auc_0s_avg,
-                                                                sem_auc_0s_avg]
+                    df_0s_summary.loc[len(df_0s_summary.index)] = [auc_0s_sum, auc_0s_avg]
                     out_0_file = os.path.join(this_output_folder,
                                             OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT)
                     df_0s_summary.to_csv(out_0_file, mode='w', index=False, header=True)
                     out_df_0s.to_csv(out_0_file, mode='a', index=False, header=True)
                     print("0 df: ", out_df_0s)
-                    print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg, " SEM_AUC: ", sem_auc_0s_sum, " SEM_AVG: ", sem_auc_0s_avg)
+                    print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg)
 
                 # 0's, outside the param
                 if auc_0s_cnt_not > 0 and generate_not_file:
-                    auc_0s_avg_not, sem_auc_0s_sum_not, sem_auc_0s_avg_not = compute_val(auc_0s_sum_not,
-                                                                                         auc_0s_cnt_not,
-                                                                                         out_df_0s_not)
+                    auc_0s_avg_not = compute_avg(auc_0s_sum_not, auc_0s_cnt_not)
                     df_0s_not_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_0s_not_summary.loc[len(df_0s_not_summary.index)] = [auc_0s_sum_not,
-                                                                           sem_auc_0s_sum_not,
-                                                                           auc_0s_avg_not,
-                                                                           sem_auc_0s_avg_not]
+                    df_0s_not_summary.loc[len(df_0s_not_summary.index)] = [auc_0s_sum_not, auc_0s_avg_not]
                     out_0_file = os.path.join(this_output_folder,
                                             OUTPUT_ZEROS + csv_basename + OUTPUT_NOT + param_ext + common.CSV_EXT)
                     df_0s_not_summary.to_csv(out_0_file, mode='w', index=False, header=True)
                     out_df_0s_not.to_csv(out_0_file, mode='a', index=False, header=True)
                     print("0 df [out]: ", out_df_0s_not)
-                    print("0s [out] sum: ", auc_0s_sum_not, " avg: ", auc_0s_avg_not, " SEM_AUC: ", sem_auc_0s_sum_not, " SEM_AVG: ", sem_auc_0s_avg_not)
+                    print("0s [out] sum: ", auc_0s_sum_not, " avg: ", auc_0s_avg_not)
 
                 # 1's, in the param
                 if auc_1s_cnt > 0:
-                    auc_1s_avg, sem_auc_1s_sum, sem_auc_1s_avg = compute_val(auc_1s_sum, auc_1s_cnt, out_df_1s)
+                    auc_1s_avg = compute_avg(auc_1s_sum, auc_1s_cnt)
                     df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_1s_summary.loc[len(df_1s_summary.index)] = [auc_1s_sum,
-                                                                sem_auc_1s_sum,
-                                                                auc_1s_avg,
-                                                                sem_auc_1s_avg]
+                    df_1s_summary.loc[len(df_1s_summary.index)] = [auc_1s_sum, auc_1s_avg]
                     out_1_file = os.path.join(this_output_folder,
                                                 OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT)
                     df_1s_summary.to_csv(out_1_file, mode='w', index=False, header=True)
                     out_df_1s.to_csv(out_1_file, mode='a', index=False, header=True)
                     print("1 df: ", out_df_1s)
-                    print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg, " SEM_AUC: ", sem_auc_1s_sum, " SEM_AVG: ", sem_auc_1s_avg)
+                    print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg)
 
                 # 1's, outside the param
                 if auc_1s_cnt_not > 0 and generate_not_file:
-                    auc_1s_avg_not, sem_auc_1s_sum_not, sem_auc_1s_avg_not = compute_val(auc_1s_sum_not,
-                                                                                         auc_1s_cnt_not,
-                                                                                         out_df_1s_not)
+                    auc_1s_avg_not = compute_avg(auc_1s_sum_not, auc_1s_cnt_not)
                     df_1s_not_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_1s_not_summary.loc[len(df_1s_not_summary.index)] = [auc_1s_sum_not,
-                                                                           sem_auc_1s_sum_not,
-                                                                           auc_1s_avg_not,
-                                                                           sem_auc_1s_avg_not]
+                    df_1s_not_summary.loc[len(df_1s_not_summary.index)] = [auc_1s_sum_not, auc_1s_avg_not]
                     out_0_file = os.path.join(this_output_folder,
                                             OUTPUT_ONES + csv_basename + OUTPUT_NOT + param_ext + common.CSV_EXT)
                     df_1s_not_summary.to_csv(out_0_file, mode='w', index=False, header=True)
                     out_df_1s_not.to_csv(out_0_file, mode='a', index=False, header=True)
                     print("1 df [out]: ", out_df_1s_not)
-                    print("1s [out] sum: ", auc_1s_sum_not, " avg: ", auc_1s_avg_not, " SEM_AUC: ", sem_auc_1s_sum_not, " SEM_AVG: ", sem_auc_1s_avg_not)
+                    print("1s [out] sum: ", auc_1s_sum_not, " avg: ", auc_1s_avg_not)
 
 def process(parameter_obj,
             param_name: str,
@@ -456,10 +434,10 @@ def process(parameter_obj,
         # Reset the index to indicate the start of a new dataset.
         index_start = -1
 
-    return True, [auc_0s_sum, auc_0s_cnt, out_df_0s,
-                  auc_0s_sum_not, auc_0s_cnt_not, out_df_0s_not,
-                  auc_1s_sum, auc_1s_cnt, out_df_1s,
-                  auc_1s_sum_not, auc_1s_cnt_not, out_df_1s_not]
+    return True, [round(auc_0s_sum, OUTPUT_VALUE_PRECISION), auc_0s_cnt, out_df_0s,
+                  round(auc_0s_sum_not, OUTPUT_VALUE_PRECISION), auc_0s_cnt_not, out_df_0s_not,
+                  round(auc_1s_sum, OUTPUT_VALUE_PRECISION), auc_1s_cnt, out_df_1s,
+                  round(auc_1s_sum_not, OUTPUT_VALUE_PRECISION), auc_1s_cnt_not, out_df_1s_not]
 
 
 class loghandler(logging.StreamHandler):
