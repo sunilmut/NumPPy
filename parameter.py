@@ -152,7 +152,9 @@ class Parameters:
 
         return Parameters.parse_param_df(param_df)
 
-    def get_param_values_as_series(self, param_name: str) -> (float, list):
+    def get_param_values_as_series(
+        self, param_name: str, timeshift_val: float
+    ) -> (float, list):
         """get the parameter values for the given parameter as [start, end] series
 
         Parameters
@@ -174,11 +176,14 @@ class Parameters:
             ]
         )
         for start in ts:
-            ts_series.loc[len(ts_series.index)] = [start, start + param_window_duration]
+            ts_series.loc[len(ts_series.index)] = [
+                start + timeshift_val,
+                start + timeshift_val + param_window_duration,
+            ]
 
         return ts_series
 
-    def get_combined_params_ts_series(self):
+    def get_combined_params_ts_series(self, timeshift_val: float):
         param_list = self.get_param_name_list()
         ts_series_combined = pd.DataFrame(
             columns=[
@@ -187,7 +192,7 @@ class Parameters:
             ]
         )
         for param in param_list:
-            ts_series = self.get_param_values_as_series(param)
+            ts_series = self.get_param_values_as_series(param, timeshift_val)
             ts_series_combined = pd.concat([ts_series_combined, ts_series])
 
         ts_series_combined.sort_values(
@@ -362,7 +367,11 @@ class Parameters:
             pass
 
     def get_ts_series_for_timestamps(
-        self, param_name: str, ts_start: float, ts_end: float
+        self,
+        param_name: str,
+        ts_start: float,
+        ts_end: float,
+        timeshift_val: float,
     ) -> list:
         """get the timestamp for the given parameter name. This routine just gets the
         timestamp series for a given parameter and calls `get_ts_split_for_ts_series`.
@@ -374,16 +383,18 @@ class Parameters:
             ts_split.append([ts_start, ts_end, True])
             return ts_split
 
-        ts_series = self.get_param_values_as_series(param_name)
+        ts_series = self.get_param_values_as_series(param_name, timeshift_val)
         return self.get_ts_split_for_ts_series(ts_series, ts_start, ts_end)
 
-    def get_ts_series_for_combined_param(self, ts_start: float, ts_end: float) -> list:
+    def get_ts_series_for_combined_param(
+        self, ts_start: float, ts_end: float, timeshift_val: float
+    ) -> list:
         """get the timestamp for all the parameters combined. This routine will combine
         the timestamp for all the parameters and then call `get_ts_split_for_ts_series`.
         See the doc for the other routine for details.
         """
 
-        ts_series = self.get_combined_params_ts_series()
+        ts_series = self.get_combined_params_ts_series(timeshift_val)
         return self.get_ts_split_for_ts_series(ts_series, ts_start, ts_end)
 
     def get_ts_split_for_ts_series(

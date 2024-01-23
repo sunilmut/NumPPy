@@ -212,7 +212,7 @@ class ParameterTest(unittest.TestCase):
             param._set_param_dir(input_dir)
             param.set_param_value(PARAM_NAME, df)
             ts_split = param.get_ts_series_for_timestamps(
-                PARAM_NAME, val[0][0], val[0][1]
+                PARAM_NAME, val[0][0], val[0][1], 0
             )
             self.logger.debug("Timestamp splits: %s", ts_split)
             self.logger.debug("val[1]: %s", val[1])

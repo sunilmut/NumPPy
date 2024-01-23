@@ -410,10 +410,12 @@ def process(
             ts_end_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
         )
         if param_name is None:
-            ts_split = parameter_obj.get_ts_series_for_combined_param(ts_start, ts_end)
+            ts_split = parameter_obj.get_ts_series_for_combined_param(
+                ts_start, ts_end, timeshift_val
+            )
         else:
             ts_split = parameter_obj.get_ts_series_for_timestamps(
-                param_name, ts_start, ts_end
+                param_name, ts_start, ts_end, timeshift_val
             )
         common.logger.debug("ts_start: %f, ts_end: %f", ts_start, ts_end)
         common.logger.debug("ts_split: %s", ts_split)
