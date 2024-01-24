@@ -198,7 +198,7 @@ def main(
                     param_ext = "_" + param
 
                 # 0's, in the param
-                if auc_0s_cnt > 0:
+                if auc_0s_cnt > 0 and param is not None:
                     auc_0s_avg = compute_avg(auc_0s_sum, auc_0s_cnt)
                     df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
                     df_0s_summary.loc[len(df_0s_summary.index)] = [
@@ -224,14 +224,20 @@ def main(
                         auc_0s_sum_not,
                         auc_0s_avg_not,
                     ]
-                    out_0_file = os.path.join(
-                        this_output_folder,
-                        OUTPUT_ZEROS
-                        + csv_basename
-                        + OUTPUT_NOT
-                        + param_ext
-                        + common.CSV_EXT,
-                    )
+                    if param is None:
+                        out_0_file = os.path.join(
+                            this_output_folder,
+                            OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT,
+                        )
+                    else:
+                        out_0_file = os.path.join(
+                            this_output_folder,
+                            OUTPUT_ZEROS
+                            + csv_basename
+                            + OUTPUT_NOT
+                            + param_ext
+                            + common.CSV_EXT,
+                        )
                     df_0s_not_summary.to_csv(
                         out_0_file, mode="w", index=False, header=True
                     )
@@ -240,7 +246,7 @@ def main(
                     print("0s [out] sum: ", auc_0s_sum_not, " avg: ", auc_0s_avg_not)
 
                 # 1's, in the param
-                if auc_1s_cnt > 0:
+                if auc_1s_cnt > 0 and param is not None:
                     auc_1s_avg = compute_avg(auc_1s_sum, auc_1s_cnt)
                     df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
                     df_1s_summary.loc[len(df_1s_summary.index)] = [
@@ -266,14 +272,20 @@ def main(
                         auc_1s_sum_not,
                         auc_1s_avg_not,
                     ]
-                    out_0_file = os.path.join(
-                        this_output_folder,
-                        OUTPUT_ONES
-                        + csv_basename
-                        + OUTPUT_NOT
-                        + param_ext
-                        + common.CSV_EXT,
-                    )
+                    if param is None:
+                        out_0_file = os.path.join(
+                            this_output_folder,
+                            OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT,
+                        )
+                    else:
+                        out_0_file = os.path.join(
+                            this_output_folder,
+                            OUTPUT_ONES
+                            + csv_basename
+                            + OUTPUT_NOT
+                            + param_ext
+                            + common.CSV_EXT,
+                        )
                     df_1s_not_summary.to_csv(
                         out_0_file, mode="w", index=False, header=True
                     )
