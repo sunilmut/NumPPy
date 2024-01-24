@@ -164,7 +164,6 @@ def main(
             # represent 'combined parameters'
             if len(param_list) > 1:
                 param_name_list.append(None)
-            combined_param_name = ""
             for param in param_name_list:
                 generate_not_file = False
                 # Process the data and write out the results
@@ -194,10 +193,9 @@ def main(
 
                 param_ext = ""
                 if param == None:
-                    param_ext = combined_param_name
+                    param_ext = "_outside-parameters"
                 elif not param == "":
                     param_ext = "_" + param
-                    combined_param_name += "_" + param
 
                 # 0's, in the param
                 if auc_0s_cnt > 0:

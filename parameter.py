@@ -162,6 +162,9 @@ class Parameters:
         param_name : str
             The name of the parameter
 
+        timeshift_val: float
+            The time shift value to apply.
+
         Raises
         ------
         ValueError
@@ -373,8 +376,9 @@ class Parameters:
         ts_end: float,
         timeshift_val: float,
     ) -> list:
-        """get the timestamp for the given parameter name. This routine just gets the
-        timestamp series for a given parameter and calls `get_ts_split_for_ts_series`.
+        """get the timestamp series for the given parameter name with the applied
+        timeshift. This routine just gets the timestamp series for a given parameter
+        and calls `get_ts_split_for_ts_series`.
         See the doc for the other routine for details.
         """
         ts_split = []
@@ -389,8 +393,9 @@ class Parameters:
     def get_ts_series_for_combined_param(
         self, ts_start: float, ts_end: float, timeshift_val: float
     ) -> list:
-        """get the timestamp for all the parameters combined. This routine will combine
-        the timestamp for all the parameters and then call `get_ts_split_for_ts_series`.
+        """get the timestamp for all the parameters combined with the applied timeshift.
+        This routine will combine the timestamp for all the parameters and then call
+        `get_ts_split_for_ts_series`.
         See the doc for the other routine for details.
         """
 
