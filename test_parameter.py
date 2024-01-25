@@ -259,7 +259,7 @@ class ParameterTest(unittest.TestCase):
                 Parameters.PARAM_TIME_WINDOW_END_LIST: [15.0, 35.0, 52.0],
             }
         )
-        combinded_df = param.get_combined_params_ts_series()
+        combinded_df = param.get_combined_params_ts_series(0)
         self.assertTrue(combinded_df.equals(expected_df))
         df = pd.DataFrame(param_val_3)
         param.set_param_value(PARAM_NAME_3, df)
@@ -269,9 +269,9 @@ class ParameterTest(unittest.TestCase):
                 Parameters.PARAM_TIME_WINDOW_END_LIST: [2.0, 16.0, 53.0, 56.0],
             }
         )
-        combinded_df = param.get_combined_params_ts_series()
+        combinded_df = param.get_combined_params_ts_series(0)
         self.assertTrue(combinded_df.equals(expected_df))
-        ts_split = param.get_ts_series_for_combined_param(0, 60)
+        ts_split = param.get_ts_series_for_combined_param(0, 60, 0)
         expected_split = [
             [0, 0.999999, False],
             [1.0, 2.0, True],
