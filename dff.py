@@ -174,7 +174,7 @@ def main(
                 if not success:
                     continue
 
-                # Always generate NOT file for combined parametes (i.e. param == None)
+                # Always generate NOT file for combined parameters (i.e. param == None)
                 if separate_not_file_for_each_param or (param is None):
                     generate_not_file = True
 
