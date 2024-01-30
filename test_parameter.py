@@ -16,6 +16,9 @@ import sys
             Unit tests for the parameter module
 ------------------------------------------------------------
 # Run these tests using `python -m unittest test_parameter`
+# To run just one test case:
+#       python -m unittest test_parameter.ParameterTest.<unit test name>
+# Ex:    python -m unittest test_parameter.ParameterTest.test_param_bvt
 ------------------------------------------------------------
 """
 param1 = {
@@ -212,10 +215,40 @@ class ParameterTest(unittest.TestCase):
             param._set_param_dir(input_dir)
             param.set_param_value(PARAM_NAME, df)
             ts_split = param.get_ts_series_for_timestamps(
-                PARAM_NAME, val[0][0], val[0][1]
+                PARAM_NAME, val[0][0], val[0][1], 0
             )
             self.logger.debug("Timestamp splits: %s", ts_split)
-            self.logger.debug("val[1]: %s", val[1])
+            self.logger.debug("Expected: %s", val[1])
+            self.assertEqual(ts_split == val[1], True)
+
+    def test_get_ts_series_for_timestamps_with_timeshift(self):
+        param_val = {
+            Parameters.PARAM_TIME_WINDOW_START_LIST: [10, 20, 30],
+            Parameters.PARAM_TIME_WINDOW_DURATION: [5, np.nan, np.nan],
+        }
+        ts1 = [10, 15]
+        expected_out_0 = [[10, 15, True]]  # Not shifted
+        expected_out_2 = [[10.0, 11.999999, False], [12.0, 15, True]]  # Shifted by 2
+        expected_out_5 = [[10.0, 14.999999, False], [15.0, 15, True]]  # Shifted by 5
+        expected_out_10 = [[10, 15, False]]  # Not shifted
+        expected_ts = [
+            [0, expected_out_0],
+            [2, expected_out_2],
+            [5, expected_out_5],
+            [10, expected_out_10],
+        ]
+        PARAM_NAME = "param"
+        param = Parameters()
+        df = pd.DataFrame(param_val)
+        self.logger.debug("testing parameter: %s", param_val)
+        for val in expected_ts:
+            self.logger.debug("timeshift duration: %s", val[0])
+            param.set_param_value(PARAM_NAME, df)
+            ts_split = param.get_ts_series_for_timestamps(
+                PARAM_NAME, ts1[0], ts1[1], val[0]
+            )
+            self.logger.debug("Timestamp splits: %s", ts_split)
+            self.logger.debug("Expected: %s", val[1])
             self.assertEqual(ts_split == val[1], True)
 
     def test_get_combined_params_ts_series(self):
@@ -259,7 +292,7 @@ class ParameterTest(unittest.TestCase):
                 Parameters.PARAM_TIME_WINDOW_END_LIST: [15.0, 35.0, 52.0],
             }
         )
-        combinded_df = param.get_combined_params_ts_series()
+        combinded_df = param.get_combined_params_ts_series(0)
         self.assertTrue(combinded_df.equals(expected_df))
         df = pd.DataFrame(param_val_3)
         param.set_param_value(PARAM_NAME_3, df)
@@ -269,9 +302,9 @@ class ParameterTest(unittest.TestCase):
                 Parameters.PARAM_TIME_WINDOW_END_LIST: [2.0, 16.0, 53.0, 56.0],
             }
         )
-        combinded_df = param.get_combined_params_ts_series()
+        combinded_df = param.get_combined_params_ts_series(0)
         self.assertTrue(combinded_df.equals(expected_df))
-        ts_split = param.get_ts_series_for_combined_param(0, 60)
+        ts_split = param.get_ts_series_for_combined_param(0, 60, 0)
         expected_split = [
             [0, 0.999999, False],
             [1.0, 2.0, True],

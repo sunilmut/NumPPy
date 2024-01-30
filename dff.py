@@ -164,7 +164,6 @@ def main(
             # represent 'combined parameters'
             if len(param_list) > 1:
                 param_name_list.append(None)
-            combined_param_name = ""
             for param in param_name_list:
                 generate_not_file = False
                 # Process the data and write out the results
@@ -175,7 +174,7 @@ def main(
                 if not success:
                     continue
 
-                # Always generate NOT file for combined parametes (i.e. param == None)
+                # Always generate NOT file for combined parameters (i.e. param == None)
                 if separate_not_file_for_each_param or (param is None):
                     generate_not_file = True
 
@@ -194,13 +193,12 @@ def main(
 
                 param_ext = ""
                 if param == None:
-                    param_ext = combined_param_name
+                    param_ext = "_outside-parameters"
                 elif not param == "":
                     param_ext = "_" + param
-                    combined_param_name += "_" + param
 
                 # 0's, in the param
-                if auc_0s_cnt > 0:
+                if auc_0s_cnt > 0 and param is not None:
                     auc_0s_avg = compute_avg(auc_0s_sum, auc_0s_cnt)
                     df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
                     df_0s_summary.loc[len(df_0s_summary.index)] = [
@@ -226,14 +224,20 @@ def main(
                         auc_0s_sum_not,
                         auc_0s_avg_not,
                     ]
-                    out_0_file = os.path.join(
-                        this_output_folder,
-                        OUTPUT_ZEROS
-                        + csv_basename
-                        + OUTPUT_NOT
-                        + param_ext
-                        + common.CSV_EXT,
-                    )
+                    if param is None:
+                        out_0_file = os.path.join(
+                            this_output_folder,
+                            OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT,
+                        )
+                    else:
+                        out_0_file = os.path.join(
+                            this_output_folder,
+                            OUTPUT_ZEROS
+                            + csv_basename
+                            + OUTPUT_NOT
+                            + param_ext
+                            + common.CSV_EXT,
+                        )
                     df_0s_not_summary.to_csv(
                         out_0_file, mode="w", index=False, header=True
                     )
@@ -242,7 +246,7 @@ def main(
                     print("0s [out] sum: ", auc_0s_sum_not, " avg: ", auc_0s_avg_not)
 
                 # 1's, in the param
-                if auc_1s_cnt > 0:
+                if auc_1s_cnt > 0 and param is not None:
                     auc_1s_avg = compute_avg(auc_1s_sum, auc_1s_cnt)
                     df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
                     df_1s_summary.loc[len(df_1s_summary.index)] = [
@@ -268,14 +272,20 @@ def main(
                         auc_1s_sum_not,
                         auc_1s_avg_not,
                     ]
-                    out_0_file = os.path.join(
-                        this_output_folder,
-                        OUTPUT_ONES
-                        + csv_basename
-                        + OUTPUT_NOT
-                        + param_ext
-                        + common.CSV_EXT,
-                    )
+                    if param is None:
+                        out_0_file = os.path.join(
+                            this_output_folder,
+                            OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT,
+                        )
+                    else:
+                        out_0_file = os.path.join(
+                            this_output_folder,
+                            OUTPUT_ONES
+                            + csv_basename
+                            + OUTPUT_NOT
+                            + param_ext
+                            + common.CSV_EXT,
+                        )
                     df_1s_not_summary.to_csv(
                         out_0_file, mode="w", index=False, header=True
                     )
@@ -410,10 +420,12 @@ def process(
             ts_end_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
         )
         if param_name is None:
-            ts_split = parameter_obj.get_ts_series_for_combined_param(ts_start, ts_end)
+            ts_split = parameter_obj.get_ts_series_for_combined_param(
+                ts_start, ts_end, timeshift_val
+            )
         else:
             ts_split = parameter_obj.get_ts_series_for_timestamps(
-                param_name, ts_start, ts_end
+                param_name, ts_start, ts_end, timeshift_val
             )
         common.logger.debug("ts_start: %f, ts_end: %f", ts_start, ts_end)
         common.logger.debug("ts_split: %s", ts_split)

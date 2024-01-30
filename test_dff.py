@@ -13,15 +13,15 @@ import dff
             Unit tests for the dff module
 ------------------------------------------------------------
 # Run these tests using `python -m unittest test_dff`
+# Or run a specific test using something like:
+# python -m unittest test_dff.DffTest.test_bvt
 ------------------------------------------------------------
 """
 
 
 class DffTest(unittest.TestCase):
     def setUp(self):
-        logging.basicConfig(
-            filename=dff.OUTPUT_LOG_FILE, level=logging.DEBUG, format=""
-        )
+        logging.basicConfig(filename=dff.OUTPUT_LOG_FILE, level=logging.INFO, format="")
         common.logger = logging.getLogger(__name__)
         if not common.logger.handlers:
             progress = dff.loghandler()
@@ -389,7 +389,7 @@ class DffTest(unittest.TestCase):
                 Parameters.PARAM_TIME_WINDOW_END_LIST: [5.0, 15.0, 25.0, 35.0, 45.0],
             }
         )
-        combinded_df = param.get_combined_params_ts_series()
+        combinded_df = param.get_combined_params_ts_series(0)
         self.assertTrue(combinded_df.equals(expected_df))
         success, results = dff.process(param, None, binary_df, timeshift_val, data, ts)
         self.assertTrue(success)
@@ -420,7 +420,16 @@ class DffTest(unittest.TestCase):
         self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
 
     def test_real_data(self):
-        input_dir = os.path.join(os.getcwd(), "test_data", "dff")
+        # input_dir = os.path.join(os.getcwd(), "test_data", "dff")
+        # input_dirs_to_test = ["dff", "dff_realdata"]
+        # dff_filenames = ["test", "0111_PV_c4m1- Index"]
+        input_dirs_to_test = ["dff_realdata"]
+        dff_filenames = ["0111_PV_c4m1- Index"]
+        for d, f in zip(input_dirs_to_test, dff_filenames):
+            self.validate_real_data_for_input_dir(d, f)
+
+    def validate_real_data_for_input_dir(self, dir: str, dff_filename: str):
+        input_dir = os.path.join(os.getcwd(), "test_data", dir)
         parameter_obj = Parameters()
         try:
             parameter_obj.parse(input_dir)
@@ -428,9 +437,11 @@ class DffTest(unittest.TestCase):
             common.logger.warning(e)
         dff.main(input_dir, parameter_obj, True)
         expected_output_dir = os.path.join(
-            os.getcwd(), "test_data", "dff_output_expected", "test"
+            os.getcwd(), "test_data", dir, "_output_expected", dff_filename
         )
-        output_dir = os.path.join(os.getcwd(), "test_data", "dff_output", "test")
+        output_dir = os.path.join(
+            os.getcwd(), "test_data", dir, "_output", dff_filename
+        )
         csv_path = glob.glob(os.path.join(expected_output_dir, "*.csv"))
         # Validate that the files in the output dir match the expected output dir
         for expected_csv_file in csv_path:
