@@ -638,6 +638,9 @@ def refresh_param_names_combo_box(parameter_obj):
 
 def select_input_dir(parameter_obj):
     input_dir = common.select_input_dir(app)
+    if input_dir is None:
+        common.logger.debug("No input folder selected.")
+        return
     try:
         parameter_obj.parse(input_dir)
     except ValueError as e:

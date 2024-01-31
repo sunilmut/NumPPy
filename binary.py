@@ -949,6 +949,10 @@ def select_input_dir(parameter_obj):
     global param_min_time_duration_before, param_min_time_duration_after
 
     input_dir = common.select_input_dir(app)
+    if input_dir is None:
+        common.logger.debug("No input folder selected.")
+        return
+
     try:
         parameter_obj.parse(input_dir)
     except ValueError as e:
