@@ -10,6 +10,8 @@ from pathlib import Path
 from parameter import Parameters
 import logging
 import sys
+import glob
+import common
 
 """
 ------------------------------------------------------------
@@ -315,6 +317,26 @@ class ParameterTest(unittest.TestCase):
             [53.000001, 54.999999, False],
             [55.0, 56.0, True],
             [56.000001, 60, False],
+        ]
+        self.assertEqual(ts_split == expected_split, True)
+
+    def test_real_data(self):
+        input_dir = os.path.join(os.getcwd(), "test_data", "parameter")
+        param = Parameters()
+        param.parse(input_dir)
+        print(param.get_param_name_list())
+        csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
+        self.assertEqual(len(csv_path), 1)
+        timeshift_val, _ = common.get_timeshift_from_input_file(csv_path[0])
+        self.assertGreater(timeshift_val, 0)
+        self.logger.info("Using timeshift value of %f", timeshift_val)
+        ts_split = param.get_ts_series_for_combined_param(
+            1041.040000, 1057.180000, timeshift_val
+        )
+        expected_split = [
+            [1041.04, 1046.91, True],
+            [1046.910001, 1049.91, True],
+            [1049.910001, 1057.18, False],
         ]
         self.assertEqual(ts_split == expected_split, True)
 

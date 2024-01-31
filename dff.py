@@ -19,7 +19,6 @@ from guizero import (
     TitleBox,
     Window,
 )
-import scipy
 import glob
 import subprocess
 
