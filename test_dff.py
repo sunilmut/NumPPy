@@ -420,12 +420,11 @@ class DffTest(unittest.TestCase):
         self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
 
     def test_real_data(self):
-        # input_dir = os.path.join(os.getcwd(), "test_data", "dff")
-        # input_dirs_to_test = ["dff", "dff_realdata"]
-        # dff_filenames = ["test", "0111_PV_c4m1- Index"]
-        input_dirs_to_test = ["dff_realdata"]
-        dff_filenames = ["0111_PV_c4m1- Index"]
+        input_dir = os.path.join(os.getcwd(), "test_data", "dff")
+        input_dirs_to_test = ["dff", "dff_realdata"]
+        dff_filenames = ["test", "0111_PV_c4m1- Index"]
         for d, f in zip(input_dirs_to_test, dff_filenames):
+            common.logger.info("testing dir(%s):file(%s)", d, f)
             self.validate_real_data_for_input_dir(d, f)
 
     def validate_real_data_for_input_dir(self, dir: str, dff_filename: str):

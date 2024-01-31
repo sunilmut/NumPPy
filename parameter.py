@@ -478,13 +478,18 @@ class Parameters:
                 end = min(ts_end, ts_series.iloc[indices[idx]][end_col_name])
                 idx += 1
 
-            ts_split.append([start + delta, end, is_in])
+            end = round(end, Parameters.TIMESTAMP_ROUND_VALUE)
+            ts_split.append(
+                [round((start + delta), Parameters.TIMESTAMP_ROUND_VALUE), end, is_in]
+            )
             if is_in:
                 delta = Parameters.TIME_PRECISION
                 if end == ts_end:
                     break
             else:
-                end += Parameters.TIME_PRECISION
+                end = round(
+                    (end + Parameters.TIME_PRECISION), Parameters.TIMESTAMP_ROUND_VALUE
+                )
                 delta = 0.0
                 if end > ts_end:
                     break
@@ -493,7 +498,13 @@ class Parameters:
             # still some left in the duration, just add the rest.
             if idx >= len(indices):
                 if end < ts_end:
-                    ts_split.append([end + delta, ts_end, False])
+                    ts_split.append(
+                        [
+                            round((end + delta), Parameters.TIMESTAMP_ROUND_VALUE),
+                            ts_end,
+                            False,
+                        ]
+                    )
                 break
 
             start = end
