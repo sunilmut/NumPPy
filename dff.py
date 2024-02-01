@@ -331,7 +331,7 @@ def process(
 
     ts: np.asarray
         The timestamps corresponding to the data values. The ts array should
-        have a 1:1 correspondonce to the data array.
+        have a 1:1 correspondence to the data array.
 
     Returns
     ------

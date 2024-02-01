@@ -467,12 +467,65 @@ class DffTest(unittest.TestCase):
                     common.logger.debug("Output does not matches expected.")
                 self.assertTrue(files_match)
 
-    # def test_generate_data_file(self):
-    #    input_dir = os.path.join(os.getcwd(), "test_data", "dff")
-    #    dff_file = os.path.join(input_dir, "dff_BLA.hdf5")
-    #    z_score = dff.read_hdf5('', dff_file, 'data')
-    #    ts_file = os.path.join(input_dir, "timeCorrection_BLA.hdf5")
-    #    timestamp = dff.read_hdf5('', ts_file, 'timestampNew')
-    #    df = pd.DataFrame({'timestamp': timestamp, 'dff': z_score})
-    #    output_file = os.path.join(input_dir, "dff_output\\test\\data.csv")
-    #    df.to_csv(output_file, index=False, header=True)
+    def test_generate_data_file(self):
+        input_dir = os.path.join(os.getcwd(), "test_data", "dff_realdata")
+        output_dir = os.path.join(os.getcwd(), "test_data", "dff_realdata_output")
+        ts_file = os.path.join(input_dir, "timeCorrection_BLA.hdf5")
+        dff_file = os.path.join(input_dir, "dff_BLA.hdf5")
+        csv_file = os.path.join(input_dir, "0111_PV_c4m1- Index.csv")
+        timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(
+            csv_file
+        )
+        success, binary_df = common.parse_input_file_into_df(
+            csv_file, common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed
+        )
+        self.assertTrue(success)
+        timeshift_val = round(timeshift_val, 2)
+        print(timeshift_val)
+        ts = dff.read_hdf5("", ts_file, "timestampNew")
+        binary_df[common.INPUT_COL0_TS] = (
+            binary_df[common.INPUT_COL0_TS] + timeshift_val
+        )
+        z_score = dff.read_hdf5("", dff_file, "data")
+        index = 0
+        ts_index = 0
+        z_score_avg_list = []
+        z_score_count_list = []
+        while index < len(binary_df.index) - 1 and ts_index < len(ts):
+            ts_start = binary_df.iloc[index][common.INPUT_COL0_TS]
+            # ts_start = round(ts_start + timeshift_val, 2)
+            index += 1
+            ts_end = binary_df.iloc[index][common.INPUT_COL0_TS]
+            # ts_end = round(ts_end + timeshift_val, 2)
+            # print(ts_start, "<->", ts_end)
+            if ts[len(ts) - 1] < ts_start:
+                print("Reached the end of the ts file, breaking")
+                break
+            while ts[ts_index] < ts_start:
+                ts_index += 1
+            z_score_sum = 0
+            z_score_cnt = 0
+            # print(ts_index)
+            while ts_index < len(ts) and ts[ts_index] < ts_end:
+                z_score_sum += z_score[ts_index]
+                ts_index += 1
+                z_score_cnt += 1
+            z_score_avg = z_score_sum / z_score_cnt
+            z_score_avg_list.append(z_score_sum)
+            z_score_count_list.append(z_score_cnt)
+            # print(ts_index)
+            # print(z_score_avg)
+            # print(z_score_avg_list[index - 1])
+
+        z_score_avg_list.append(0)
+        z_score_count_list.append(0)
+
+        # df = pd.DataFrame({"timestamp": timestamp, "dff": z_score})
+        binary_df.insert(3, "dff", z_score_avg_list, True)
+        binary_df.insert(4, "dff_count", z_score_count_list, True)
+        zero_binary_df = binary_df[binary_df[common.INPUT_COL2_FREEZE] == 0]
+        output_file = os.path.join(output_dir, "0_data.csv")
+        zero_binary_df.to_csv(output_file, index=False, header=True)
+        one_binary_df = binary_df[binary_df[common.INPUT_COL2_FREEZE] == 1]
+        output_file = os.path.join(output_dir, "1_data.csv")
+        one_binary_df.to_csv(output_file, index=False, header=True)
