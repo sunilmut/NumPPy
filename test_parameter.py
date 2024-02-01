@@ -327,7 +327,7 @@ class ParameterTest(unittest.TestCase):
         print(param.get_param_name_list())
         csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
         self.assertEqual(len(csv_path), 1)
-        timeshift_val, _ = common.get_timeshift_from_input_file(csv_path[0])
+        timeshift_val, _v = common.get_timeshift_from_input_file(csv_path[0])
         self.assertGreater(timeshift_val, 0)
         self.logger.info("Using timeshift value of %f", timeshift_val)
         ts_split = param.get_ts_series_for_combined_param(

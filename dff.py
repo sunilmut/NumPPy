@@ -103,13 +103,6 @@ def main(
     for i in range(len(path)):
         basename = (os.path.basename(path[i])).split(".")[0]
         name_1 = basename.split("_")[-1]
-        z_score = read_hdf5("", path[i], "data")
-        if np.isnan(z_score).any():
-            common.logger.warning(
-                "%s file has NaN (not a number) values. Currently, unsupported", path[i]
-            )
-            continue
-
         ts = read_hdf5("timeCorrection_" + name_1, input_dir, "timestampNew")
         if np.isnan(ts).any():
             common.logger.warning(
@@ -117,6 +110,23 @@ def main(
                 ("timeCorrection_" + name_1),
             )
             continue
+
+        z_score = read_hdf5("", path[i], "data")
+        nan = np.isnan(z_score)
+        if nan.any():
+            cleaned_z_score = []
+            cleaned_ts = []
+            common.logger.warning(
+                "%s file has NaN (not a number) values. Discarding those values.",
+                path[i],
+            )
+            for idx, v in enumerate(nan):
+                # Discard NaN
+                if v == False:
+                    cleaned_z_score.append(z_score[idx])
+                    cleaned_ts.append(ts[idx])
+            z_score = cleaned_z_score
+            ts = cleaned_ts
 
         csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
         for csv_file in csv_path:
@@ -640,6 +650,7 @@ def select_input_dir(parameter_obj):
     if input_dir is None:
         common.logger.debug("No input folder selected.")
         return
+
     try:
         parameter_obj.parse(input_dir)
     except ValueError as e:
