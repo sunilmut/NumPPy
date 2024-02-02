@@ -438,7 +438,7 @@ class DffTest(unittest.TestCase):
             parameter_obj.parse(input_dir)
         except ValueError as e:
             common.logger.warning(e)
-        dff.main(input_dir, parameter_obj, True)
+        dff.main(input_dir, parameter_obj)
         dir_for_file = os.path.splitext(dff_filename)[0]
         expected_output_dir = os.path.join(input_dir + "_output_expected", dir_for_file)
         output_dir = os.path.join(input_dir + "_output", dir_for_file)

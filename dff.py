@@ -52,6 +52,7 @@ OUTPUT_VALUE_PRECISION = 5
 # output file names
 OUTPUT_ZEROS = "0_"
 OUTPUT_ONES = "1_"
+OUTPUT_DFF = "dff_"
 OUTPUT_NOT = "_Not"
 OUTPUT_AUC = "AUC (sum)"
 OUTPUT_Z_SCORE = "dff (avg)"
@@ -93,9 +94,15 @@ def compute_avg(sum, cnt):
     return avg
 
 
-def main(
-    input_dir: str, parameter_obj: Parameters, separate_not_file_for_each_param: bool
-):
+def generate_output_file(sum, cnt, out_df, out_file):
+    avg = compute_avg(sum, cnt)
+    df_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+    df_summary.loc[len(df_summary.index)] = [sum, avg]
+    df_summary.to_csv(out_file, mode="w", index=False, header=True)
+    out_df.to_csv(out_file, mode="a", index=False, header=True)
+
+
+def main(input_dir: str, parameter_obj: Parameters):
     global files_without_timeshift, result_success_list_box, output_dir
 
     path = glob.glob(os.path.join(input_dir, "dff_*"))
@@ -174,7 +181,6 @@ def main(
             if len(param_list) > 1:
                 param_name_list.append(None)
             for param in param_name_list:
-                generate_not_file = False
                 # Process the data and write out the results
                 common.logger.info("processing param: %s", param)
                 success, results = process(
@@ -182,10 +188,6 @@ def main(
                 )
                 if not success:
                     continue
-
-                # Always generate NOT file for combined parameters (i.e. param == None)
-                if separate_not_file_for_each_param or (param is None):
-                    generate_not_file = True
 
                 auc_0s_sum = results[0]
                 auc_0s_cnt = results[1]
@@ -212,137 +214,45 @@ def main(
                 elif not param == "":
                     param_ext = "_" + param
 
-                # 0's, in the param
+                # 0's
+                out_0_file = os.path.join(
+                    this_output_folder,
+                    OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT,
+                )
                 if auc_0s_cnt > 0 and param is not None:
-                    auc_0s_avg = compute_avg(auc_0s_sum, auc_0s_cnt)
-                    df_0s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_0s_summary.loc[len(df_0s_summary.index)] = [
-                        auc_0s_sum,
-                        auc_0s_avg,
-                    ]
-                    out_0_file = os.path.join(
-                        this_output_folder,
-                        OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT,
-                    )
-                    df_0s_summary.to_csv(out_0_file, mode="w", index=False, header=True)
-                    out_df_0s.to_csv(out_0_file, mode="a", index=False, header=True)
-                    print("0 df: ", out_df_0s)
-                    print("0s sum: ", auc_0s_sum, " avg: ", auc_0s_avg)
+                    generate_output_file(auc_0s_sum, auc_0s_cnt, out_df_0s, out_0_file)
 
-                # 0's, outside the param
-                if auc_0s_cnt_not > 0 and generate_not_file:
-                    auc_0s_avg_not = compute_avg(auc_0s_sum_not, auc_0s_cnt_not)
-                    df_0s_not_summary = pd.DataFrame(
-                        columns=OUTPUT_SUMMARY_COLUMN_NAMES
-                    )
-                    df_0s_not_summary.loc[len(df_0s_not_summary.index)] = [
-                        auc_0s_sum_not,
-                        auc_0s_avg_not,
-                    ]
-                    if param is None:
-                        out_0_file = os.path.join(
-                            this_output_folder,
-                            OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT,
-                        )
-                    else:
-                        out_0_file = os.path.join(
-                            this_output_folder,
-                            OUTPUT_ZEROS
-                            + csv_basename
-                            + OUTPUT_NOT
-                            + param_ext
-                            + common.CSV_EXT,
-                        )
-                    df_0s_not_summary.to_csv(
-                        out_0_file, mode="w", index=False, header=True
-                    )
-                    out_df_0s_not.to_csv(out_0_file, mode="a", index=False, header=True)
-                    print("0 df [outside]: ", out_df_0s_not)
-                    print(
-                        "0s [outside] sum: ", auc_0s_sum_not, " avg: ", auc_0s_avg_not
+                if auc_0s_cnt_not > 0 and param is None:
+                    generate_output_file(
+                        auc_0s_sum_not, auc_0s_cnt_not, out_df_0s_not, out_0_file
                     )
 
-                # 1's, in the param
+                # 1's
+                out_1_file = os.path.join(
+                    this_output_folder,
+                    OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT,
+                )
                 if auc_1s_cnt > 0 and param is not None:
-                    auc_1s_avg = compute_avg(auc_1s_sum, auc_1s_cnt)
-                    df_1s_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_1s_summary.loc[len(df_1s_summary.index)] = [
-                        auc_1s_sum,
-                        auc_1s_avg,
-                    ]
-                    out_1_file = os.path.join(
-                        this_output_folder,
-                        OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT,
-                    )
-                    df_1s_summary.to_csv(out_1_file, mode="w", index=False, header=True)
-                    out_df_1s.to_csv(out_1_file, mode="a", index=False, header=True)
-                    print("1 df: ", out_df_1s)
-                    print("1s sum: ", auc_1s_sum, " avg: ", auc_1s_avg)
+                    generate_output_file(auc_1s_sum, auc_1s_cnt, out_df_1s, out_1_file)
 
-                # 1's, outside the param
-                if auc_1s_cnt_not > 0 and generate_not_file:
-                    auc_1s_avg_not = compute_avg(auc_1s_sum_not, auc_1s_cnt_not)
-                    df_1s_not_summary = pd.DataFrame(
-                        columns=OUTPUT_SUMMARY_COLUMN_NAMES
+                if auc_1s_cnt_not > 0 and param is None:
+                    generate_output_file(
+                        auc_1s_sum_not, auc_1s_cnt_not, out_df_1s_not, out_1_file
                     )
-                    df_1s_not_summary.loc[len(df_1s_not_summary.index)] = [
-                        auc_1s_sum_not,
-                        auc_1s_avg_not,
-                    ]
-                    if param is None:
-                        out_0_file = os.path.join(
-                            this_output_folder,
-                            OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT,
-                        )
-                    else:
-                        out_0_file = os.path.join(
-                            this_output_folder,
-                            OUTPUT_ONES
-                            + csv_basename
-                            + OUTPUT_NOT
-                            + param_ext
-                            + common.CSV_EXT,
-                        )
-                    df_1s_not_summary.to_csv(
-                        out_0_file, mode="w", index=False, header=True
-                    )
-                    out_df_1s_not.to_csv(out_0_file, mode="a", index=False, header=True)
-                    print("1 df [outside]: ", out_df_1s_not)
-                    print(
-                        "1s [outside] sum: ", auc_1s_sum_not, " avg: ", auc_1s_avg_not
-                    )
+
+                # Data independent of 0 or 1
+                out_not_file = os.path.join(
+                    this_output_folder,
+                    OUTPUT_DFF + csv_basename + param_ext + common.CSV_EXT,
+                )
 
                 if auc_cnt > 0 and param is not None:
-                    auc_avg = compute_avg(auc_sum, auc_cnt)
-                    df_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_summary.loc[len(df_summary.index)] = [
-                        auc_sum,
-                        auc_avg,
-                    ]
-                    out_file = os.path.join(
-                        this_output_folder,
-                        "dff_" + csv_basename + param_ext + common.CSV_EXT,
-                    )
-                    df_summary.to_csv(out_file, mode="w", index=False, header=True)
-                    out_df.to_csv(out_file, mode="a", index=False, header=True)
-                    print("df: ", out_df)
-                    print("sum: ", auc_sum, " avg: ", auc_avg)
+                    generate_output_file(auc_sum, auc_cnt, out_df, out_not_file)
 
-                if auc_cnt_not > 0 and generate_not_file and param is None:
-                    auc_avg_not = compute_avg(auc_sum_not, auc_cnt_not)
-                    df_not_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
-                    df_not_summary.loc[len(df_not_summary.index)] = [
-                        auc_sum_not,
-                        auc_avg_not,
-                    ]
-                    out_file = os.path.join(
-                        this_output_folder,
-                        "dff_" + csv_basename + param_ext + common.CSV_EXT,
+                if auc_cnt_not > 0 and param is None:
+                    generate_output_file(
+                        auc_sum_not, auc_cnt_not, out_df_not, out_not_file
                     )
-                    df_not_summary.to_csv(out_file, mode="w", index=False, header=True)
-                    out_df_not.to_csv(out_file, mode="a", index=False, header=True)
-                    print("df [outside]: ", out_df_not)
-                    print("[outside] sum: ", auc_sum_not, " avg: ", auc_avg_not)
 
 
 def process(
@@ -363,7 +273,7 @@ def process(
         None -> Indicates combining all the parameters
 
     binary_df : pd.DataFrame
-        The freeze frame binary dataframe.
+        The freeze frame binary DataFrame.
 
     timeshift_val - float
         The timeshift value to apply to the timestamps from the binary_df
@@ -394,6 +304,13 @@ def process(
         list[9] -> Sum of data values outside the parameters, corresponding to the 1s from the freeze frame.
         list[10] -> Count of data values outside the parameters, corresponding to the 1s from the freeze frame.
         list[11] -> Summarized DataFrame of data values outside the parameters, corresponding to the 1s from the freeze frame.
+
+        list[12] -> Sum of data values within the parameters.
+        list[13] -> Count of data values within the parameters.
+        list[14] -> Summarized DataFrame of data values within the parameters.
+        list[15] -> Sum of data values outside the parameters.
+        list[16] -> Count of data values outside the parameters.
+        list[17] -> Summarized DataFrame of data values outside the parameters.
 
     """
 
@@ -802,7 +719,7 @@ def ui_process_cmd(parameter_obj):
         return
 
     reset_result_box()
-    main(common.get_input_dir(), parameter_obj, False)
+    main(common.get_input_dir(), parameter_obj)
     rwin.show()
 
 
@@ -933,7 +850,7 @@ if __name__ == "__main__":
             print_help()
 
     if console_mode:
-        main(input_dir, parameter_obj, True)
+        main(input_dir, parameter_obj)
         sys.exit()
 
     # Main app
