@@ -291,19 +291,19 @@ def process(
     bool -> True if the routine successfully process the parameter; False otherwise.
 
     list:
-        list[0] -> Sum of data values within the parameters, corresponding to the 0s from the freeze frame.
-        list[1] -> Count of data values within the parameters, corresponding to the 0s from the freeze frame.
-        list[2] -> Summarized DataFrame of data values within the parameters, corresponding to the 0s from the freeze frame.
-        list[3] -> Sum of data values outside the parameters, corresponding to the 0s from the freeze frame.
-        list[4] -> Count of data values outside the parameters, corresponding to the 0s from the freeze frame.
-        list[5] -> Summarized DataFrame of data values outside the parameters, corresponding to the 0s from the freeze frame.
+        list[0] -> Sum of data values within the parameters, for the freeze frame 0s.
+        list[1] -> Count of data values within the parameters, for the freeze frame 0s.
+        list[2] -> Summarized DataFrame of data values within the parameters, for the freeze frame 0s.
+        list[3] -> Sum of data values outside the parameters, for the freeze frame 0s.
+        list[4] -> Count of data values outside the parameters, for the freeze frame 0s.
+        list[5] -> Summarized DataFrame of data values outside the parameters, for the freeze frame 0s.
 
-        list[6] -> Sum of data values within the parameters, corresponding to the 1s from the freeze frame.
-        list[7] -> Count of data values within the parameters, corresponding to the 1s from the freeze frame.
-        list[8] -> Summarized DataFrame of data values within the parameters, corresponding to the 1s from the freeze frame.
-        list[9] -> Sum of data values outside the parameters, corresponding to the 1s from the freeze frame.
-        list[10] -> Count of data values outside the parameters, corresponding to the 1s from the freeze frame.
-        list[11] -> Summarized DataFrame of data values outside the parameters, corresponding to the 1s from the freeze frame.
+        list[6] -> Sum of data values within the parameters, for the freeze frame 1s.
+        list[7] -> Count of data values within the parameters, for the freeze frame 1s.
+        list[8] -> Summarized DataFrame of data values within the parameters, for the freeze frame 1s.
+        list[9] -> Sum of data values outside the parameters, for the freeze frame 1s.
+        list[10] -> Count of data values outside the parameters, for the freeze frame 1s.
+        list[11] -> Summarized DataFrame of data values outside the parameters, for the freeze frame 1s.
 
         list[12] -> Sum of data values within the parameters.
         list[13] -> Count of data values within the parameters.
