@@ -199,6 +199,12 @@ def main(
                 auc_1s_sum_not = results[9]
                 auc_1s_cnt_not = results[10]
                 out_df_1s_not = results[11]
+                auc_sum = results[12]
+                auc_cnt = results[13]
+                out_df = results[14]
+                auc_sum_not = results[15]
+                auc_cnt_not = results[16]
+                out_df_not = results[17]
 
                 param_ext = ""
                 if param == None:
@@ -251,8 +257,10 @@ def main(
                         out_0_file, mode="w", index=False, header=True
                     )
                     out_df_0s_not.to_csv(out_0_file, mode="a", index=False, header=True)
-                    print("0 df [out]: ", out_df_0s_not)
-                    print("0s [out] sum: ", auc_0s_sum_not, " avg: ", auc_0s_avg_not)
+                    print("0 df [outside]: ", out_df_0s_not)
+                    print(
+                        "0s [outside] sum: ", auc_0s_sum_not, " avg: ", auc_0s_avg_not
+                    )
 
                 # 1's, in the param
                 if auc_1s_cnt > 0 and param is not None:
@@ -299,8 +307,42 @@ def main(
                         out_0_file, mode="w", index=False, header=True
                     )
                     out_df_1s_not.to_csv(out_0_file, mode="a", index=False, header=True)
-                    print("1 df [out]: ", out_df_1s_not)
-                    print("1s [out] sum: ", auc_1s_sum_not, " avg: ", auc_1s_avg_not)
+                    print("1 df [outside]: ", out_df_1s_not)
+                    print(
+                        "1s [outside] sum: ", auc_1s_sum_not, " avg: ", auc_1s_avg_not
+                    )
+
+                if auc_cnt > 0 and param is not None:
+                    auc_avg = compute_avg(auc_sum, auc_cnt)
+                    df_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+                    df_summary.loc[len(df_summary.index)] = [
+                        auc_sum,
+                        auc_avg,
+                    ]
+                    out_file = os.path.join(
+                        this_output_folder,
+                        "dff_" + csv_basename + param_ext + common.CSV_EXT,
+                    )
+                    df_summary.to_csv(out_file, mode="w", index=False, header=True)
+                    out_df.to_csv(out_file, mode="a", index=False, header=True)
+                    print("df: ", out_df)
+                    print("sum: ", auc_sum, " avg: ", auc_avg)
+
+                if auc_cnt_not > 0 and generate_not_file and param is None:
+                    auc_avg_not = compute_avg(auc_sum_not, auc_cnt_not)
+                    df_not_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+                    df_not_summary.loc[len(df_not_summary.index)] = [
+                        auc_sum_not,
+                        auc_avg_not,
+                    ]
+                    out_file = os.path.join(
+                        this_output_folder,
+                        "dff_" + csv_basename + param_ext + common.CSV_EXT,
+                    )
+                    df_not_summary.to_csv(out_file, mode="w", index=False, header=True)
+                    out_df_not.to_csv(out_file, mode="a", index=False, header=True)
+                    print("df [outside]: ", out_df_not)
+                    print("[outside] sum: ", auc_sum_not, " avg: ", auc_avg_not)
 
 
 def process(
@@ -384,6 +426,16 @@ def process(
 
     index_start = -1
     row_count = binary_df.shape[0]
+    auc_sum = 0
+    auc_cnt = 0
+    mi_sum = 0
+    mi_cnt = 0
+    out_df = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    auc_sum_not = 0
+    auc_cnt_not = 0
+    mi_sum_not = 0
+    mi_cnt_not = 0
+    out_df_not = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
     auc_0s_sum = 0
     auc_0s_cnt = 0
     mi_0s_sum = 0
@@ -506,7 +558,34 @@ def process(
                     ts_index_end_for_val,
                     ts_index_end_for_val - ts_index_start_for_val + 1,
                 )
-            elif cur_binary_value == 0:
+                continue
+
+            if is_inside:
+                auc_sum += sum_data
+                auc_cnt += cnt_data
+                mi_sum += sum_mi
+                mi_cnt += cnt_mi
+                out_df.loc[len(out_df.index)] = [
+                    ts_start,
+                    bout_length,
+                    mi_avg,
+                    sum_data,
+                    data_avg,
+                ]
+            else:
+                auc_sum_not += sum_data
+                auc_cnt_not += cnt_data
+                mi_sum_not += sum_mi
+                mi_cnt_not += cnt_mi
+                out_df_not.loc[len(out_df_not.index)] = [
+                    ts_start,
+                    bout_length,
+                    mi_avg,
+                    sum_data,
+                    data_avg,
+                ]
+
+            if cur_binary_value == 0:
                 if is_inside:
                     auc_0s_sum += sum_data
                     auc_0s_cnt += cnt_data
@@ -573,6 +652,12 @@ def process(
         round(auc_1s_sum_not, OUTPUT_VALUE_PRECISION),
         auc_1s_cnt_not,
         out_df_1s_not,
+        round(auc_sum, OUTPUT_VALUE_PRECISION),
+        auc_cnt,
+        out_df,
+        round(auc_sum_not, OUTPUT_VALUE_PRECISION),
+        auc_cnt_not,
+        out_df_not,
     ]
 
 

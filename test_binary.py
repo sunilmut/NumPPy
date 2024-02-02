@@ -142,6 +142,7 @@ class TestBinary(unittest.TestCase):
         for file in successfully_parsed_files:
             success_normalized_path.append(os.path.normpath(file))
 
+        num_files_compared = 0
         csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
         # Validate that each of the input files were successfully parsed and matches expected
         for input_csv_file in csv_path:
@@ -152,9 +153,9 @@ class TestBinary(unittest.TestCase):
             expected_output_dir = os.path.join(
                 expected_output_dir_base, file_name_without_ext
             )
-            print("Expected output dir: ", expected_output_dir)
+            common.logger.info("Expected output dir: %s", expected_output_dir)
             output_dir = os.path.join(output_dir_base, file_name_without_ext)
-            print("Onput dir: ", output_dir)
+            common.logger.info("Output dir: %s", output_dir)
             csv_path = glob.glob(os.path.join(expected_output_dir, "*.csv"))
             for expected_csv_file in csv_path:
                 file_name = os.path.basename(expected_csv_file)
@@ -179,4 +180,11 @@ class TestBinary(unittest.TestCase):
                     if files_match:
                         common.logger.debug("Output matches expected.")
                     else:
-                        common.logger.debug("Output does not matches expected.")
+                        common.logger.error("Output does not matches expected.")
+                    self.assertTrue(files_match)
+                    num_files_compared += 1
+        # Make sure that at least 1 file was compared
+        common.logger.info(
+            "Number of files successfully compared: %d", num_files_compared
+        )
+        self.assertGreater(num_files_compared, 0)

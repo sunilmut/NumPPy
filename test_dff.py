@@ -420,28 +420,30 @@ class DffTest(unittest.TestCase):
         self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
 
     def test_real_data(self):
-        input_dir = os.path.join(os.getcwd(), "test_data", "dff")
         input_dirs_to_test = ["dff", "dff_realdata"]
-        dff_filenames = ["test", "0111_PV_c4m1- Index"]
-        for d, f in zip(input_dirs_to_test, dff_filenames):
-            common.logger.info("testing dir(%s):file(%s)", d, f)
-            self.validate_real_data_for_input_dir(d, f)
+        parent_dir = os.path.join(os.getcwd(), "test_data")
+        for d in input_dirs_to_test:
+            input_dir = os.path.join(parent_dir, d)
+            csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
+            for f in csv_path:
+                f = os.path.basename(f)
+                common.logger.info("testing dir(%s):file(%s)", input_dir, f)
+                self.validate_real_data_for_input_dir(input_dir, f)
 
-    def validate_real_data_for_input_dir(self, dir: str, dff_filename: str):
-        input_dir = os.path.join(os.getcwd(), "test_data", dir)
+    # Calls dff module's `main` routine and then validates that the output folder
+    # matches the expected output folder.
+    def validate_real_data_for_input_dir(self, input_dir: str, dff_filename: str):
         parameter_obj = Parameters()
         try:
             parameter_obj.parse(input_dir)
         except ValueError as e:
             common.logger.warning(e)
         dff.main(input_dir, parameter_obj, True)
-        expected_output_dir = os.path.join(
-            os.getcwd(), "test_data", dir, "_output_expected", dff_filename
-        )
-        output_dir = os.path.join(
-            os.getcwd(), "test_data", dir, "_output", dff_filename
-        )
+        dir_for_file = os.path.splitext(dff_filename)[0]
+        expected_output_dir = os.path.join(input_dir + "_output_expected", dir_for_file)
+        output_dir = os.path.join(input_dir + "_output", dir_for_file)
         csv_path = glob.glob(os.path.join(expected_output_dir, "*.csv"))
+        num_files_compared = 0
         # Validate that the files in the output dir match the expected output dir
         for expected_csv_file in csv_path:
             file_name = os.path.basename(expected_csv_file)
@@ -464,8 +466,15 @@ class DffTest(unittest.TestCase):
                 if files_match:
                     common.logger.debug("Output matches expected.")
                 else:
-                    common.logger.debug("Output does not matches expected.")
+                    common.logger.error("Output does not matches expected.")
                 self.assertTrue(files_match)
+                num_files_compared += 1
+
+        # Make sure that at least 1 file was compared
+        common.logger.info(
+            "Number of files successfully compared: %d", num_files_compared
+        )
+        self.assertGreater(num_files_compared, 0)
 
     def test_generate_data_file(self):
         input_dir = os.path.join(os.getcwd(), "test_data", "dff_realdata")
@@ -529,3 +538,5 @@ class DffTest(unittest.TestCase):
         one_binary_df = binary_df[binary_df[common.INPUT_COL2_FREEZE] == 1]
         output_file = os.path.join(output_dir, "1_data.csv")
         one_binary_df.to_csv(output_file, index=False, header=True)
+        output_file = os.path.join(output_dir, "data.csv")
+        binary_df.to_csv(output_file, index=False, header=True)
