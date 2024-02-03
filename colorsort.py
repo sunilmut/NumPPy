@@ -1,23 +1,23 @@
 #!/usr/bin/python
 
-from asyncio.log import logger
-import sys
-import xlrd
 import getopt
-from collections import defaultdict
-import xlsxwriter
-import logging as log
-from nested_dict import nested_dict
 import logging
-import sys
+import logging as log
 import os
-from guizero import App, CheckBox, PushButton, Text, TextBox
-import matplotlib
-import openpyxl
-from enum import Enum
 
 # from openpyxl import styles
 import subprocess
+import sys
+from asyncio.log import logger
+from collections import defaultdict
+from enum import Enum
+
+import matplotlib
+import openpyxl
+import xlrd
+import xlsxwriter
+from guizero import App, CheckBox, PushButton, Text, TextBox
+from nested_dict import nested_dict
 
 # constants
 OUTPUT_LOG_FILE = "output.txt"
@@ -140,7 +140,8 @@ def sheet_cell_details(sheet, wb, r, c):
             xf = wb.xf_list[xfx]
             bgx = xf.background.pattern_colour_index
             empty_or_ws = (
-                (col_type == xlrd.XL_CELL_EMPTY) or (cell_obj == "") or bgx == 64
+                (col_type == xlrd.XL_CELL_EMPTY) or (
+                    cell_obj == "") or bgx == 64
             )
             return empty_or_ws, bgx, cell_obj.value
         case Type.OPENPYXL:
@@ -181,13 +182,15 @@ def parse_input_workbook(in_wb, sheet_num, break_on_white):
         white_space_encountered = False
         for row in range(0, rows):
             # Get cell details of [row, col]
-            empty_or_ws, bgx, value = sheet_cell_details(sheet, in_wb, row, col)
+            empty_or_ws, bgx, value = sheet_cell_details(
+                sheet, in_wb, row, col)
             if empty_or_ws:
                 logging.debug("[%d,%d] empty cell" % (row + 1, col + 1))
                 white_space_encountered = True
                 continue  # skip empty cells
             if break_on_white and white_space_encountered and last_non_white_bgx != -1:
-                logging.debug("breaking on white for color: %d" % (last_non_white_bgx))
+                logging.debug("breaking on white for color: %d" %
+                              (last_non_white_bgx))
                 cur_column_per_color[last_non_white_bgx] += 1
             last_non_white_bgx = bgx
             white_space_encountered = False
@@ -275,7 +278,8 @@ def sort(input_file, output_file, break_on_ws):
     elif ext == ".xlsx":
         in_wb = openpyxl.load_workbook(input_file)
     else:
-        logger.error("Unsupported extension (%s). Only .xls or xlsx supported.", ext)
+        logger.error(
+            "Unsupported extension (%s). Only .xls or xlsx supported.", ext)
         return False
 
     for sheet_num in range(0, num_sheets(in_wb)):
@@ -329,7 +333,8 @@ def select_input_file():
     input_folder = os.path.dirname(input_file)
     file_name_without_ext, ext = os.path.splitext(os.path.basename(input_file))
     input_file_text_box.value = os.path.basename(input_file)
-    output_file = os.path.join(input_folder, "o_" + file_name_without_ext + ".xlsx")
+    output_file = os.path.join(
+        input_folder, "o_" + file_name_without_ext + ".xlsx")
     open_output_file_button.enabled = False
 
 
@@ -427,7 +432,8 @@ if __name__ == "__main__":
     app = App("", height=450, width=400)
 
     # App name box
-    title = Text(app, text="Excel color sort", size=16, font="Arial Bold", width=30)
+    title = Text(app, text="Excel color sort",
+                 size=16, font="Arial Bold", width=30)
     title.bg = "white"
     line()
 
@@ -452,7 +458,8 @@ if __name__ == "__main__":
     line()
 
     # Process input button
-    process_button = PushButton(app, text="Color Sort", command=sort_cick, width=26)
+    process_button = PushButton(
+        app, text="Color Sort", command=sort_cick, width=26)
     process_button.tk.config(font=("Verdana bold", 14))
     process_button.bg = "#0099cc"
     process_button.text_color = "white"

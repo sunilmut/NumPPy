@@ -1,11 +1,12 @@
 #!/usr/bin/python
 
-import pandas as pd
-import os
-import numpy as np
-from numpy import NAN as NAN
 import glob
+import os
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from numpy import NAN as NAN
 
 CSV_EXT = ".csv"
 
@@ -196,7 +197,12 @@ class Parameters:
         )
         for param in param_list:
             ts_series = self.get_param_values_as_series(param, timeshift_val)
-            ts_series_combined = pd.concat([ts_series_combined, ts_series])
+            ts_series_combined = pd.concat(
+                [
+                    ts_series_combined.astype(ts_series.dtypes),
+                    ts_series.astype(ts_series_combined.dtypes),
+                ]
+            )
 
         ts_series_combined.sort_values(
             by=Parameters.PARAM_TIME_WINDOW_START_LIST, ascending=True, inplace=True

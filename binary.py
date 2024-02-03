@@ -1,12 +1,14 @@
 #!/usr/bin/python
 
-import sys
 import getopt
+import glob
 import logging
 import os
+import subprocess
+import sys
+
+import numpy as np
 import pandas as pd
-from pandas.api.types import is_integer_dtype
-import glob
 from guizero import (
     App,
     Box,
@@ -19,8 +21,8 @@ from guizero import (
     TitleBox,
     Window,
 )
-import subprocess
-import numpy as np
+from pandas.api.types import is_integer_dtype
+
 import common
 from parameter import *
 
@@ -97,7 +99,7 @@ files_without_timeshift = []
 def apply_duration_criteria(
     ts_series, param_min_time_duration_before, param_min_time_duration_after
 ):
-    it = ts_series.iteritems()
+    it = ts_series.items()
     prev_ts = 0
     for i, (idx, ts) in enumerate(it):
         # Query the timestamp of the next element in the series.
@@ -113,7 +115,7 @@ def apply_duration_criteria(
 
 
 def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
-    it = ts_series.iteritems()
+    it = ts_series.items()
     for idx, val in it:
         for filter_idx, filter_val in timstamp_filter_series.items():
             if val < filter_val:
@@ -126,7 +128,7 @@ def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
 def apply_special_emtpy_ts_logic(file_name_with_path, df):
     """
     This function will generate a new name for the file if the supplied
-    dataframe is empty
+    DataFrame is empty
     """
 
     if df.empty:
@@ -149,19 +151,19 @@ def split_df_and_output(
     out_file_one_to_zero_ts,
 ):
     """
-    Split the dataframe based on whether it is a [0->1] or [1->0] transitions
+    Split the DataFrame based on whether it is a [0->1] or [1->0] transitions
     and output to respective files.
     Timestamps file should have the header
     """
 
-    # Create a copy of the dataframe so that the original is not affected
+    # Create a copy of the DataFrame so that the original is not affected
     output_df = out_df[:]
 
     output_df[OUTPUT_COL0_TS] = output_df[OUTPUT_COL0_TS] + timeshift_val
     # Round up to two decimals
-    output_df[OUTPUT_COL0_TS] = output_df[OUTPUT_COL0_TS].round(decimals=2)
+    output_df[OUTPUT_COL0_TS] = output_df[OUTPUT_COL0_TS].astype(float).round(decimals=2)
     common.logger.debug("Removing all entries with timestamp < 10 secs")
-    # Remove all entries with timeseconds less than 10 seconds
+    # Remove all entries with timestamps less than 10 seconds
     output_df = output_df[output_df[OUTPUT_COL0_TS] > 10]
 
     out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
@@ -174,12 +176,14 @@ def split_df_and_output(
     out_file_zero_to_one_ts = apply_special_emtpy_ts_logic(
         out_file_zero_to_one_ts, out_zero_to_one_ts_df
     )
-    out_zero_to_one_ts_df.to_csv(out_file_zero_to_one_ts, index=False, header=True)
+    out_zero_to_one_ts_df.to_csv(
+        out_file_zero_to_one_ts, index=False, header=True)
     out_one_to_zero_df.to_csv(out_file_one_to_zero, index=False)
     out_file_one_to_zero_ts = apply_special_emtpy_ts_logic(
         out_file_one_to_zero_ts, out_one_to_zero_ts_df
     )
-    out_one_to_zero_ts_df.to_csv(out_file_one_to_zero_ts, index=False, header=True)
+    out_one_to_zero_ts_df.to_csv(
+        out_file_one_to_zero_ts, index=False, header=True)
 
 
 def out_base(input_file, output_folder):
@@ -302,8 +306,10 @@ def format_out_nop_file_name(
         )
 
     common.logger.debug("\tOutput files:")
-    common.logger.debug("\t\tNOp [0->1]: %s", os.path.basename(out_file_zero_to_one_un))
-    common.logger.debug("\t\tNOp [1->0]: %s", os.path.basename(out_file_one_to_zero_un))
+    common.logger.debug("\t\tNOp [0->1]: %s",
+                        os.path.basename(out_file_zero_to_one_un))
+    common.logger.debug("\t\tNOp [1->0]: %s",
+                        os.path.basename(out_file_one_to_zero_un))
     common.logger.debug(
         "\t\tNOp [0->1] TimeStamps Only: %s",
         os.path.basename(out_file_zero_to_one_un_ts),
@@ -392,19 +398,23 @@ def format_out_file_names(
         )
 
     common.logger.debug("\tOutput files:")
-    common.logger.debug("\t\t[0->1]: %s", os.path.basename(out_file_zero_to_one))
-    common.logger.debug("\t\t[1->0]: %s", os.path.basename(out_file_one_to_zero))
     common.logger.debug(
-        "\t\t[0->1] TimeStamps Only: %s", os.path.basename(out_file_zero_to_one_ts)
+        "\t\t[0->1]: %s", os.path.basename(out_file_zero_to_one))
+    common.logger.debug(
+        "\t\t[1->0]: %s", os.path.basename(out_file_one_to_zero))
+    common.logger.debug(
+        "\t\t[0->1] TimeStamps Only: %s", os.path.basename(
+            out_file_zero_to_one_ts)
     )
     common.logger.debug(
-        "\t\t[1->0] TimeStamps Only: %s", os.path.basename(out_file_one_to_zero_ts)
+        "\t\t[1->0] TimeStamps Only: %s", os.path.basename(
+            out_file_one_to_zero_ts)
     )
 
 
 def parse_param_folder(parameter_obj):
     """
-    Parse parameter folder and create a list of parameter dataframe(s)
+    Parse parameter folder and create a list of parameter DataFrame(s)
     out of it.
     """
 
@@ -465,22 +475,24 @@ def parse_cur_param_file(parameter_obj):
     except ValueError as e:
         common.logger.error(e)
 
-    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+    refresh_param_values_ui(param_window_duration,
+                            param_start_timestamp_series)
 
 
 def process_param(parameter_obj, param_name, out_df, nop_df):
     """
-    Processes the dataframe for the parameter name specified using
+    Processes the DataFrame for the parameter name specified using
     the parameter name.
     Returns:
-    - dataframe after applying the time window criteria
-    - 'not in parameter' dataframe - i.e. everything in the input dataframe after removing
-      entries that were selected by the parameter criterias
+    - DataFrame after applying the time window criteria
+    - 'not in parameter' DataFrame - i.e. everything in the input DataFrame after removing
+      entries that were selected by the parameter criteria's
       p.s - This parameter allows continuation from a previous 'nop_df'
     """
 
     # Make a copy by value
     temp_out_df = out_df[:]
+
     (
         param_window_duration,
         param_start_timestamp_series,
@@ -497,10 +509,10 @@ def process_param(parameter_obj, param_name, out_df, nop_df):
         )
         temp_out_df = temp_out_df.loc[filter_list]
 
-    # Build a consolidated (for each parameter) 'not in parameter' dataframe
+    # Build a consolidated (for each parameter) 'not in parameter' DataFrame
     # after starting from original set and by removing entries that are in the parameter.
-    # This is done by doing an right outer join of the two dataframes where the right
-    # dataframe is 'not in parameter' dataframe.
+    # This is done by doing an right outer join of the two DataFrames where the right
+    # DataFrame is 'not in parameter' DataFrame.
     nop_df = (
         pd.merge(temp_out_df, nop_df, how="outer", indicator=True)
         .query("_merge == 'right_only'")
@@ -513,8 +525,8 @@ def process_param(parameter_obj, param_name, out_df, nop_df):
 
 def process_input_df(input_df):
     """
-    Process an input dataframe and return an output base dataframe (i.e. without
-    any of the criterias or parameters applied)
+    Process an input DataFrame and return an output base DataFrame (i.e. without
+    any of the criteria's or parameters applied)
     """
 
     sum = 0
@@ -564,7 +576,11 @@ def process_input_df(input_df):
                     OUTPUT_COL3_FREEZE_TP: [ONE_TO_ZERO],
                 }
             )
-            out_df = pd.concat([out_df, df_o], ignore_index=True, sort=False)
+            out_df = pd.concat(
+                [out_df.astype(df_o.dtypes), df_o.astype(out_df.dtypes)],
+                ignore_index=True,
+                sort=False,
+            )
             df_o = pd.DataFrame(
                 {
                     OUTPUT_COL0_TS: [row.values[0]],
@@ -573,7 +589,11 @@ def process_input_df(input_df):
                     OUTPUT_COL3_FREEZE_TP: [ZERO_TO_ONE],
                 }
             )
-            out_df = pd.concat([out_df, df_o], ignore_index=True, sort=False)
+            out_df = pd.concat(
+                [out_df.astype(df_o.dtypes), df_o.astype(out_df.dtypes)],
+                ignore_index=True,
+                sort=False,
+            )
 
             # On transition, reset the values.
             sum = 0
@@ -590,12 +610,13 @@ def process_input_df(input_df):
 def apply_min_time_duration_criteria(min_t_before, min_t_after, df):
     """
     This will apply minimum time duration criteria on the provided
-    dataframe and return the dataframe.
+    DataFrame and return the DataFrame.
     """
 
     if min_t_before > 0 or min_t_after > 0:
         df = df.loc[
-            list(apply_duration_criteria(df.iloc[:, 0], min_t_before, min_t_after))
+            list(apply_duration_criteria(
+                df.iloc[:, 0], min_t_before, min_t_after))
         ]
 
     return df
@@ -613,17 +634,21 @@ def process_input_file(input_file, output_folder):
     global param_min_time_duration_after, files_without_timeshift
     global param_file_exists, parameter_obj
 
-    common.logger.debug("Processing input file: %s", os.path.basename(input_file))
-    timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(input_file)
+    common.logger.debug("Processing input file: %s",
+                        os.path.basename(input_file))
+    timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(
+        input_file)
 
     if timeshift_val:
-        common.logger.debug("\tUsing timeshift value of: %s", str(timeshift_val))
+        common.logger.debug(
+            "\tUsing timeshift value of: %s", str(timeshift_val))
     else:
         if timeshift_val is None:
             timeshift_val = 0
             common.logger.warning("\tNo timeshift value specified")
         else:
-            common.logger.warning("\tIncorrect timeshift value of zero specified")
+            common.logger.warning(
+                "\tIncorrect timeshift value of zero specified")
         files_without_timeshift.append(input_file)
 
     # Parse the input file
@@ -637,7 +662,7 @@ def process_input_file(input_file, output_folder):
     reset_all_parameters()
     parse_param_folder(parameter_obj)
 
-    # Get a base output dataframe without any criterias applied
+    # Get a base output DataFrame without any criteria's applied
     result, out_df = process_input_df(df)
     if result == False or out_df.empty:
         return False
@@ -655,7 +680,8 @@ def process_input_file(input_file, output_folder):
     ) = get_param_min_time_duration(parameter_obj)
     if param_file_exists:
         common.logger.debug(
-            "\tUsing min time duration (secs): %s", str(param_min_time_duration_before)
+            "\tUsing min time duration (secs): %s", str(
+                param_min_time_duration_before)
         )
         # Apply any minimum time duration criteria
         out_df = apply_min_time_duration_criteria(
@@ -673,7 +699,7 @@ def process_input_file(input_file, output_folder):
     # after all the parameters have been processed. 'no' starts with
     # the original set (after the min time duration) and as each parameter
     # gets process the set gets subtracted by that.
-    # Make a copy of out dataframe 'by value' and not by reference.
+    # Make a copy of out DataFrame 'by value' and not by reference.
     nop_df = out_df[:]
     params_name = ""
     cur_selected_param = parameter_obj.get_currently_selected_param()
@@ -687,8 +713,9 @@ def process_input_file(input_file, output_folder):
 
         params_name += UNDERSCORE + param_name
 
-        # process the dataframe for the parameter with the given index.
-        temp_out_df, nop_df = process_param(parameter_obj, param_name, out_df, nop_df)
+        # process the DataFrame for the parameter with the given index.
+        temp_out_df, nop_df = process_param(
+            parameter_obj, param_name, out_df, nop_df)
 
         # Format the file names of the output files using the parameter name
         format_out_file_names(
@@ -698,7 +725,8 @@ def process_input_file(input_file, output_folder):
             param_min_time_duration_after,
             output_folder,
         )
-        tw_filter_file = out_tw_filter_file(input_file, param_name, output_folder)
+        tw_filter_file = out_tw_filter_file(
+            input_file, param_name, output_folder)
         common.logger.debug(
             "\tAfter applying time window duration filter: %s",
             os.path.basename(tw_filter_file),
@@ -813,7 +841,8 @@ def main(input_folder_or_file, separate_files, output_folder):
 
     # get the input file if one is not provided.
     if not input_folder_or_file:
-        input_folder_or_file = input("Provide an input folder or .csv file name: ")
+        input_folder_or_file = input(
+            "Provide an input folder or .csv file name: ")
 
     input_folder_or_file = os.path.normpath(input_folder_or_file)
     if os.path.isdir(input_folder_or_file):
@@ -828,7 +857,8 @@ def main(input_folder_or_file, separate_files, output_folder):
         )
         print_help()
 
-    output_folder = common.get_output_dir(input_dir, output_folder, separate_files)
+    output_folder = common.get_output_dir(
+        input_dir, output_folder, separate_files)
     common.set_input_dir(input_dir)
     common.logger.debug("Input folder: %s", os.path.normpath(input_dir))
     output_dir = os.path.normpath(output_folder)
@@ -862,16 +892,19 @@ def separate_input_file(input_file, output_folder):
     """
 
     global files_without_timeshift
-    timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(input_file)
+    timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(
+        input_file)
 
     if timeshift_val:
-        common.logger.debug("\tUsing timeshift value of: %s", str(timeshift_val))
+        common.logger.debug(
+            "\tUsing timeshift value of: %s", str(timeshift_val))
     else:
         if timeshift_val is None:
             timeshift_val = 0
             common.logger.warning("\tNo timeshift value specified")
         else:
-            common.logger.warning("\tIncorrect timeshift value of zero specified")
+            common.logger.warning(
+                "\tIncorrect timeshift value of zero specified")
         files_without_timeshift.append(input_file)
 
     # Parse the input file
@@ -880,7 +913,8 @@ def separate_input_file(input_file, output_folder):
     try:
         time_col_index = columns.index("time")
     except ValueError:
-        common.logger.warning("Time column is not present in the file. Skipping file")
+        common.logger.warning(
+            "Time column is not present in the file. Skipping file")
         return False
 
     for i, col in enumerate(df):
@@ -903,7 +937,8 @@ def separate_input_file(input_file, output_folder):
             )
             out_df_freeze = df[col]
             # Empty motion index columns
-            out_mi = pd.DataFrame(index=range(out_df_freeze.size), columns=range(1))
+            out_mi = pd.DataFrame(index=range(
+                out_df_freeze.size), columns=range(1))
             out_df_time = df.iloc[:, time_col_index]
             out_df = pd.concat(
                 [out_df_time, out_mi, out_df_freeze],
@@ -911,7 +946,8 @@ def separate_input_file(input_file, output_folder):
                 ignore_index=True,
                 sort=False,
             )
-            out_df = pd.concat([out_df_frame, out_df], ignore_index=True, sort=False)
+            out_df = pd.concat([out_df_frame, out_df],
+                               ignore_index=True, sort=False)
             out_df.to_csv(output_file_name, index=False, header=False)
             # print(out_df)
 
@@ -971,7 +1007,8 @@ def select_input_dir(parameter_obj):
         param_window_duration,
         param_start_timestamp_series,
     ) = parameter_obj.get_default_parameter_values()
-    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+    refresh_param_values_ui(param_window_duration,
+                            param_start_timestamp_series)
     (
         param_min_time_duration_before,
         param_min_time_duration_after,
@@ -983,7 +1020,8 @@ def select_input_dir(parameter_obj):
             param_window_duration,
             param_start_timestamp_series,
         ) = parameter_obj.get_param_values(parameter_obj.get_currently_selected_param())
-        refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+        refresh_param_values_ui(param_window_duration,
+                                param_start_timestamp_series)
 
 
 def open_output_folder():
@@ -1041,7 +1079,8 @@ def refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_fil
     total_files_processed = len(successfully_parsed_files) + len(
         unsuccessfully_parsed_files
     )
-    result_box_str = "Total input files processed: " + str(total_files_processed) + "\n"
+    result_box_str = "Total input files processed: " + \
+        str(total_files_processed) + "\n"
     result_box_str += (
         "Number of files successfully processed: "
         + str(len(successfully_parsed_files))
@@ -1071,7 +1110,8 @@ def update_min_t_in_file(min_t_before_val, min_t_after_val):
     global parameter_obj
 
     try:
-        parameter_obj.set_min_time_duration_values(min_t_before_val, min_t_after_val)
+        parameter_obj.set_min_time_duration_values(
+            min_t_before_val, min_t_after_val)
     except ValueError(e):
         common.logger.error(e)
         pass
@@ -1100,7 +1140,8 @@ def process():
     successfully_parsed_files, unsuccessfully_parsed_files = main(
         input_dir, False, None
     )
-    refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_files)
+    refresh_result_text_box(successfully_parsed_files,
+                            unsuccessfully_parsed_files)
 
     rwin.show()
 
@@ -1117,8 +1158,10 @@ def process_separate_input():
     # Reset the result box before processing so that the new values of the
     # processing results can be shown.
     reset_result_box()
-    successfully_parsed_files, unsuccessfully_parsed_files = main(input_dir, True, None)
-    refresh_result_text_box(successfully_parsed_files, unsuccessfully_parsed_files)
+    successfully_parsed_files, unsuccessfully_parsed_files = main(
+        input_dir, True, None)
+    refresh_result_text_box(successfully_parsed_files,
+                            unsuccessfully_parsed_files)
 
     rwin.show()
 
@@ -1152,7 +1195,8 @@ def select_param(selected_param_value):
         param_window_duration,
         param_start_timestamp_series,
     ) = parameter_obj.get_param_values(cur_selected_param)
-    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+    refresh_param_values_ui(param_window_duration,
+                            param_start_timestamp_series)
 
 
 def refresh_param_names_combo_box(parameter_obj):
@@ -1220,7 +1264,8 @@ if __name__ == "__main__":
     """
 
     progress = loghandler()
-    logging.basicConfig(filename=OUTPUT_LOG_FILE, level=logging.INFO, format="")
+    logging.basicConfig(filename=OUTPUT_LOG_FILE,
+                        level=logging.INFO, format="")
     common.logger = logging.getLogger(__name__)
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     progress.setFormatter(formatter)
@@ -1361,7 +1406,8 @@ if __name__ == "__main__":
     time_window_duration_label_box = Text(
         param_box, text=PARAM_UI_TIME_WINDOW_DURATION_TEXT, grid=[0, cnt], align="left"
     )
-    time_window_duration_box = TextBox(param_box, text="", grid=[1, cnt], align="left")
+    time_window_duration_box = TextBox(
+        param_box, text="", grid=[1, cnt], align="left")
     # Non editable
     time_window_duration_box.disable()
     cnt += 1
@@ -1433,10 +1479,12 @@ if __name__ == "__main__":
     line()
 
     # New Result window
-    rwin = Window(app, title="Result Window", visible=False, height=700, width=800)
+    rwin = Window(app, title="Result Window",
+                  visible=False, height=700, width=800)
 
     # Title box
-    rwin_title = Text(rwin, text="Results", size=16, font="Arial Bold", width=25)
+    rwin_title = Text(rwin, text="Results", size=16,
+                      font="Arial Bold", width=25)
     rwin_title.bg = "white"
     line_r(rwin)
     result_text_box = Text(rwin, text="")
@@ -1445,12 +1493,17 @@ if __name__ == "__main__":
     # Grid to hold the various lists
     rlist_box = Box(rwin, layout="grid")
     cnt = 0
-    rwin_success_title = Text(rlist_box, text="Successful files:", grid=[0, cnt])
-    rwin_unsuccess_title = Text(rlist_box, text="Unsuccessful files:", grid=[5, cnt])
-    rwin_without_shift = Text(rlist_box, text="Files without shift:", grid=[10, cnt])
+    rwin_success_title = Text(
+        rlist_box, text="Successful files:", grid=[0, cnt])
+    rwin_unsuccess_title = Text(
+        rlist_box, text="Unsuccessful files:", grid=[5, cnt])
+    rwin_without_shift = Text(
+        rlist_box, text="Files without shift:", grid=[10, cnt])
     cnt += 1
-    result_success_list_box = ListBox(rlist_box, [], scrollbar=True, grid=[0, cnt])
-    result_unsuccess_list_box = ListBox(rlist_box, [], scrollbar=True, grid=[5, cnt])
+    result_success_list_box = ListBox(
+        rlist_box, [], scrollbar=True, grid=[0, cnt])
+    result_unsuccess_list_box = ListBox(
+        rlist_box, [], scrollbar=True, grid=[5, cnt])
     result_withoutshift_list_box = ListBox(
         rlist_box, [], scrollbar=True, grid=[10, cnt]
     )

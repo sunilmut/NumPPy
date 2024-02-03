@@ -1,3 +1,9 @@
+# Overview
+This repo has various python scripts that make it easy to analyze photometry
+and freeze frame data.
+There is a more general colorsort.py script that helps sort and separate
+columns with different colors.
+
 # Setup:
 ## Install git for windows:
 In a browser go [here](https://git-scm.com/download/win), download and
@@ -52,6 +58,11 @@ To run the app in verbose mode (to get more logs), run:
 python binary.py -v
 ```
 
+To run unit tests:
+```python
+python -m unittest test_binary
+```
+
 ## XLS (Excel) color sorter
 Sorts the color coded data from a given .xls(x) input file and outputs
 them to an .xlsx file.<br/>
@@ -87,4 +98,11 @@ python dff.py
 To run the app in verbose mode (to get more logs), run:
 ```python
 python dff.py -v
+```
+
+To run unit tests:
+```python
+python -m unittest test_dff
+# Or to run a particular test case:
+python -m unittest test_dff.DffTest.test_bvt
 ```

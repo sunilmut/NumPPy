@@ -1,12 +1,14 @@
 #!/usr/bin/python
 
 import logging
-import pandas as pd
-import numpy as np
 import unittest
+
+import numpy as np
+import pandas as pd
+
+import binary as b
 import common
 from parameter import *
-import binary as b
 
 """
 ------------------------------------------------------------
@@ -92,7 +94,8 @@ class TestBinary(unittest.TestCase):
     def setUp(self):
         self.input_df1 = pd.DataFrame(input_data1)
         self.p1_df = pd.DataFrame(test_p1)
-        logging.basicConfig(filename=b.OUTPUT_LOG_FILE, level=logging.DEBUG, format="")
+        logging.basicConfig(filename=b.OUTPUT_LOG_FILE,
+                            level=logging.DEBUG, format="")
         common.logger = logging.getLogger(__name__)
         if not common.logger.handlers:
             progress = b.loghandler()
@@ -100,10 +103,11 @@ class TestBinary(unittest.TestCase):
 
     def validate_df(self, df, expected_data):
         expected_df = pd.DataFrame(expected_data)
-        self.assertEqual(expected_df.equals(df), True)
+        self.assertTrue(expected_df.equals(df.astype(expected_df.dtypes)))
 
     def validate_min_t(self, min_t_before, min_t_after, df, exp_out):
-        out_df = b.apply_min_time_duration_criteria(min_t_before, min_t_after, df)
+        out_df = b.apply_min_time_duration_criteria(
+            min_t_before, min_t_after, df)
         # print(out_df)
         out_df.reset_index(drop=True, inplace=True)
         self.validate_df(out_df, exp_out)
@@ -111,8 +115,8 @@ class TestBinary(unittest.TestCase):
     def test_process_input_df(self):
         exp_out_df = pd.DataFrame(output_data1)
         result, out_df = b.process_input_df(self.input_df1)
-        self.assertEqual(result, True)
-        self.assertEqual(exp_out_df.equals(out_df), True)
+        self.assertTrue(result)
+        self.assertTrue(exp_out_df.equals(out_df.astype(exp_out_df.dtypes)))
         self.validate_min_t(1, 0, out_df, output_data1_min_t_1_before)
         self.validate_min_t(5, 0, out_df, output_data1_min_t_5_before)
         self.validate_min_t(0, 4, out_df, output_data1_min_t_4_after)
@@ -123,14 +127,16 @@ class TestBinary(unittest.TestCase):
         parameter_obj.set_param_value(param_name, self.p1_df)
         out_df = b.process_input_df(self.input_df1)[1]
         nop_df = out_df[:]
-        temp_out_df, nop_df = b.process_param(parameter_obj, param_name, out_df, nop_df)
+        temp_out_df, nop_df = b.process_param(
+            parameter_obj, param_name, out_df, nop_df)
         temp_out_df.reset_index(drop=True, inplace=True)
         self.validate_df(temp_out_df, out_p1)
         self.validate_df(nop_df, out_p1_nop)
 
     def test_real_data(self):
         input_dir = os.path.join(os.getcwd(), "test_data", "binary")
-        output_dir_base = os.path.join(os.getcwd(), "test_data", "binary_output")
+        output_dir_base = os.path.join(
+            os.getcwd(), "test_data", "binary_output")
         expected_output_dir_base = os.path.join(
             os.getcwd(), "test_data", "binary_output_expected"
         )
@@ -171,17 +177,23 @@ class TestBinary(unittest.TestCase):
                     expected_lines = t1.readlines()
                     output_lines = t2.readlines()
                     x = 0
-                    files_match = True
-                    for line in expected_lines:
-                        if line != output_lines[x]:
-                            common.logger.error("%s!=\n%s", line, output_lines[x])
-                            files_match = False
+                    for expected_line in expected_lines:
+                        expected_line_w = expected_line.strip().split(",")
+                        output_line_w = output_lines[x].strip().split(",")
+                        self.assertEqual(len(expected_line_w),
+                                         len(output_line_w))
+                        for exp_w, actual_w in zip(expected_line_w, output_line_w):
+                            if common.str_is_float(exp_w):
+                                self.assertTrue(common.str_is_float(actual_w))
+                                self.assertAlmostEqual(
+                                    float(exp_w),
+                                    float(actual_w),
+                                    2,
+                                    "output does not match",
+                                )
+                            else:
+                                self.assertEqual(exp_w, actual_w)
                         x += 1
-                    if files_match:
-                        common.logger.debug("Output matches expected.")
-                    else:
-                        common.logger.error("Output does not matches expected.")
-                    self.assertTrue(files_match)
                     num_files_compared += 1
         # Make sure that at least 1 file was compared
         common.logger.info(

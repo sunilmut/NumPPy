@@ -1,13 +1,13 @@
-import h5py
-import sys
 import getopt
+import glob
 import logging
-import numpy as np
-import common
-from parameter import *
 import os
+import subprocess
+import sys
+
+import h5py
+import numpy as np
 import pandas as pd
-from pandas.api.types import is_integer_dtype
 from guizero import (
     App,
     Box,
@@ -19,8 +19,10 @@ from guizero import (
     TitleBox,
     Window,
 )
-import glob
-import subprocess
+from pandas.api.types import is_integer_dtype
+
+import common
+from parameter import *
 
 # UI related constants
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
@@ -141,7 +143,8 @@ def main(input_dir: str, parameter_obj: Parameters):
                 csv_file
             )
             if timeshift_val:
-                common.logger.info("Using timeshift value of: %s", str(timeshift_val))
+                common.logger.info(
+                    "Using timeshift value of: %s", str(timeshift_val))
             else:
                 if timeshift_val is None:
                     timeshift_val = 0
@@ -156,9 +159,11 @@ def main(input_dir: str, parameter_obj: Parameters):
                 csv_file, common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed
             )
             if not success:
-                common.logger.warning("Skipping CSV file (%s) as it is well formed")
+                common.logger.warning(
+                    "Skipping CSV file (%s) as it is well formed")
                 if result_unsuccess_list_box is not None:
-                    result_unsuccess_list_box.append(os.path.basename(csv_file))
+                    result_unsuccess_list_box.append(
+                        os.path.basename(csv_file))
                 continue
 
             if result_success_list_box is not None:
@@ -220,7 +225,8 @@ def main(input_dir: str, parameter_obj: Parameters):
                     OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT,
                 )
                 if auc_0s_cnt > 0 and param is not None:
-                    generate_output_file(auc_0s_sum, auc_0s_cnt, out_df_0s, out_0_file)
+                    generate_output_file(
+                        auc_0s_sum, auc_0s_cnt, out_df_0s, out_0_file)
 
                 if auc_0s_cnt_not > 0 and param is None:
                     generate_output_file(
@@ -233,7 +239,8 @@ def main(input_dir: str, parameter_obj: Parameters):
                     OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT,
                 )
                 if auc_1s_cnt > 0 and param is not None:
-                    generate_output_file(auc_1s_sum, auc_1s_cnt, out_df_1s, out_1_file)
+                    generate_output_file(
+                        auc_1s_sum, auc_1s_cnt, out_df_1s, out_1_file)
 
                 if auc_1s_cnt_not > 0 and param is None:
                     generate_output_file(
@@ -247,7 +254,8 @@ def main(input_dir: str, parameter_obj: Parameters):
                 )
 
                 if auc_cnt > 0 and param is not None:
-                    generate_output_file(auc_sum, auc_cnt, out_df, out_not_file)
+                    generate_output_file(
+                        auc_sum, auc_cnt, out_df, out_not_file)
 
                 if auc_cnt_not > 0 and param is None:
                     generate_output_file(
@@ -323,7 +331,7 @@ def process(
         )
         return False
 
-    if not binary_df[common.INPUT_COL0_TS].is_monotonic:
+    if not binary_df[common.INPUT_COL0_TS].is_monotonic_increasing:
         common.logger.error("Binary timestamp values are not sorted.")
         return False, []
 
@@ -385,7 +393,8 @@ def process(
         # If there is a transition of the freeze value, compute the variables.
         # Note: The last row is also considered as the end of transition.
         if index < row_count - 1 and (
-            cur_binary_value == binary_df.iloc[index + 1][common.INPUT_COL2_FREEZE]
+            cur_binary_value == binary_df.iloc[index +
+                                               1][common.INPUT_COL2_FREEZE]
         ):
             continue
 
@@ -427,11 +436,13 @@ def process(
                 index_end = len(binary_df_ts)
 
             ts_start = round(
-                binary_df.iloc[index_start][common.INPUT_COL0_TS] + timeshift_val,
+                binary_df.iloc[index_start][common.INPUT_COL0_TS] +
+                timeshift_val,
                 Parameters.TIMESTAMP_ROUND_VALUE,
             )
             ts_end = round(
-                binary_df.iloc[index_end - 1][common.INPUT_COL0_TS] + timeshift_val,
+                binary_df.iloc[index_end -
+                               1][common.INPUT_COL0_TS] + timeshift_val,
                 Parameters.TIMESTAMP_ROUND_VALUE,
             )
 
@@ -450,7 +461,8 @@ def process(
             if ts_index_end_for_val == 0:
                 ts_index_end_for_val = len(ts)
 
-            bout_length = round(ts_end - ts_start, Parameters.TIMESTAMP_ROUND_VALUE)
+            bout_length = round(ts_end - ts_start,
+                                Parameters.TIMESTAMP_ROUND_VALUE)
             motion_index_slice = binary_df.iloc[index_start:index_end][
                 common.INPUT_COL1_MI
             ]
@@ -671,7 +683,8 @@ def select_input_dir(parameter_obj):
         param_window_duration,
         param_start_timestamp_series,
     ) = parameter_obj.get_default_parameter_values()
-    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+    refresh_param_values_ui(param_window_duration,
+                            param_start_timestamp_series)
     param_name_list = parameter_obj.get_param_name_list()
     refresh_param_names_combo_box(parameter_obj)
     if len(param_name_list):
@@ -679,7 +692,8 @@ def select_input_dir(parameter_obj):
             param_window_duration,
             param_start_timestamp_series,
         ) = parameter_obj.get_param_values(parameter_obj.get_currently_selected_param())
-        refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+        refresh_param_values_ui(param_window_duration,
+                                param_start_timestamp_series)
 
 
 def open_output_folder():
@@ -753,7 +767,8 @@ def parse_cur_param_file(parameter_obj):
     except ValueError as e:
         common.logger.error(e)
 
-    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+    refresh_param_values_ui(param_window_duration,
+                            param_start_timestamp_series)
 
 
 def set_time_window_duration_box_value(param_window_duration):
@@ -791,7 +806,8 @@ def select_param(selected_param_value):
         param_window_duration,
         param_start_timestamp_series,
     ) = parameter_obj.get_param_values(cur_selected_param)
-    refresh_param_values_ui(param_window_duration, param_start_timestamp_series)
+    refresh_param_values_ui(param_window_duration,
+                            param_start_timestamp_series)
 
 
 def line():
@@ -820,7 +836,8 @@ if __name__ == "__main__":
     """
 
     progress = loghandler()
-    logging.basicConfig(filename=OUTPUT_LOG_FILE, level=logging.INFO, format="")
+    logging.basicConfig(filename=OUTPUT_LOG_FILE,
+                        level=logging.INFO, format="")
     common.logger = logging.getLogger(__name__)
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     progress.setFormatter(formatter)
@@ -914,7 +931,8 @@ if __name__ == "__main__":
     time_window_duration_label_box = Text(
         param_box, text=PARAM_UI_TIME_WINDOW_DURATION_TEXT, grid=[0, cnt], align="left"
     )
-    time_window_duration_box = TextBox(param_box, text="", grid=[1, cnt], align="left")
+    time_window_duration_box = TextBox(
+        param_box, text="", grid=[1, cnt], align="left")
     # Non editable
     time_window_duration_box.disable()
     cnt += 1
@@ -972,10 +990,12 @@ if __name__ == "__main__":
     line()
 
     # New Result window
-    rwin = Window(app, title="Result Window", visible=False, height=700, width=800)
+    rwin = Window(app, title="Result Window",
+                  visible=False, height=700, width=800)
 
     # Title box
-    rwin_title = Text(rwin, text="Results", size=16, font="Arial Bold", width=25)
+    rwin_title = Text(rwin, text="Results", size=16,
+                      font="Arial Bold", width=25)
     rwin_title.bg = "white"
     line_r(rwin)
     result_text_box = Text(rwin, text="")
@@ -984,12 +1004,17 @@ if __name__ == "__main__":
     # Grid to hold the various lists
     rlist_box = Box(rwin, layout="grid")
     cnt = 0
-    rwin_success_title = Text(rlist_box, text="Successful files:", grid=[0, cnt])
-    rwin_unsuccess_title = Text(rlist_box, text="Unsuccessful files:", grid=[5, cnt])
-    rwin_without_shift = Text(rlist_box, text="Files without shift:", grid=[10, cnt])
+    rwin_success_title = Text(
+        rlist_box, text="Successful files:", grid=[0, cnt])
+    rwin_unsuccess_title = Text(
+        rlist_box, text="Unsuccessful files:", grid=[5, cnt])
+    rwin_without_shift = Text(
+        rlist_box, text="Files without shift:", grid=[10, cnt])
     cnt += 1
-    result_success_list_box = ListBox(rlist_box, [], scrollbar=True, grid=[0, cnt])
-    result_unsuccess_list_box = ListBox(rlist_box, [], scrollbar=True, grid=[5, cnt])
+    result_success_list_box = ListBox(
+        rlist_box, [], scrollbar=True, grid=[0, cnt])
+    result_unsuccess_list_box = ListBox(
+        rlist_box, [], scrollbar=True, grid=[5, cnt])
     result_withoutshift_list_box = ListBox(
         rlist_box, [], scrollbar=True, grid=[10, cnt]
     )
