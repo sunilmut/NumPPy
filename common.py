@@ -1,14 +1,13 @@
 #!/usr/bin/python
 
-import glob
 import os
 import subprocess
 import sys
 from csv import reader
 
-import numpy as np
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
+import unittest
 
 # input coloumns
 INPUT_COL0_TS = "timestamps"
@@ -152,3 +151,31 @@ def str_is_float(x: str) -> bool:
     except ValueError:
         return False
     return True
+
+class CommonTetsMethods(object):
+    def compare_csv_files(self, expected_csv_file, actual_file):
+        logger.info(
+            "\nComparing output file with expected.\n\tExpected: %s,\n\tOutput:%s",
+            expected_csv_file,
+            actual_file,
+        )
+        with open(expected_csv_file, "r") as t1, open(actual_file, "r") as t2:
+            expected_lines = t1.readlines()
+            output_lines = t2.readlines()
+            x = 0
+            for expected_line in expected_lines:
+                expected_line_w = expected_line.strip().split(",")
+                output_line_w = output_lines[x].strip().split(",")
+                self.assertEqual(len(expected_line_w), len(output_line_w))
+                for exp_w, actual_w in zip(expected_line_w, output_line_w):
+                    if str_is_float(exp_w):
+                        self.assertTrue(str_is_float(actual_w))
+                        self.assertAlmostEqual(
+                            float(exp_w),
+                            float(actual_w),
+                            2,
+                            "output does not match",
+                        )
+                    else:
+                        self.assertEqual(exp_w, actual_w)
+                x += 1

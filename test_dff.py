@@ -22,7 +22,7 @@ from parameter import *
 """
 
 
-class DffTest(unittest.TestCase):
+class DffTest(common.CommonTetsMethods, unittest.TestCase):
     def setUp(self):
         logging.basicConfig(filename=dff.OUTPUT_LOG_FILE,
                             level=logging.INFO, format="")
@@ -455,32 +455,8 @@ class DffTest(unittest.TestCase):
         for expected_csv_file in csv_path:
             file_name = os.path.basename(expected_csv_file)
             output_csv_file = os.path.join(output_dir, file_name)
-            common.logger.info(
-                "\nComparing output file with expected.\n\tExpected: %s,\n\tOutput:%s",
-                expected_csv_file,
-                output_csv_file,
-            )
-            with open(expected_csv_file, "r") as t1, open(output_csv_file, "r") as t2:
-                expected_lines = t1.readlines()
-                output_lines = t2.readlines()
-                x = 0
-                for expected_line in expected_lines:
-                    expected_line_w = expected_line.strip().split(",")
-                    output_line_w = output_lines[x].strip().split(",")
-                    self.assertEqual(len(expected_line_w), len(output_line_w))
-                    for exp_w, actual_w in zip(expected_line_w, output_line_w):
-                        if common.str_is_float(exp_w):
-                            self.assertTrue(common.str_is_float(actual_w))
-                            self.assertAlmostEqual(
-                                float(exp_w),
-                                float(actual_w),
-                                2,
-                                "output does not match",
-                            )
-                        else:
-                            self.assertEqual(exp_w, actual_w)
-                    x += 1
-                num_files_compared += 1
+            super().compare_csv_files(expected_csv_file, output_csv_file)
+            num_files_compared += 1
 
         # Make sure that at least 1 file was compared
         common.logger.info(
