@@ -1,17 +1,19 @@
 #!/usr/bin/python
 
-import pandas as pd
-import os
-import numpy as np
-from numpy import NAN as NAN
-import unittest
-import shutil
-from pathlib import Path
-from parameter import Parameters
-import logging
-import sys
 import glob
+import logging
+import os
+import shutil
+import sys
+import unittest
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from numpy import NAN as NAN
+
 import common
+from parameter import Parameters
 
 """
 ------------------------------------------------------------
@@ -230,8 +232,10 @@ class ParameterTest(unittest.TestCase):
         }
         ts1 = [10, 15]
         expected_out_0 = [[10, 15, True]]  # Not shifted
-        expected_out_2 = [[10.0, 11.999999, False], [12.0, 15, True]]  # Shifted by 2
-        expected_out_5 = [[10.0, 14.999999, False], [15.0, 15, True]]  # Shifted by 5
+        expected_out_2 = [[10.0, 11.999999, False],
+                          [12.0, 15, True]]  # Shifted by 2
+        expected_out_5 = [[10.0, 14.999999, False],
+                          [15.0, 15, True]]  # Shifted by 5
         expected_out_10 = [[10, 15, False]]  # Not shifted
         expected_ts = [
             [0, expected_out_0],

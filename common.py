@@ -1,13 +1,14 @@
 #!/usr/bin/python
 
-import sys
-import pandas as pd
-from pandas.api.types import is_numeric_dtype
-from csv import reader
+import glob
 import os
 import subprocess
+import sys
+from csv import reader
+
 import numpy as np
-import glob
+import pandas as pd
+from pandas.api.types import is_numeric_dtype
 
 # input coloumns
 INPUT_COL0_TS = "timestamps"
@@ -36,7 +37,8 @@ def parse_input_file_into_df(input_file, skip_num_initial_rows):
     dataframe - Parsed dataframe
     """
     in_col_names = [INPUT_COL0_TS, INPUT_COL1_MI, INPUT_COL2_FREEZE]
-    df = pd.read_csv(input_file, names=in_col_names, skiprows=skip_num_initial_rows)
+    df = pd.read_csv(input_file, names=in_col_names,
+                     skiprows=skip_num_initial_rows)
 
     # Do some basic format checking. All input fields are expected
     # to be numeric in nature.
@@ -56,6 +58,14 @@ def parse_input_file_into_df(input_file, skip_num_initial_rows):
             + ". Column 3 (freeze) value outside bounds (should be 0 or 1)"
         )
         return False, pd.DataFrame()
+
+    cast_to_type = {
+        INPUT_COL0_TS: float,
+        INPUT_COL1_MI: float,
+        INPUT_COL2_FREEZE: int,
+    }
+
+    df = df.astype(cast_to_type)
 
     return True, df
 
@@ -120,7 +130,8 @@ def get_output_dir(input_dir, output_dir, separate_files: bool):
     if separate_files:
         output_folder = os.path.join(output_folder, base_name)
     else:
-        output_folder = os.path.join(output_folder, base_name + OUTPUT_DIR_NAME)
+        output_folder = os.path.join(
+            output_folder, base_name + OUTPUT_DIR_NAME)
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
 

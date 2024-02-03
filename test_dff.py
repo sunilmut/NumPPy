@@ -1,13 +1,15 @@
-import logging
-import numpy as np
-import common
-from parameter import *
-import os
-import pandas as pd
 import glob
+import logging
+import os
 import unittest
-import dff
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+import common
+import dff
+from parameter import *
 
 """
 ------------------------------------------------------------
@@ -22,7 +24,8 @@ from pathlib import Path
 
 class DffTest(unittest.TestCase):
     def setUp(self):
-        logging.basicConfig(filename=dff.OUTPUT_LOG_FILE, level=logging.INFO, format="")
+        logging.basicConfig(filename=dff.OUTPUT_LOG_FILE,
+                            level=logging.INFO, format="")
         common.logger = logging.getLogger(__name__)
         if not common.logger.handlers:
             progress = dff.loghandler()
@@ -167,7 +170,8 @@ class DffTest(unittest.TestCase):
         ]
         timeshift_val = 0
         print(binary_df)
-        success, results = dff.process(param, "", binary_df, timeshift_val, data, ts)
+        success, results = dff.process(
+            param, "", binary_df, timeshift_val, data, ts)
         self.assertTrue(success)
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
@@ -392,7 +396,8 @@ class DffTest(unittest.TestCase):
         )
         combinded_df = param.get_combined_params_ts_series(0)
         self.assertTrue(combinded_df.equals(expected_df))
-        success, results = dff.process(param, None, binary_df, timeshift_val, data, ts)
+        success, results = dff.process(
+            param, None, binary_df, timeshift_val, data, ts)
         self.assertTrue(success)
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
@@ -441,7 +446,8 @@ class DffTest(unittest.TestCase):
             common.logger.warning(e)
         dff.main(input_dir, parameter_obj)
         dir_for_file = os.path.splitext(dff_filename)[0]
-        expected_output_dir = os.path.join(input_dir + "_output_expected", dir_for_file)
+        expected_output_dir = os.path.join(
+            input_dir + "_output_expected", dir_for_file)
         output_dir = os.path.join(input_dir + "_output", dir_for_file)
         csv_path = glob.glob(os.path.join(expected_output_dir, "*.csv"))
         num_files_compared = 0
@@ -484,7 +490,8 @@ class DffTest(unittest.TestCase):
 
     def test_generate_data_file(self):
         input_dir = os.path.join(os.getcwd(), "test_data", "dff_realdata")
-        output_dir = os.path.join(os.getcwd(), "test_data", "dff_realdata_output")
+        output_dir = os.path.join(
+            os.getcwd(), "test_data", "dff_realdata_output")
         path = Path(output_dir)
         path.mkdir(parents=True, exist_ok=True)
         ts_file = os.path.join(input_dir, "timeCorrection_BLA.hdf5")

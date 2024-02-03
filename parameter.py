@@ -1,11 +1,12 @@
 #!/usr/bin/python
 
-import pandas as pd
-import os
-import numpy as np
-from numpy import NAN as NAN
 import glob
+import os
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from numpy import NAN as NAN
 
 CSV_EXT = ".csv"
 
