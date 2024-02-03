@@ -196,7 +196,12 @@ class Parameters:
         )
         for param in param_list:
             ts_series = self.get_param_values_as_series(param, timeshift_val)
-            ts_series_combined = pd.concat([ts_series_combined, ts_series])
+            ts_series_combined = pd.concat(
+                [
+                    ts_series_combined.astype(ts_series.dtypes),
+                    ts_series.astype(ts_series_combined.dtypes),
+                ]
+            )
 
         ts_series_combined.sort_values(
             by=Parameters.PARAM_TIME_WINDOW_START_LIST, ascending=True, inplace=True

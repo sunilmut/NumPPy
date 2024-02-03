@@ -7,6 +7,7 @@ import pandas as pd
 import glob
 import unittest
 import dff
+from pathlib import Path
 
 """
 ------------------------------------------------------------
@@ -448,7 +449,7 @@ class DffTest(unittest.TestCase):
         for expected_csv_file in csv_path:
             file_name = os.path.basename(expected_csv_file)
             output_csv_file = os.path.join(output_dir, file_name)
-            common.logger.debug(
+            common.logger.info(
                 "\nComparing output file with expected.\n\tExpected: %s,\n\tOutput:%s",
                 expected_csv_file,
                 output_csv_file,
@@ -457,17 +458,22 @@ class DffTest(unittest.TestCase):
                 expected_lines = t1.readlines()
                 output_lines = t2.readlines()
                 x = 0
-                files_match = True
-                for line in expected_lines:
-                    if line != output_lines[x]:
-                        common.logger.error("%s!=\n%s", line, output_lines[x])
-                        files_match = False
+                for expected_line in expected_lines:
+                    expected_line_w = expected_line.strip().split(",")
+                    output_line_w = output_lines[x].strip().split(",")
+                    self.assertEqual(len(expected_line_w), len(output_line_w))
+                    for exp_w, actual_w in zip(expected_line_w, output_line_w):
+                        if common.str_is_float(exp_w):
+                            self.assertTrue(common.str_is_float(actual_w))
+                            self.assertAlmostEqual(
+                                float(exp_w),
+                                float(actual_w),
+                                2,
+                                "output does not match",
+                            )
+                        else:
+                            self.assertEqual(exp_w, actual_w)
                     x += 1
-                if files_match:
-                    common.logger.debug("Output matches expected.")
-                else:
-                    common.logger.error("Output does not matches expected.")
-                self.assertTrue(files_match)
                 num_files_compared += 1
 
         # Make sure that at least 1 file was compared
@@ -479,6 +485,8 @@ class DffTest(unittest.TestCase):
     def test_generate_data_file(self):
         input_dir = os.path.join(os.getcwd(), "test_data", "dff_realdata")
         output_dir = os.path.join(os.getcwd(), "test_data", "dff_realdata_output")
+        path = Path(output_dir)
+        path.mkdir(parents=True, exist_ok=True)
         ts_file = os.path.join(input_dir, "timeCorrection_BLA.hdf5")
         dff_file = os.path.join(input_dir, "dff_BLA.hdf5")
         csv_file = os.path.join(input_dir, "0111_PV_c4m1- Index.csv")

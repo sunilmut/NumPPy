@@ -133,3 +133,11 @@ def open_file(filename):
     else:
         opener = "open" if sys.platform == "darwin" else "xdg-open"
         subprocess.call([opener, filename])
+
+
+def str_is_float(x: str) -> bool:
+    try:
+        float(x)
+    except ValueError:
+        return False
+    return True

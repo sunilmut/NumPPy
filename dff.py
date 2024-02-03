@@ -323,7 +323,7 @@ def process(
         )
         return False
 
-    if not binary_df[common.INPUT_COL0_TS].is_monotonic:
+    if not binary_df[common.INPUT_COL0_TS].is_monotonic_increasing:
         common.logger.error("Binary timestamp values are not sorted.")
         return False, []
 

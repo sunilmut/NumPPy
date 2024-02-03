@@ -57,7 +57,7 @@ class ParameterTest(unittest.TestCase):
     def reset(self) -> str:
         input_dir = ParameterTest.get_trash_dir()
         param_dir = Parameters.get_param_dir(input_dir)
-        shutil.rmtree(param_dir)
+        shutil.rmtree(param_dir, ignore_errors=True)
         path = Path(param_dir)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -67,7 +67,7 @@ class ParameterTest(unittest.TestCase):
         expected_param = Parameters()
         expected_param._set_param_dir(input_dir)
 
-        # Min time duration values should be set to default valuse without any
+        # Min time duration values should be set to default values without any
         # min time duration parameter present.
         (
             param_file_exists,

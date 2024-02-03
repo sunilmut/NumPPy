@@ -97,7 +97,7 @@ files_without_timeshift = []
 def apply_duration_criteria(
     ts_series, param_min_time_duration_before, param_min_time_duration_after
 ):
-    it = ts_series.iteritems()
+    it = ts_series.items()
     prev_ts = 0
     for i, (idx, ts) in enumerate(it):
         # Query the timestamp of the next element in the series.
@@ -113,7 +113,7 @@ def apply_duration_criteria(
 
 
 def apply_timewindow_filter(ts_series, timstamp_filter_series, duration):
-    it = ts_series.iteritems()
+    it = ts_series.items()
     for idx, val in it:
         for filter_idx, filter_val in timstamp_filter_series.items():
             if val < filter_val:
@@ -564,7 +564,11 @@ def process_input_df(input_df):
                     OUTPUT_COL3_FREEZE_TP: [ONE_TO_ZERO],
                 }
             )
-            out_df = pd.concat([out_df, df_o], ignore_index=True, sort=False)
+            out_df = pd.concat(
+                [out_df.astype(df_o.dtypes), df_o.astype(out_df.dtypes)],
+                ignore_index=True,
+                sort=False,
+            )
             df_o = pd.DataFrame(
                 {
                     OUTPUT_COL0_TS: [row.values[0]],
@@ -573,7 +577,11 @@ def process_input_df(input_df):
                     OUTPUT_COL3_FREEZE_TP: [ZERO_TO_ONE],
                 }
             )
-            out_df = pd.concat([out_df, df_o], ignore_index=True, sort=False)
+            out_df = pd.concat(
+                [out_df.astype(df_o.dtypes), df_o.astype(out_df.dtypes)],
+                ignore_index=True,
+                sort=False,
+            )
 
             # On transition, reset the values.
             sum = 0
