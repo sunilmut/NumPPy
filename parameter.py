@@ -2,7 +2,6 @@
 
 import glob
 import os
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -45,7 +44,8 @@ class Parameters:
     MIN_TIME_DURATION_BEFORE_DEFAULT = float(0)
     MIN_TIME_DURATION_AFTER_DEFAULT = float(0)
     PARAM_WINDOW_DURATION_DEFAULT = 0
-    _param_col_names = [PARAM_TIME_WINDOW_START_LIST, PARAM_TIME_WINDOW_DURATION]
+    _param_col_names = [PARAM_TIME_WINDOW_START_LIST,
+                        PARAM_TIME_WINDOW_DURATION]
     TIMESTAMP_ROUND_VALUE = 6
     TIME_PRECISION = float(1) / pow(10, TIMESTAMP_ROUND_VALUE)
 
@@ -282,7 +282,8 @@ class Parameters:
         try:
             param_index = self._param_name_list.index(param_name)
         except ValueError:
-            raise ValueError("Parameter", param_name, "is not in the parameter list.")
+            raise ValueError("Parameter", param_name,
+                             "is not in the parameter list.")
 
         return self._param_df_list[param_index]
 
@@ -446,6 +447,7 @@ class Parameters:
         [[5, 10, False], [10, 15, True], [15, 20, False], [20, 25, True], [25, 35, False]]
         """
         ts_split = []
+        ts_series = ts_series.round(Parameters.TIMESTAMP_ROUND_VALUE)
         start_col_name = Parameters.PARAM_TIME_WINDOW_START_LIST
         end_col_name = Parameters.PARAM_TIME_WINDOW_END_LIST
         indices = list(

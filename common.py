@@ -7,7 +7,6 @@ from csv import reader
 
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
-import unittest
 
 # input coloumns
 INPUT_COL0_TS = "timestamps"
@@ -151,6 +150,7 @@ def str_is_float(x: str) -> bool:
     except ValueError:
         return False
     return True
+
 
 class CommonTetsMethods(object):
     def compare_csv_files(self, expected_csv_file, actual_file):

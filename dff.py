@@ -381,7 +381,6 @@ def process(
     mi_1s_sum_not = 0
     mi_1s_cnt_not = 0
     out_df_1s_not = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
-    print("timeshift_val: ", timeshift_val)
     for index, row in binary_df.iterrows():
         if index_start == -1:
             index_start = index
@@ -406,6 +405,7 @@ def process(
         ts_end = round(
             ts_end_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
         )
+        common.logger.debug("ts_start: %f, ts_end: %f", ts_start, ts_end)
         if param_name is None:
             ts_split = parameter_obj.get_ts_series_for_combined_param(
                 ts_start, ts_end, timeshift_val
@@ -414,7 +414,6 @@ def process(
             ts_split = parameter_obj.get_ts_series_for_timestamps(
                 param_name, ts_start, ts_end, timeshift_val
             )
-        common.logger.debug("ts_start: %f, ts_end: %f", ts_start, ts_end)
         common.logger.debug("ts_split: %s", ts_split)
         for element in ts_split:
             ts_start = element[0]
