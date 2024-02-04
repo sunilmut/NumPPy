@@ -34,11 +34,11 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
     def test_bvt(self):
         # Whole duration parameter
         param = Parameters()
-        in_col_names = [
-            common.INPUT_COL0_TS,
-            common.INPUT_COL1_MI,
-            common.INPUT_COL2_FREEZE,
-        ]
+        in_col_names = {
+            common.INPUT_COL0_TS: 'float64',
+            common.INPUT_COL1_MI: 'float64',
+            common.INPUT_COL2_FREEZE: 'int',
+        }
         ts = [
             0,
             1,
@@ -125,7 +125,8 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         ]
         mi = [1] * 40
         list_of_tuples = list(zip(ts, mi, fz))
-        binary_df = pd.DataFrame(list_of_tuples, columns=in_col_names)
+        binary_df = pd.DataFrame(list_of_tuples, columns=in_col_names.keys()).astype(
+            in_col_names)
         data = [
             0,
             1,

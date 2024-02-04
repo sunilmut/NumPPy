@@ -48,6 +48,10 @@ class Parameters:
                         PARAM_TIME_WINDOW_DURATION]
     TIMESTAMP_ROUND_VALUE = 6
     TIME_PRECISION = float(1) / pow(10, TIMESTAMP_ROUND_VALUE)
+    OUTPUT_COLUMN_SCHEMA = {
+        PARAM_TIME_WINDOW_START_LIST: 'float64',
+        PARAM_TIME_WINDOW_END_LIST: 'float64'
+    }
 
     def __init__(self):
         self.reset()
@@ -173,12 +177,9 @@ class Parameters:
         """
 
         param_window_duration, ts = self.get_param_values(param_name)
-        ts_series = pd.DataFrame(
-            columns=[
-                Parameters.PARAM_TIME_WINDOW_START_LIST,
-                Parameters.PARAM_TIME_WINDOW_END_LIST,
-            ]
-        )
+        ts_series = pd.DataFrame(columns=Parameters.OUTPUT_COLUMN_SCHEMA.keys()).astype(
+            Parameters.OUTPUT_COLUMN_SCHEMA)
+
         for start in ts:
             ts_series.loc[len(ts_series.index)] = [
                 start + timeshift_val,
@@ -189,12 +190,9 @@ class Parameters:
 
     def get_combined_params_ts_series(self, timeshift_val: float):
         param_list = self.get_param_name_list()
-        ts_series_combined = pd.DataFrame(
-            columns=[
-                Parameters.PARAM_TIME_WINDOW_START_LIST,
-                Parameters.PARAM_TIME_WINDOW_END_LIST,
-            ]
-        )
+        ts_series_combined = pd.DataFrame(columns=Parameters.OUTPUT_COLUMN_SCHEMA.keys()).astype(
+            Parameters.OUTPUT_COLUMN_SCHEMA)
+
         for param in param_list:
             ts_series = self.get_param_values_as_series(param, timeshift_val)
             ts_series_combined = pd.concat(
@@ -208,12 +206,8 @@ class Parameters:
             by=Parameters.PARAM_TIME_WINDOW_START_LIST, ascending=True, inplace=True
         )
 
-        ts_series_out = pd.DataFrame(
-            columns=[
-                Parameters.PARAM_TIME_WINDOW_START_LIST,
-                Parameters.PARAM_TIME_WINDOW_END_LIST,
-            ]
-        )
+        ts_series_out = pd.DataFrame(columns=Parameters.OUTPUT_COLUMN_SCHEMA.keys()).astype(
+            Parameters.OUTPUT_COLUMN_SCHEMA)
         i = 0
         while i < len(ts_series_combined):
             j = i + 1

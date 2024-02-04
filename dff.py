@@ -41,13 +41,14 @@ OUTPUT_COL1_LEN = "Bout length (sec)"
 OUTPUT_COL2_MI_AVG = "Motion Index (avg)"
 OUTPUT_COL3_DATA_AUC = "AUC (dff)"
 OUTPUT_COL4_DATA_AVG = "dff"
-OUTPUT_COLUMN_NAMES = [
-    OUTPUT_COL0_TS,
-    OUTPUT_COL1_LEN,
-    OUTPUT_COL2_MI_AVG,
-    OUTPUT_COL3_DATA_AUC,
-    OUTPUT_COL4_DATA_AVG,
-]
+OUTPUT_COLUMN_SCHEMA = {
+    OUTPUT_COL0_TS: 'float64',
+    OUTPUT_COL1_LEN: 'float64',
+    OUTPUT_COL2_MI_AVG: 'float64',
+    OUTPUT_COL3_DATA_AUC: 'float64',
+    OUTPUT_COL4_DATA_AVG: 'float64',
+}
+
 # Number of decimal precision
 OUTPUT_VALUE_PRECISION = 5
 
@@ -58,7 +59,8 @@ OUTPUT_DFF = "dff_"
 OUTPUT_NOT = "_Not"
 OUTPUT_AUC = "AUC (sum)"
 OUTPUT_Z_SCORE = "dff (avg)"
-OUTPUT_SUMMARY_COLUMN_NAMES = [OUTPUT_AUC, OUTPUT_Z_SCORE]
+OUTPUT_SUMMARY_COLUMN_SCHEMA = {
+    OUTPUT_AUC: 'float64', OUTPUT_Z_SCORE: 'float64'}
 
 # Globals
 parameter_obj = Parameters()
@@ -98,7 +100,8 @@ def compute_avg(sum, cnt):
 
 def generate_output_file(sum, cnt, out_df, out_file):
     avg = compute_avg(sum, cnt)
-    df_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_NAMES)
+    df_summary = pd.DataFrame(columns=OUTPUT_SUMMARY_COLUMN_SCHEMA.keys()).astype(
+        OUTPUT_SUMMARY_COLUMN_SCHEMA)
     df_summary.loc[len(df_summary.index)] = [sum, avg]
     df_summary.to_csv(out_file, mode="w", index=False, header=True)
     out_df.to_csv(out_file, mode="a", index=False, header=True)
@@ -355,32 +358,38 @@ def process(
     auc_cnt = 0
     mi_sum = 0
     mi_cnt = 0
-    out_df = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    out_df = pd.DataFrame(columns=OUTPUT_COLUMN_SCHEMA.keys()).astype(
+        OUTPUT_COLUMN_SCHEMA)
     auc_sum_not = 0
     auc_cnt_not = 0
     mi_sum_not = 0
     mi_cnt_not = 0
-    out_df_not = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    out_df_not = pd.DataFrame(columns=OUTPUT_COLUMN_SCHEMA.keys()).astype(
+        OUTPUT_COLUMN_SCHEMA)
     auc_0s_sum = 0
     auc_0s_cnt = 0
     mi_0s_sum = 0
     mi_0s_cnt = 0
-    out_df_0s = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    out_df_0s = pd.DataFrame(columns=OUTPUT_COLUMN_SCHEMA.keys()).astype(
+        OUTPUT_COLUMN_SCHEMA)
     auc_0s_sum_not = 0
     auc_0s_cnt_not = 0
     mi_0s_sum_not = 0
     mi_0s_cnt_not = 0
-    out_df_0s_not = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    out_df_0s_not = pd.DataFrame(columns=OUTPUT_COLUMN_SCHEMA.keys()).astype(
+        OUTPUT_COLUMN_SCHEMA)
     auc_1s_sum = 0
     auc_1s_cnt = 0
     mi_1s_sum = 0
     mi_1s_cnt = 0
-    out_df_1s = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    out_df_1s = pd.DataFrame(columns=OUTPUT_COLUMN_SCHEMA.keys()).astype(
+        OUTPUT_COLUMN_SCHEMA)
     auc_1s_sum_not = 0
     auc_1s_cnt_not = 0
     mi_1s_sum_not = 0
     mi_1s_cnt_not = 0
-    out_df_1s_not = pd.DataFrame(columns=OUTPUT_COLUMN_NAMES)
+    out_df_1s_not = pd.DataFrame(columns=OUTPUT_COLUMN_SCHEMA.keys()).astype(
+        OUTPUT_COLUMN_SCHEMA)
     for index, row in binary_df.iterrows():
         if index_start == -1:
             index_start = index

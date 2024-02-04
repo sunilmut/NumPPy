@@ -38,19 +38,14 @@ param2 = {
 min_time_duration_validation_set = [[5, 10], [1.0, 2], [20.0, 30.0], [0, 0]]
 
 
-class ParameterTest(unittest.TestCase):
+class ParameterTest(common.CommonTetsMethods, unittest.TestCase):
     TEST_DATA_DIR = "test_data"
     TEST_TRASH_DIR = "trash"
 
     def setUp(self):
         self.param = Parameters()
-        self.logger = logging.getLogger()
-        self.logger.setLevel(logging.DEBUG)
-
-        if not self.logger.handlers:
-            handler = logging.StreamHandler(sys.stdout)
-            handler.setLevel(logging.DEBUG)
-            self.logger.addHandler(handler)
+        logging.basicConfig(level=logging.INFO, format="")
+        common.logger = logging.getLogger(__name__)
 
     def validate_df(self, df, expected_data):
         expected_df = pd.DataFrame(expected_data)
@@ -212,17 +207,17 @@ class ParameterTest(unittest.TestCase):
         param = Parameters()
         PARAM_NAME = "param"
         df = pd.DataFrame(param_val)
-        self.logger.debug("testing parameter: %s", param_val)
+        common.logger.debug("testing parameter: %s", param_val)
         for val in expected_ts:
-            self.logger.debug("timestamp duration: %s", val[0])
+            common.logger.debug("timestamp duration: %s", val[0])
             input_dir = self.reset()
             param._set_param_dir(input_dir)
             param.set_param_value(PARAM_NAME, df)
             ts_split = param.get_ts_series_for_timestamps(
                 PARAM_NAME, val[0][0], val[0][1], 0
             )
-            self.logger.debug("Timestamp splits: %s", ts_split)
-            self.logger.debug("Expected: %s", val[1])
+            common.logger.debug("Timestamp splits: %s", ts_split)
+            common.logger.debug("Expected: %s", val[1])
             self.assertEqual(ts_split == val[1], True)
 
     def test_get_ts_series_for_timestamps_with_timeshift(self):
@@ -246,15 +241,15 @@ class ParameterTest(unittest.TestCase):
         PARAM_NAME = "param"
         param = Parameters()
         df = pd.DataFrame(param_val)
-        self.logger.debug("testing parameter: %s", param_val)
+        common.logger.debug("testing parameter: %s", param_val)
         for val in expected_ts:
-            self.logger.debug("timeshift duration: %s", val[0])
+            common.logger.debug("timeshift duration: %s", val[0])
             param.set_param_value(PARAM_NAME, df)
             ts_split = param.get_ts_series_for_timestamps(
                 PARAM_NAME, ts1[0], ts1[1], val[0]
             )
-            self.logger.debug("Timestamp splits: %s", ts_split)
-            self.logger.debug("Expected: %s", val[1])
+            common.logger.debug("Timestamp splits: %s", ts_split)
+            common.logger.debug("Expected: %s", val[1])
             self.assertEqual(ts_split == val[1], True)
 
     def test_get_combined_params_ts_series(self):
@@ -326,14 +321,22 @@ class ParameterTest(unittest.TestCase):
 
     def test_real_data(self):
         input_dir = os.path.join(os.getcwd(), "test_data", "parameter")
+        output_dir = os.path.join(os.getcwd(), "test_data", "parameter_output")
+        expected_output_dir = os.path.join(
+            os.getcwd(), "test_data", "parameter_output_expected")
+        out_file = os.path.join(output_dir, "out.csv")
+        path = Path(output_dir)
+        path.mkdir(parents=True, exist_ok=True)
         param = Parameters()
         param.parse(input_dir)
-        print(param.get_param_name_list())
         csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
         self.assertEqual(len(csv_path), 1)
-        timeshift_val, _v = common.get_timeshift_from_input_file(csv_path[0])
+        csv_file = csv_path[0]
+        timeshift_val, _v = common.get_timeshift_from_input_file(
+            csv_file)
         self.assertGreater(timeshift_val, 0)
-        self.logger.info("Using timeshift value of %f", timeshift_val)
+        common.logger.info("Using timeshift value of %f", timeshift_val)
+        # Some hard coded test case that surfaced a bug.
         ts_split = param.get_ts_series_for_combined_param(
             1041.040000, 1057.180000, timeshift_val
         )
@@ -343,6 +346,46 @@ class ParameterTest(unittest.TestCase):
             [1049.910001, 1057.18, False],
         ]
         self.assertEqual(ts_split == expected_split, True)
+        in_col_names = {
+            'Start': 'float64',
+            'End': 'float64',
+            'Is In?': 'str',
+        }
+        out_splits_df = pd.DataFrame(columns=in_col_names.keys()).astype(
+            in_col_names)
+        durations_to_test = [5, 17, 100, 123, 500, 1000]
+        for param_name in param.get_param_name_list():
+            for d in durations_to_test:
+                common.logger.info(
+                    "Processing parameter: %s, duration: %f", param_name, d)
+                param_list = [[0, d, param_name]]
+                param_df = pd.DataFrame(param_list, columns=in_col_names.keys()).astype(
+                    in_col_names)
+                out_splits_df = pd.concat(
+                    [out_splits_df.astype(param_df.dtypes), param_df.astype(
+                        out_splits_df.dtypes)],
+                    ignore_index=True,
+                    sort=False,
+                )
+                for r in range(0, 1500, d):
+                    start = r
+                    end = r + d
+                    ts_split = param.get_ts_series_for_timestamps(
+                        param_name, start, end, timeshift_val
+                    )
+                    df_o = pd.DataFrame(ts_split, columns=in_col_names.keys()).astype(
+                        in_col_names)
+                    out_splits_df = pd.concat(
+                        [out_splits_df.astype(df_o.dtypes), df_o.astype(
+                            out_splits_df.dtypes)],
+                        ignore_index=True,
+                        sort=False,
+                    )
+        out_splits_df.to_csv(out_file, mode="w", index=False, header=True)
+        csv_path = glob.glob(os.path.join(expected_output_dir, "*.csv"))
+        self.assertEqual(len(csv_path), 1)
+        expected_csv_file = csv_path[0]
+        super().compare_csv_files(expected_csv_file, out_file)
 
     @staticmethod
     def get_test_dir():

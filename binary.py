@@ -61,12 +61,12 @@ PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
 # globals
 r_log_box = None
 output_dir = None
-out_col_names = [
-    OUTPUT_COL0_TS,
-    OUTPUT_COL1_MI,
-    OUTPUT_COL2_MI_AVG,
-    OUTPUT_COL3_FREEZE_TP,
-]
+OUTPUT_COLUMN_SCHEMA = {
+    OUTPUT_COL0_TS: 'float64',
+    OUTPUT_COL1_MI: 'float64',
+    OUTPUT_COL2_MI_AVG: 'float64',
+    OUTPUT_COL3_FREEZE_TP: 'str',
+}
 out_file_zero_to_one = ""
 out_file_zero_to_one_ts = ""
 out_file_zero_to_one_un = ""
@@ -161,13 +161,16 @@ def split_df_and_output(
 
     output_df[OUTPUT_COL0_TS] = output_df[OUTPUT_COL0_TS] + timeshift_val
     # Round up to two decimals
-    output_df[OUTPUT_COL0_TS] = output_df[OUTPUT_COL0_TS].astype(float).round(decimals=2)
+    output_df[OUTPUT_COL0_TS] = output_df[OUTPUT_COL0_TS].astype(
+        float).round(decimals=2)
     common.logger.debug("Removing all entries with timestamp < 10 secs")
     # Remove all entries with timestamps less than 10 seconds
     output_df = output_df[output_df[OUTPUT_COL0_TS] > 10]
 
-    out_zero_to_one_df = pd.DataFrame(columns=out_col_names)
-    out_one_to_zero_df = pd.DataFrame(columns=out_col_names)
+    out_zero_to_one_df = pd.DataFrame(columns=OUTPUT_COLUMN_SCHEMA.keys()).astype(
+        OUTPUT_COLUMN_SCHEMA)
+    out_one_to_zero_df = pd.DataFrame(columns=OUTPUT_COLUMN_SCHEMA.keys()).astype(
+        OUTPUT_COLUMN_SCHEMA)
     out_zero_to_one_df = output_df.loc[output_df[OUTPUT_COL3_FREEZE_TP] == ZERO_TO_ONE]
     out_zero_to_one_ts_df = out_zero_to_one_df.loc[:, OUTPUT_COL0_TS]
     out_one_to_zero_df = output_df.loc[output_df[OUTPUT_COL3_FREEZE_TP] == ONE_TO_ZERO]
@@ -536,7 +539,8 @@ def process_input_df(input_df):
     #        with freeze value of 0 look like a transition to avoid special
     #        case handle for row 0.
     prev_freeze = 1
-    out_df = pd.DataFrame(columns=out_col_names)
+    out_df = pd.DataFrame(columns=OUTPUT_COLUMN_SCHEMA.keys()).astype(
+        OUTPUT_COLUMN_SCHEMA)
     freeze_0_ts = 0
     freeze_0_mi = 0
 
