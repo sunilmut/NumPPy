@@ -20,7 +20,7 @@ from guizero import App, CheckBox, PushButton, Text, TextBox
 from nested_dict import nested_dict
 
 # constants
-OUTPUT_LOG_FILE = "output.txt"
+OUTPUT_LOG_FILE = "colorsort_output.log"
 
 # globals
 output_file = ""

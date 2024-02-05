@@ -48,7 +48,7 @@ EMPTY = "_EMPTY"
 OUTPUT_NO_PARAMETERS = "_Not"
 OUTPUT_ZERO_TO_ONE_CSV_NAME = "01"
 OUTPUT_ONE_TO_ZERO_CSV_NAME = "10"
-OUTPUT_LOG_FILE = "output.txt"
+OUTPUT_LOG_FILE = "binary_output.log"
 
 # UI related constants
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
@@ -211,7 +211,7 @@ def format_out_name_with_param_val(
 ):
     global param_file_exists
 
-    if param_file_exists == False or (
+    if param_file_exists is False or (
         param_min_time_duration_before == 0 and param_min_time_duration_after == 0
     ):
         return ""
@@ -668,7 +668,7 @@ def process_input_file(input_file, output_folder):
 
     # Get a base output DataFrame without any criteria's applied
     result, out_df = process_input_df(df)
-    if result == False or out_df.empty:
+    if result is False or out_df.empty:
         return False
 
     out_base_file = out_base(input_file, output_folder)
@@ -804,32 +804,6 @@ def get_input_files(input_dir):
         input_files.append(file)
 
     return input_files
-
-
-class loghandler(logging.StreamHandler):
-    """
-    Custom logging handler
-    """
-
-    def emit(self, record):
-        """
-        Writes the message to the output file (or the default logger stream),
-        stdout and the UI result text box
-        """
-        try:
-            # TODO: Have different log format for input depending on whether
-            # it is the file output or anything else. And, also based on the
-            # log level. Ex: error logs can be prepend with some string like
-            # "ERROR:: "
-            msg = self.format(record)
-            if r_log_box is not None:
-                r_log_box.value += msg
-            print(msg)
-            self.flush()
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
-            self.handleError(record)
 
 
 def main(input_folder_or_file, separate_files, output_folder):
@@ -1267,13 +1241,13 @@ if __name__ == "__main__":
     Main entry point
     """
 
-    progress = loghandler()
+    custom_log_handler = common.loghandler()
     logging.basicConfig(filename=OUTPUT_LOG_FILE,
                         level=logging.INFO, format="")
     common.logger = logging.getLogger(__name__)
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    progress.setFormatter(formatter)
-    common.logger.addHandler(progress)
+    custom_log_handler.setFormatter(formatter)
+    common.logger.addHandler(custom_log_handler)
     argv = sys.argv[1:]
     console_mode = False
     separate_files = False
@@ -1519,6 +1493,9 @@ if __name__ == "__main__":
     r_log_box = TextBox(
         rwin, text="", height=200, width=500, multiline=True, scrollbar=True
     )
+
+    custom_log_handler.set_result_log_ui_box(r_log_box)
+
     # Non editable
     r_log_box.disable()
 

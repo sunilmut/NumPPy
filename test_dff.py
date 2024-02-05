@@ -28,8 +28,7 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
                             level=logging.INFO, format="")
         common.logger = logging.getLogger(__name__)
         if not common.logger.handlers:
-            progress = dff.loghandler()
-            common.logger.addHandler(progress)
+            common.logger.addHandler(common.loghandler())
 
     def test_bvt(self):
         # Whole duration parameter

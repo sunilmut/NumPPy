@@ -1,10 +1,12 @@
 #!/usr/bin/python
 
+import logging
 import os
 import subprocess
 import sys
 from csv import reader
 
+import bcolors
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
@@ -21,6 +23,10 @@ TIMESHIFT_HEADER_ALT = "shift"
 NUM_INITIAL_ROWS_TO_SKIP = 3
 OUTPUT_DIR_NAME = "_output"
 CSV_EXT = ".csv"
+
+# Colors
+LIGHT_RED_COLOR = "#FFCCCB"
+LIGHT_YELLOW_COLOR = "#FFFFED"
 
 # globals
 logger = None
@@ -179,3 +185,46 @@ class CommonTetsMethods(object):
                     else:
                         self.assertEqual(exp_w, actual_w)
                 x += 1
+
+
+class loghandler(logging.StreamHandler):
+    """
+    Custom logging handler
+    """
+
+    def __init__(self):
+        self.result_log_ui_box = None
+        logging.StreamHandler.__init__(self=self)
+
+    def set_result_log_ui_box(self, result_log_ui_box):
+        self.result_log_ui_box = result_log_ui_box
+
+    def emit(self, record):
+        """
+        Writes the message to the output file (or the default logger stream),
+        stdout and the UI result text box
+        """
+        try:
+            msg = self.format(record)
+            match record.levelno:
+                case logging.WARNING:
+                    p_msg = bcolors.WARN + msg + bcolors.ENDC
+                case logging.CRITICAL | logging.ERROR:
+                    p_msg = bcolors.ERR + msg + bcolors.ENDC
+                case _:
+                    p_msg = msg
+            if self.result_log_ui_box is not None:
+                match record.levelno:
+                    case logging.WARNING:
+                        # If it wasn't previously set to higher attention.
+                        if not self.result_log_ui_box.bg == LIGHT_RED_COLOR:
+                            self.result_log_ui_box.bg = LIGHT_YELLOW_COLOR
+                    case logging.CRITICAL | logging.ERROR:
+                        self.result_log_ui_box.bg = LIGHT_RED_COLOR
+                self.result_log_ui_box.value += msg
+            print(p_msg)
+            self.flush()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)

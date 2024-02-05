@@ -98,8 +98,7 @@ class TestBinary(common.CommonTetsMethods, unittest.TestCase):
                             level=logging.DEBUG, format="")
         common.logger = logging.getLogger(__name__)
         if not common.logger.handlers:
-            progress = b.loghandler()
-            common.logger.addHandler(progress)
+            common.logger.addHandler(common.loghandler())
 
     def validate_df(self, df, expected_data):
         expected_df = pd.DataFrame(expected_data)
