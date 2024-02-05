@@ -35,7 +35,7 @@ PARAM_UI_MIN_AFTER_TIME_DURATION_CRITERIA_TEXT = "after: "
 PARAM_UI_TIME_WINDOW_DURATION_TEXT = "Time window duration (secs): "
 
 # Other constants
-OUTPUT_LOG_FILE = "output.txt"
+OUTPUT_LOG_FILE = "dff_output.log"
 OUTPUT_COL0_TS = "Start time (sec)"
 OUTPUT_COL1_LEN = "Bout length (sec)"
 OUTPUT_COL2_MI_AVG = "Motion Index (avg)"
@@ -134,7 +134,7 @@ def main(input_dir: str, parameter_obj: Parameters):
             )
             for idx, v in enumerate(nan):
                 # Discard NaN
-                if v == False:
+                if v is False:
                     cleaned_z_score.append(z_score[idx])
                     cleaned_ts.append(ts[idx])
             z_score = cleaned_z_score
@@ -217,7 +217,7 @@ def main(input_dir: str, parameter_obj: Parameters):
                 out_df_not = results[17]
 
                 param_ext = ""
-                if param == None:
+                if param is None:
                     param_ext = "_outside-parameters"
                 elif not param == "":
                     param_ext = "_" + param
@@ -598,28 +598,6 @@ def process(
     ]
 
 
-class loghandler(logging.StreamHandler):
-    """
-    Custom logging handler
-    """
-
-    def emit(self, record):
-        """
-        Writes the message to the output file (or the default logger stream),
-        stdout and the UI result text box
-        """
-        try:
-            msg = self.format(record)
-            if r_log_box is not None:
-                r_log_box.value += msg
-            print(msg)
-            self.flush()
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
-            self.handleError(record)
-
-
 def print_help():
     """
     Display help
@@ -843,13 +821,13 @@ if __name__ == "__main__":
     Main entry point
     """
 
-    progress = loghandler()
+    custom_log_handler = common.loghandler()
     logging.basicConfig(filename=OUTPUT_LOG_FILE,
                         level=logging.INFO, format="")
     common.logger = logging.getLogger(__name__)
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    progress.setFormatter(formatter)
-    common.logger.addHandler(progress)
+    custom_log_handler.setFormatter(formatter)
+    common.logger.addHandler(custom_log_handler)
     argv = sys.argv[1:]
     console_mode = False
     separate_files = False
@@ -1034,6 +1012,9 @@ if __name__ == "__main__":
     r_log_box = TextBox(
         rwin, text="", height=200, width=500, multiline=True, scrollbar=True
     )
+
+    custom_log_handler.set_result_log_ui_box(r_log_box)
+
     # Non editable
     r_log_box.disable()
 

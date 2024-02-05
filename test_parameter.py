@@ -71,7 +71,7 @@ class ParameterTest(common.CommonTetsMethods, unittest.TestCase):
             min_time_duration_before,
             min_time_duration_after,
         ) = expected_param.get_min_time_duration_values()
-        self.assertEqual(param_file_exists == False, True)
+        self.assertFalse(param_file_exists, False)
         self.assertEqual(
             min_time_duration_before == Parameters.MIN_TIME_DURATION_BEFORE_DEFAULT,
             True,
