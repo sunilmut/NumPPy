@@ -142,6 +142,7 @@ def main(input_dir: str, parameter_obj: Parameters):
 
         csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
         for csv_file in csv_path:
+            common.logger.info("Processing input file: %s", csv_file)
             timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(
                 csv_file
             )
@@ -163,7 +164,7 @@ def main(input_dir: str, parameter_obj: Parameters):
             )
             if not success:
                 common.logger.warning(
-                    "Skipping CSV file (%s) as it is well formed")
+                    "Skipping CSV file (%s) as it is not well formed", csv_file)
                 if result_unsuccess_list_box is not None:
                     result_unsuccess_list_box.append(
                         os.path.basename(csv_file))
@@ -353,6 +354,7 @@ def process(
         return False, []
 
     index_start = -1
+    index_end = 0
     row_count = binary_df.shape[0]
     auc_sum = 0
     auc_cnt = 0
@@ -391,6 +393,8 @@ def process(
     out_df_1s_not = pd.DataFrame(columns=OUTPUT_COLUMN_SCHEMA.keys()).astype(
         OUTPUT_COLUMN_SCHEMA)
     for index, row in binary_df.iterrows():
+        if index_end == row_count:
+            break
         if index_start == -1:
             index_start = index
             cur_binary_value = binary_df.iloc[index_start][common.INPUT_COL2_FREEZE]

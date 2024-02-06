@@ -169,7 +169,6 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
             39,
         ]
         timeshift_val = 0
-        print(binary_df)
         success, results = dff.process(
             param, "", binary_df, timeshift_val, data, ts)
         self.assertTrue(success)
@@ -481,7 +480,6 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         )
         self.assertTrue(success)
         timeshift_val = round(timeshift_val, 2)
-        print(timeshift_val)
         ts = dff.read_hdf5("", ts_file, "timestampNew")
         binary_df[common.INPUT_COL0_TS] = (
             binary_df[common.INPUT_COL0_TS] + timeshift_val
@@ -499,7 +497,7 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
             # ts_end = round(ts_end + timeshift_val, 2)
             # print(ts_start, "<->", ts_end)
             if ts[len(ts) - 1] < ts_start:
-                print("Reached the end of the ts file, breaking")
+                # print("Reached the end of the ts file, breaking")
                 break
             while ts[ts_index] < ts_start:
                 ts_index += 1
@@ -510,12 +508,8 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
                 z_score_sum += z_score[ts_index]
                 ts_index += 1
                 z_score_cnt += 1
-            z_score_avg = z_score_sum / z_score_cnt
             z_score_avg_list.append(z_score_sum)
             z_score_count_list.append(z_score_cnt)
-            # print(ts_index)
-            # print(z_score_avg)
-            # print(z_score_avg_list[index - 1])
 
         z_score_avg_list.append(0)
         z_score_count_list.append(0)
