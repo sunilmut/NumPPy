@@ -7,6 +7,7 @@ import sys
 from csv import reader
 
 import bcolors
+import numpy as np
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
@@ -33,35 +34,83 @@ logger = None
 input_dir = ""
 
 
-def parse_input_file_into_df(input_file, skip_num_initial_rows):
+def convert_obj_to_nan(val: object) -> object:
+    """
+    Parameters
+    ----------
+    val - Object to check if it can be converted to a float.
+
+    Returns
+    ------
+    val -> if `val` can be converted to float; np.nan otherwise.
+    """
+
+    if str_is_float(val.strip()):
+        return val
+
+    return np.nan
+
+
+def parse_input_file_into_df(input_file: str, skip_num_initial_rows: int) -> (bool, pd.DataFrame):
     """
     Parse the input file
-    returns bool, dataframe
-    bool - True if parsing was successful; False otherwise
-    dataframe - Parsed dataframe
+    Parameters
+    ----------
+    input_file - Full path to the input file to pars.e
+
+    skip_num_initial_rows - Number of initial rows to skip.
+
+    Returns
+    ------
+    (bool, pandas.DataFrame)
+        bool - True if parsing was successful; False otherwise
+        DataFrame - Parsed DataFrame`
     """
     in_col_names = [INPUT_COL0_TS, INPUT_COL1_MI, INPUT_COL2_FREEZE]
-    df = pd.read_csv(input_file, names=in_col_names,
-                     skiprows=skip_num_initial_rows)
+    try:
+        df = pd.read_csv(input_file, names=in_col_names,
+                         dtype={INPUT_COL0_TS: 'float64',
+                                INPUT_COL1_MI: 'float64',
+                                INPUT_COL2_FREEZE: 'int'},
+                         skiprows=skip_num_initial_rows)
+    except ValueError:
+        logger.warning(
+            "Input file(%s) contains invalid (NaN - Not A Number) values. Skipping rows with any NaN.", input_file)
+        df = pd.read_csv(input_file, names=in_col_names,
+                         skiprows=skip_num_initial_rows,
+                         converters={INPUT_COL1_MI: convert_obj_to_nan})
 
-    # Do some basic format checking. All input fields are expected
-    # to be numeric in nature.
-    if not (
-        is_numeric_dtype(df[INPUT_COL0_TS])
-        and is_numeric_dtype(df[INPUT_COL1_MI])
-        and is_numeric_dtype(df[INPUT_COL2_FREEZE])
-    ):
-        print("Invalid input file format: " + input_file)
-        return False, pd.DataFrame()
+        # Drop the NaN
+        df.dropna(inplace=True)
+        df.reset_index(drop=True, inplace=True)
+
+        # Try to convert to the required type again and if this one fails, just skip the file
+        # with a warning.
+        try:
+            df = df.astype({INPUT_COL0_TS: 'float64',
+                            INPUT_COL1_MI: 'float64',
+                            INPUT_COL2_FREEZE: 'int'})
+        except ValueError:
+            logger.warning("Invalid values in the input file(%s)", input_file)
+            return False, None
+
+    if df.isnull().values.any():
+        logger.warning(
+            "Input file(%s) contains invalid (NaN - Not A Number) values. Skipping rows with any NaN.", input_file)
+        df.dropna(inplace=True)
+        df.reset_index(drop=True, inplace=True)
+
+    # Remove duplicates in timestamps.
+    df.drop_duplicates(subset=INPUT_COL0_TS, keep='first',
+                       inplace=True, ignore_index=True)
 
     # Freeze column is supposed to be binary (0 or 1)
     if df[INPUT_COL2_FREEZE].min() < 0 or df[INPUT_COL2_FREEZE].max() > 1:
-        print(
-            "Invalid input file format in "
-            + input_file
-            + ". Column 3 (freeze) value outside bounds (should be 0 or 1)"
+        logger.warning(
+            "Invalid values in input file(%s). Column 3 (freeze) value outside bounds (should be 0 or 1)",
+            input_file
         )
-        return False, pd.DataFrame()
+        return False, None
 
     cast_to_type = {
         INPUT_COL0_TS: float,
