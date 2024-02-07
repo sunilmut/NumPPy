@@ -134,11 +134,17 @@ def main(input_dir: str, parameter_obj: Parameters):
             )
             for idx, v in enumerate(nan):
                 # Discard NaN
-                if v is False:
+                if v == False:
                     cleaned_z_score.append(z_score[idx])
                     cleaned_ts.append(ts[idx])
             z_score = cleaned_z_score
             ts = cleaned_ts
+
+        if len(ts) == 0:
+            common.logger.warning(
+                "No timestamp values left in the series. Skipping file: %s",
+                os.path.basename(path[i]))
+            continue
 
         csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
         for csv_file in csv_path:
@@ -218,7 +224,7 @@ def main(input_dir: str, parameter_obj: Parameters):
                 out_df_not = results[17]
 
                 param_ext = ""
-                if param is None:
+                if param == None:
                     param_ext = "_outside-parameters"
                 elif not param == "":
                     param_ext = "_" + param
