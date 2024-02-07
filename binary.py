@@ -211,7 +211,7 @@ def format_out_name_with_param_val(
 ):
     global param_file_exists
 
-    if param_file_exists is False or (
+    if param_file_exists == False or (
         param_min_time_duration_before == 0 and param_min_time_duration_after == 0
     ):
         return ""
@@ -668,7 +668,7 @@ def process_input_file(input_file, output_folder):
 
     # Get a base output DataFrame without any criteria's applied
     result, out_df = process_input_df(df)
-    if result is False or out_df.empty:
+    if result == False or out_df.empty:
         return False
 
     out_base_file = out_base(input_file, output_folder)
