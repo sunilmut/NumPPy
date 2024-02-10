@@ -404,8 +404,10 @@ def process(
         OUTPUT_COLUMN_SCHEMA)
 
     splits = []
-    if binary_ts_splits is None:
+    if binary_ts_splits == None:
         binary_ts_splits = get_ts_split_for_binary(binary_df, timeshift_val)
+    else:
+        common.logger.info("using ts splits")
     for binary_split in binary_ts_splits:
         ts_start = binary_split[0]
         ts_end = binary_split[1]
@@ -430,11 +432,13 @@ def process(
             ts_start_without_shift = round(
                 ts_start - timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
             )
-            index_start = np.argmax(binary_df_ts >= ts_start_without_shift)
+            #index_start = np.argmax(binary_df_ts >= ts_start_without_shift)
+            index_start = np.searchsorted(binary_df_ts, ts_start_without_shift)
             ts_end_without_shift = round(
                 ts_end - timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
             )
-            index_end = np.argmax(binary_df_ts > ts_end_without_shift)
+            #index_end = np.argmax(binary_df_ts > ts_end_without_shift)
+            index_end = np.searchsorted(binary_df_ts, ts_end_without_shift, side='right')
             if index_start == index_end:
                 index_end += 1
             if index_end == 0:
@@ -451,7 +455,8 @@ def process(
                 Parameters.TIMESTAMP_ROUND_VALUE,
             )
 
-            ts_index_start_for_val = np.argmax(ts >= ts_start)
+            #ts_index_start_for_val = np.argmax(ts >= ts_start)
+            ts_index_start_for_val = np.searchsorted(ts, ts_start)
             if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
                 common.logger.debug(
                     "ts start is out of bounds. ts_start: %f, ts[last]: %f",
@@ -459,7 +464,8 @@ def process(
                     ts[len(ts) - 1],
                 )
                 break
-            ts_index_end_for_val = np.argmax(ts > ts_end)
+            #ts_index_end_for_val = np.argmax(ts > ts_end)
+            ts_index_end_for_val = np.searchsorted(ts, ts_end, side='right')
             # If there is only one element, then include it.
             if ts_index_start_for_val == ts_index_end_for_val:
                 ts_index_end_for_val += 1

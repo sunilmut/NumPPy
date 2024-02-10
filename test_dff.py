@@ -425,7 +425,8 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
 
     def test_real_data(self):
-        input_dirs_to_test = ["dff", "dff_realdata"]
+        #input_dirs_to_test = ["dff", "dff_realdata"]
+        input_dirs_to_test = ["dff_data_takes_very_long"]
         parent_dir = os.path.join(os.getcwd(), "test_data")
         for d in input_dirs_to_test:
             input_dir = os.path.join(parent_dir, d)
