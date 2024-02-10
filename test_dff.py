@@ -170,7 +170,7 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         ]
         timeshift_val = 0
         success, results = dff.process(
-            param, "", binary_df, timeshift_val, data, ts)
+            param, "", binary_df, timeshift_val, None, data, ts)
         self.assertTrue(success)
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
@@ -227,7 +227,7 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         df = pd.DataFrame(param_val)
         param.set_param_value(PARAM_NAME, df)
         success, results = dff.process(
-            param, PARAM_NAME, binary_df, timeshift_val, data, ts
+            param, PARAM_NAME, binary_df, None, timeshift_val, data, ts
         )
         self.assertTrue(success)
         auc_0s_sum = results[0]
@@ -267,7 +267,7 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         df = pd.DataFrame(param_val)
         param.set_param_value(PARAM_NAME, df)
         success, results = dff.process(
-            param, PARAM_NAME, binary_df, timeshift_val, data, ts
+            param, PARAM_NAME, binary_df, None, timeshift_val, data, ts
         )
         self.assertTrue(success)
         auc_0s_sum = results[0]
@@ -396,7 +396,7 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         combinded_df = param.get_combined_params_ts_series(0)
         self.assertTrue(combinded_df.equals(expected_df))
         success, results = dff.process(
-            param, None, binary_df, timeshift_val, data, ts)
+            param, None, binary_df, timeshift_val, None, data, ts)
         self.assertTrue(success)
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
