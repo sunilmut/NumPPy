@@ -425,8 +425,10 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
 
     def test_real_data(self):
-        input_dirs_to_test = ["dff", "dff_realdata"]
+        # input_dirs_to_test = ["dff", "dff_realdata"]
         parent_dir = os.path.join(os.getcwd(), "test_data")
+        input_dirs_to_test = glob.glob(
+            os.path.join(parent_dir, "dff_test_*"))
         for d in input_dirs_to_test:
             input_dir = os.path.join(parent_dir, d)
             csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
