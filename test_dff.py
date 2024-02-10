@@ -38,139 +38,17 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
             common.INPUT_COL1_MI: 'float64',
             common.INPUT_COL2_FREEZE: 'int',
         }
-        ts = [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            17,
-            18,
-            19,
-            20,
-            21,
-            22,
-            23,
-            24,
-            25,
-            26,
-            27,
-            28,
-            29,
-            30,
-            31,
-            32,
-            33,
-            34,
-            35,
-            36,
-            37,
-            38,
-            39,
-        ]
-        fz = [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            1,
-            1,
-            1,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            1,
-            1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            1,
-            1,
-            1,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-        ]
+        ts = [*range(0, 40, 1)]
+        fz = [0] * 10 + [1] * 5 + [0] * 5 + [1] * 3 + \
+            [0] * 3 + [1, 0, 1, 0] + [1] * 5 + [0] * 5
         mi = [1] * 40
         list_of_tuples = list(zip(ts, mi, fz))
         binary_df = pd.DataFrame(list_of_tuples, columns=in_col_names.keys()).astype(
             in_col_names)
-        data = [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            17,
-            18,
-            19,
-            20,
-            21,
-            22,
-            23,
-            24,
-            25,
-            26,
-            27,
-            28,
-            29,
-            30,
-            31,
-            32,
-            33,
-            34,
-            35,
-            36,
-            37,
-            38,
-            39,
-        ]
+        data = [*range(0, 40, 1)]
         timeshift_val = 0
         success, results = dff.process(
-            param, "", binary_df, timeshift_val, data, ts)
+            param, "", binary_df, timeshift_val, None, data, ts)
         self.assertTrue(success)
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
@@ -227,7 +105,7 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         df = pd.DataFrame(param_val)
         param.set_param_value(PARAM_NAME, df)
         success, results = dff.process(
-            param, PARAM_NAME, binary_df, timeshift_val, data, ts
+            param, PARAM_NAME, binary_df, timeshift_val, None, data, ts
         )
         self.assertTrue(success)
         auc_0s_sum = results[0]
@@ -267,7 +145,7 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         df = pd.DataFrame(param_val)
         param.set_param_value(PARAM_NAME, df)
         success, results = dff.process(
-            param, PARAM_NAME, binary_df, timeshift_val, data, ts
+            param, PARAM_NAME, binary_df, timeshift_val, None, data, ts
         )
         self.assertTrue(success)
         auc_0s_sum = results[0]
@@ -396,7 +274,7 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         combinded_df = param.get_combined_params_ts_series(0)
         self.assertTrue(combinded_df.equals(expected_df))
         success, results = dff.process(
-            param, None, binary_df, timeshift_val, data, ts)
+            param, None, binary_df, timeshift_val, None, data, ts)
         self.assertTrue(success)
         auc_0s_sum = results[0]
         auc_0s_cnt = results[1]
@@ -425,11 +303,13 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         self.assertTrue(out_df_1s_not_expected.equals(out_df_1s_not))
 
     def test_real_data(self):
-        # input_dirs_to_test = ["dff", "dff_realdata"]
         parent_dir = os.path.join(os.getcwd(), "test_data")
         input_dirs_to_test = glob.glob(
             os.path.join(parent_dir, "dff_test_*"))
         for d in input_dirs_to_test:
+            # Skip output dirs
+            if "_output" in d:
+                continue
             input_dir = os.path.join(parent_dir, d)
             csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
             for f in csv_path:
@@ -466,9 +346,9 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         self.assertGreater(num_files_compared, 0)
 
     def test_generate_data_file(self):
-        input_dir = os.path.join(os.getcwd(), "test_data", "dff_realdata")
+        input_dir = os.path.join(os.getcwd(), "test_data", "dff_test_1")
         output_dir = os.path.join(
-            os.getcwd(), "test_data", "dff_realdata_output")
+            os.getcwd(), "test_data", "dff_test_1_output")
         path = Path(output_dir)
         path.mkdir(parents=True, exist_ok=True)
         ts_file = os.path.join(input_dir, "timeCorrection_BLA.hdf5")
@@ -493,10 +373,8 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         z_score_count_list = []
         while index < len(binary_df.index) - 1 and ts_index < len(ts):
             ts_start = binary_df.iloc[index][common.INPUT_COL0_TS]
-            # ts_start = round(ts_start + timeshift_val, 2)
             index += 1
             ts_end = binary_df.iloc[index][common.INPUT_COL0_TS]
-            # ts_end = round(ts_end + timeshift_val, 2)
             # print(ts_start, "<->", ts_end)
             if ts[len(ts) - 1] < ts_start:
                 # print("Reached the end of the ts file, breaking")

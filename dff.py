@@ -178,6 +178,9 @@ def main(input_dir: str, parameter_obj: Parameters):
 
             if result_success_list_box is not None:
                 result_success_list_box.append(os.path.basename(csv_file))
+            binary_ts_splits = get_ts_split_for_binary(
+                binary_df, timeshift_val)
+
             csv_basename = (os.path.basename(csv_file)).split(".")[0]
             # Create output folder specific for this csv file.
             this_output_folder = os.path.join(output_dir, csv_basename)
@@ -199,7 +202,7 @@ def main(input_dir: str, parameter_obj: Parameters):
                 # Process the data and write out the results
                 common.logger.info("processing param: %s", param)
                 success, results = process(
-                    parameter_obj, param, binary_df, timeshift_val, z_score, ts
+                    parameter_obj, param, binary_df, timeshift_val, binary_ts_splits, z_score, ts
                 )
                 if not success:
                     continue
@@ -278,6 +281,7 @@ def process(
     param_name: str,
     binary_df: pd.DataFrame,
     timeshift_val: float,
+    binary_ts_splits: list,
     data: np.asarray,
     ts: np.asarray,
 ) -> (bool, list):
@@ -295,6 +299,10 @@ def process(
 
     timeshift_val - float
         The timeshift value to apply to the timestamps from the binary_df
+
+    binary_ts_splits -> list
+        Binary timestamp splits to use. If `None`, then this routine
+        will compute the splits.
 
     data: np.asarray
         The data values
@@ -398,33 +406,16 @@ def process(
     mi_1s_cnt_not = 0
     out_df_1s_not = pd.DataFrame(columns=OUTPUT_COLUMN_SCHEMA.keys()).astype(
         OUTPUT_COLUMN_SCHEMA)
-    for index, row in binary_df.iterrows():
-        if index_end == row_count:
-            break
-        if index_start == -1:
-            index_start = index
-            cur_binary_value = binary_df.iloc[index_start][common.INPUT_COL2_FREEZE]
 
-        if cur_binary_value == row[common.INPUT_COL2_FREEZE]:
-            index_end = index
-
-        # If there is a transition of the freeze value, compute the variables.
-        # Note: The last row is also considered as the end of transition.
-        if index < row_count - 1 and (
-            cur_binary_value == binary_df.iloc[index +
-                                               1][common.INPUT_COL2_FREEZE]
-        ):
-            continue
-
-        ts_start_without_shift = binary_df.iloc[index_start][common.INPUT_COL0_TS]
-        ts_start = round(
-            ts_start_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
-        )
-        ts_end_without_shift = binary_df.iloc[index_end][common.INPUT_COL0_TS]
-        ts_end = round(
-            ts_end_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
-        )
+    splits = []
+    if binary_ts_splits == None:
+        binary_ts_splits = get_ts_split_for_binary(binary_df, timeshift_val)
+    for binary_split in binary_ts_splits:
+        ts_start = binary_split[0]
+        ts_end = binary_split[1]
+        cur_binary_value = binary_split[2]
         common.logger.debug("ts_start: %f, ts_end: %f", ts_start, ts_end)
+        splits.append([ts_start, ts_end])
         if param_name is None:
             ts_split = parameter_obj.get_ts_series_for_combined_param(
                 ts_start, ts_end, timeshift_val
@@ -443,11 +434,13 @@ def process(
             ts_start_without_shift = round(
                 ts_start - timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
             )
-            index_start = np.argmax(binary_df_ts >= ts_start_without_shift)
+            # Find the `index` such that binary_df_ts[index] >= ts_start_without_shift
+            index_start = np.searchsorted(binary_df_ts, ts_start_without_shift)
             ts_end_without_shift = round(
                 ts_end - timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
             )
-            index_end = np.argmax(binary_df_ts > ts_end_without_shift)
+            # Find the 'index' such that binary_df_ts[index] > ts_end_without_shift
+            index_end = np.searchsorted(binary_df_ts, ts_end_without_shift, side='right')
             if index_start == index_end:
                 index_end += 1
             if index_end == 0:
@@ -464,7 +457,8 @@ def process(
                 Parameters.TIMESTAMP_ROUND_VALUE,
             )
 
-            ts_index_start_for_val = np.argmax(ts >= ts_start)
+            # Find the `index` such that ts[index] >= ts_start
+            ts_index_start_for_val = np.searchsorted(ts, ts_start)
             if ts_index_start_for_val == 0 and ts_start > ts[len(ts) - 1]:
                 common.logger.debug(
                     "ts start is out of bounds. ts_start: %f, ts[last]: %f",
@@ -472,7 +466,9 @@ def process(
                     ts[len(ts) - 1],
                 )
                 break
-            ts_index_end_for_val = np.argmax(ts > ts_end)
+
+            # Find the `index` such that ts[index] > ts_end
+            ts_index_end_for_val = np.searchsorted(ts, ts_end, side='right')
             # If there is only one element, then include it.
             if ts_index_start_for_val == ts_index_end_for_val:
                 ts_index_end_for_val += 1
@@ -606,6 +602,64 @@ def process(
         auc_cnt_not,
         out_df_not,
     ]
+
+
+def get_ts_split_for_binary(
+    binary_df: pd.DataFrame,
+    timeshift_val: float,
+) -> list:
+
+    if not binary_df[common.INPUT_COL0_TS].is_monotonic_increasing:
+        common.logger.error("Binary timestamp values are not sorted.")
+        return False, []
+
+    # Make sure the 'binary' column is actually binary.
+    if not (
+        is_integer_dtype(binary_df[common.INPUT_COL2_FREEZE])
+        and binary_df[common.INPUT_COL2_FREEZE].min() == 0
+        and binary_df[common.INPUT_COL2_FREEZE].max() == 1
+    ):
+        common.logger.error("Binary column contains non-binary data.")
+        return False, []
+
+    index_start = -1
+    index_end = 0
+    row_count = binary_df.shape[0]
+
+    splits = []
+    for index, row in binary_df.iterrows():
+        if index_end == row_count:
+            break
+        if index_start == -1:
+            index_start = index
+            cur_binary_value = binary_df.iloc[index_start][common.INPUT_COL2_FREEZE]
+
+        if cur_binary_value == row[common.INPUT_COL2_FREEZE]:
+            index_end = index
+
+        # If there is a transition of the freeze value, compute the variables.
+        # Note: The last row is also considered as the end of transition.
+        if index < row_count - 1 and (
+            cur_binary_value == binary_df.iloc[index +
+                                               1][common.INPUT_COL2_FREEZE]
+        ):
+            continue
+
+        ts_start_without_shift = binary_df.iloc[index_start][common.INPUT_COL0_TS]
+        ts_start = round(
+            ts_start_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
+        )
+        ts_end_without_shift = binary_df.iloc[index_end][common.INPUT_COL0_TS]
+        ts_end = round(
+            ts_end_without_shift + timeshift_val, Parameters.TIMESTAMP_ROUND_VALUE
+        )
+
+        splits.append([ts_start, ts_end, cur_binary_value])
+
+        # Reset the index to indicate the start of a new dataset.
+        index_start = -1
+
+    return splits
 
 
 def print_help():
