@@ -432,7 +432,7 @@ class Parameters:
         For example, if the timestamp series for this parameter is
         Timestamps: [[10, 15], [20, 25], [30, 35], [40, 45]]
         So, for a given timestamp of [8, 23] (i.e from 8 to 17 seconds), this routine will return:
-        [[10, 15, True], [15, 20, False], [20, 23, True]]
+        [[8, 10, False], [10, 15, True], [15, 20, False], [20, 23, True]]
 
         Another example:
         Window duration: 5s
