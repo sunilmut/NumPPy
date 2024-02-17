@@ -10,6 +10,9 @@ import pandas as pd
 import common
 import dff
 from parameter import *
+from concurrent.futures import ProcessPoolExecutor
+import concurrent
+import sys
 
 """
 ------------------------------------------------------------
@@ -306,6 +309,7 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         parent_dir = os.path.join(os.getcwd(), "test_data")
         input_dirs_to_test = glob.glob(
             os.path.join(parent_dir, "dff_test_*"))
+        inputs = []
         for d in input_dirs_to_test:
             # Skip output dirs
             if "_output" in d:
@@ -314,8 +318,35 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
             csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
             for f in csv_path:
                 f = os.path.basename(f)
-                common.logger.info("testing dir(%s):file(%s)", input_dir, f)
-                self.validate_real_data_for_input_dir(input_dir, f)
+                inputs.append([input_dir, f])
+
+        futures = []
+        futures_dict = {}
+        with ProcessPoolExecutor(initializer=initialize) as executor:
+            for input in inputs:
+                input_dir = input[0]
+                filename = input[1]
+                f = executor.submit(self.process, input_dir, filename)
+                common.logger.info('Submitted input dir: %s, file: %s', input_dir, filename)
+                futures.append(f)
+                futures_dict[f] = input_dir + "/" + filename
+
+        for f in concurrent.futures.as_completed(futures):
+            common.logger.info('Finished processing: %s', futures_dict[f])
+
+        for input in inputs:
+            input_dir = input[0]
+            filename = input[1]
+            self.validate_real_data_for_input_dir(input_dir, filename)
+
+    @staticmethod
+    def process(input_dir: str, dff_filename: str):
+        parameter_obj = Parameters()
+        try:
+            parameter_obj.parse(input_dir)
+        except ValueError as e:
+            common.logger.warning(e)
+        dff.main(input_dir, parameter_obj)
 
     # Calls dff module's `main` routine and then validates that the output folder
     # matches the expected output folder.
@@ -325,7 +356,7 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
             parameter_obj.parse(input_dir)
         except ValueError as e:
             common.logger.warning(e)
-        dff.main(input_dir, parameter_obj)
+        #dff.main(input_dir, parameter_obj)
         dir_for_file = os.path.splitext(dff_filename)[0]
         expected_output_dir = os.path.join(
             input_dir + "_output_expected", dir_for_file)
@@ -405,3 +436,11 @@ class DffTest(common.CommonTetsMethods, unittest.TestCase):
         one_binary_df.to_csv(output_file, index=False, header=True)
         output_file = os.path.join(output_dir, "data.csv")
         binary_df.to_csv(output_file, index=False, header=True)
+
+def initialize():
+    logging.basicConfig(filename=dff.OUTPUT_LOG_FILE,
+                        level=logging.INFO, format="")
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(logging.INFO)
+    common.logger = logging.getLogger(__name__)
+    common.logger.addHandler(stdout_handler)

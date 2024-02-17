@@ -23,6 +23,9 @@ from pandas.api.types import is_integer_dtype
 
 import common
 from parameter import *
+import concurrent
+from concurrent.futures import ProcessPoolExecutor
+import time
 
 # UI related constants
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
@@ -69,7 +72,86 @@ files_without_timeshift = []
 result_success_list_box = None
 result_unsuccess_list_box = None
 output_dir = None
+custom_log_handler = None
 
+def initialize(log_level: int):
+    global custom_log_handler
+
+    logging.basicConfig(filename=OUTPUT_LOG_FILE,
+                        level=log_level, format="")
+    common.logger = logging.getLogger(__name__)
+    custom_log_handler = common.loghandler()
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    custom_log_handler.setFormatter(formatter)
+    common.logger.addHandler(custom_log_handler)
+
+
+def main(input_dir: str, parameter_obj: Parameters):
+    global result_success_list_box, result_unsuccess_list_box, files_without_timeshift
+
+    path = glob.glob(os.path.join(input_dir, "dff_*"))
+    output_dir = common.get_output_dir(input_dir, "", False)
+    futures = []
+    futures_dict = {}
+    log_level = common.logger.getEffectiveLevel()
+    with ProcessPoolExecutor(initializer=initialize, initargs=(log_level, )) as executor:
+        for i in range(len(path)):
+            basename = (os.path.basename(path[i])).split(".")[0]
+            name_1 = basename.split("_")[-1]
+            ts = read_hdf5("timeCorrection_" + name_1, input_dir, "timestampNew")
+            if np.isnan(ts).any():
+                common.logger.warning(
+                    "%s file has NaN (not a number) values. Currently, unsupported",
+                    ("timeCorrection_" + name_1),
+                )
+                continue
+
+            z_score = read_hdf5("", path[i], "data")
+            nan = np.isnan(z_score)
+            if nan.any():
+                cleaned_z_score = []
+                cleaned_ts = []
+                common.logger.warning(
+                    "%s file has NaN (not a number) values. Discarding those values.",
+                    path[i],
+                )
+                for idx, v in enumerate(nan):
+                    # Discard NaN
+                    if v == False:
+                        cleaned_z_score.append(z_score[idx])
+                        cleaned_ts.append(ts[idx])
+                z_score = cleaned_z_score
+                ts = cleaned_ts
+
+            if len(ts) == 0:
+                common.logger.warning(
+                    "No timestamp values left in the series. Skipping file: %s",
+                    os.path.basename(path[i]))
+                continue
+
+            csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
+            for csv_file in csv_path:
+                f = executor.submit(__process_csv_file, parameter_obj,
+                                               csv_file, z_score, ts, output_dir)
+                common.logger.info('Processing csv file: %s', csv_file)
+                futures.append(f)
+                futures_dict[f] = csv_file
+
+    for f in concurrent.futures.as_completed(futures):
+        common.logger.info('Finished processing csv file: %s', futures_dict[f])
+        result = f.result()
+        if result_success_list_box is not None:
+            result_success_list_box.append(result[0])
+        if result_unsuccess_list_box is not None:
+            result_unsuccess_list_box.append(result[1])
+        if files_without_timeshift is not None:
+            files_without_timeshift.append(result[2])
+        custom_log_handler.flush_logs(result[3])
+
+# ----------------------------------------------------------------------------
+#   Routines in the below section are all parallelizable. Avoid taking any
+#   dependencies on globals.
+# ----------------------------------------------------------------------------
 
 # Read the values of the given 'key' from the HDF5 file
 # into an numpy array. If an 'event' is provided, it will
@@ -106,174 +188,167 @@ def generate_output_file(sum, cnt, out_df, out_file):
     df_summary.to_csv(out_file, mode="w", index=False, header=True)
     out_df.to_csv(out_file, mode="a", index=False, header=True)
 
-
-def main(input_dir: str, parameter_obj: Parameters):
-    global files_without_timeshift, result_success_list_box, output_dir
-
-    path = glob.glob(os.path.join(input_dir, "dff_*"))
-    output_dir = common.get_output_dir(input_dir, "", False)
-    for i in range(len(path)):
-        basename = (os.path.basename(path[i])).split(".")[0]
-        name_1 = basename.split("_")[-1]
-        ts = read_hdf5("timeCorrection_" + name_1, input_dir, "timestampNew")
-        if np.isnan(ts).any():
+def __process_csv_file(
+    parameter_obj: Parameters,
+    csv_file: str,
+    data: np.asarray,
+    ts: np.asarray,
+    output_dir: str,
+):
+    without_timeshift_list = []
+    unsuccess_list = []
+    success_list = []
+    common.logger.info("Processing input file: %s", csv_file)
+    timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(
+        csv_file
+    )
+    if timeshift_val:
+        common.logger.info(
+            "Using timeshift value of: %s", str(timeshift_val))
+    else:
+        if timeshift_val is None:
+            timeshift_val = 0
+            common.logger.warning("\tNo timeshift value specified")
+        else:
             common.logger.warning(
-                "%s file has NaN (not a number) values. Currently, unsupported",
-                ("timeCorrection_" + name_1),
+                "\tIncorrect timeshift value of zero specified"
             )
-            continue
+        without_timeshift_list.append(os.path.basename(csv_file))
 
-        z_score = read_hdf5("", path[i], "data")
-        nan = np.isnan(z_score)
-        if nan.any():
-            cleaned_z_score = []
-            cleaned_ts = []
-            common.logger.warning(
-                "%s file has NaN (not a number) values. Discarding those values.",
-                path[i],
-            )
-            for idx, v in enumerate(nan):
-                # Discard NaN
-                if v == False:
-                    cleaned_z_score.append(z_score[idx])
-                    cleaned_ts.append(ts[idx])
-            z_score = cleaned_z_score
-            ts = cleaned_ts
+    success, binary_df = common.parse_input_file_into_df(
+        csv_file, common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed
+    )
+    if not success:
+        common.logger.warning(
+            "Skipping CSV file (%s) as it is not well formed", csv_file)
+        unsuccess_list.append(os.path.basename(csv_file))
+        return
 
-        if len(ts) == 0:
-            common.logger.warning(
-                "No timestamp values left in the series. Skipping file: %s",
-                os.path.basename(path[i]))
-            continue
+    success_list.append(os.path.basename(csv_file))
+    binary_ts_splits = get_ts_split_for_binary(
+        binary_df, timeshift_val)
 
-        csv_path = glob.glob(os.path.join(input_dir, "*.csv"))
-        for csv_file in csv_path:
-            common.logger.info("Processing input file: %s", csv_file)
-            timeshift_val, num_rows_processed = common.get_timeshift_from_input_file(
-                csv_file
-            )
-            if timeshift_val:
-                common.logger.info(
-                    "Using timeshift value of: %s", str(timeshift_val))
-            else:
-                if timeshift_val is None:
-                    timeshift_val = 0
-                    common.logger.warning("\tNo timeshift value specified")
-                else:
-                    common.logger.warning(
-                        "\tIncorrect timeshift value of zero specified"
-                    )
-                files_without_timeshift.append(os.path.basename(csv_file))
+    csv_basename = (os.path.basename(csv_file)).split(".")[0]
+    # Create output folder specific for this csv file.
+    this_output_dir = os.path.join(output_dir, csv_basename)
+    common.logger.info("Output folder: %s", this_output_dir)
+    if not os.path.isdir(this_output_dir):
+        os.mkdir(this_output_dir)
 
-            success, binary_df = common.parse_input_file_into_df(
-                csv_file, common.NUM_INITIAL_ROWS_TO_SKIP + num_rows_processed
-            )
-            if not success:
-                common.logger.warning(
-                    "Skipping CSV file (%s) as it is not well formed", csv_file)
-                if result_unsuccess_list_box is not None:
-                    result_unsuccess_list_box.append(
-                        os.path.basename(csv_file))
-                continue
+    # We want to generate without any parameters as well. So start with
+    # no parameters and append the parameter list.
+    param_name_list = [""]
+    param_list = parameter_obj.get_param_name_list()
+    # If there are more than one parameter, generate output for combined
+    # parameter and ~(combined parameter). A `None` value is used to
+    # represent 'combined parameters'
+    if len(param_list) > 1:
+        param_name_list.append(None)
+    param_name_list.extend(param_list)
 
-            if result_success_list_box is not None:
-                result_success_list_box.append(os.path.basename(csv_file))
-            binary_ts_splits = get_ts_split_for_binary(
-                binary_df, timeshift_val)
+    futures = []
+    futures_dict = {}
+    log_level = common.logger.getEffectiveLevel()
+    with ProcessPoolExecutor(initializer=initialize, initargs=(log_level, )) as executor:
+        for param_name in param_name_list:
+            f = executor.submit(__process_param_with_output, parameter_obj, param_name,
+                                           binary_df, timeshift_val, binary_ts_splits, data, ts,
+                                           this_output_dir, csv_basename)
+            common.logger.info('Processing, param: %s', param_name)
+            futures.append(f)
+            futures_dict[f] = param_name
 
-            csv_basename = (os.path.basename(csv_file)).split(".")[0]
-            # Create output folder specific for this csv file.
-            this_output_folder = os.path.join(output_dir, csv_basename)
-            common.logger.info("Output folder: %s", this_output_folder)
-            if not os.path.isdir(this_output_folder):
-                os.mkdir(this_output_folder)
+    for f in concurrent.futures.as_completed(futures):
+        common.logger.info('Finished processing param: %s', futures_dict[f])
 
-            # We want to generate without any parameters as well. So start with
-            # no parameters and append the parameter list.
-            param_name_list = [""]
-            param_list = parameter_obj.get_param_name_list()
-            param_name_list.extend(param_list)
-            # If there are more than one parameter, generate output for combined
-            # parameter and ~(combined parameter). A `None` value is used to
-            # represent 'combined parameters'
-            if len(param_list) > 1:
-                param_name_list.append(None)
-            for param in param_name_list:
-                # Process the data and write out the results
-                common.logger.info("processing param: %s", param)
-                success, results = process(
-                    parameter_obj, param, binary_df, timeshift_val, binary_ts_splits, z_score, ts
-                )
-                if not success:
-                    continue
+    return success_list, unsuccess_list, without_timeshift_list, common.logs
 
-                auc_0s_sum = results[0]
-                auc_0s_cnt = results[1]
-                out_df_0s = results[2]
-                auc_0s_sum_not = results[3]
-                auc_0s_cnt_not = results[4]
-                out_df_0s_not = results[5]
-                auc_1s_sum = results[6]
-                auc_1s_cnt = results[7]
-                out_df_1s = results[8]
-                auc_1s_sum_not = results[9]
-                auc_1s_cnt_not = results[10]
-                out_df_1s_not = results[11]
-                auc_sum = results[12]
-                auc_cnt = results[13]
-                out_df = results[14]
-                auc_sum_not = results[15]
-                auc_cnt_not = results[16]
-                out_df_not = results[17]
+def __process_param_with_output(
+    parameter_obj: Parameters,
+    param_name: str,
+    binary_df: pd.DataFrame,
+    timeshift_val: float,
+    binary_ts_splits: list,
+    data: np.asarray,
+    ts: np.asarray,
+    output_dir: str,
+    csv_basename: str,
+):
+    # Process the data and write out the results
+    common.logger.info("processing param: %s", param_name)
+    success, results = process(
+        parameter_obj, param_name, binary_df, timeshift_val, binary_ts_splits, data, ts
+    )
+    if not success:
+        return
 
-                param_ext = ""
-                if param == None:
-                    param_ext = "_outside-parameters"
-                elif not param == "":
-                    param_ext = "_" + param
+    auc_0s_sum = results[0]
+    auc_0s_cnt = results[1]
+    out_df_0s = results[2]
+    auc_0s_sum_not = results[3]
+    auc_0s_cnt_not = results[4]
+    out_df_0s_not = results[5]
+    auc_1s_sum = results[6]
+    auc_1s_cnt = results[7]
+    out_df_1s = results[8]
+    auc_1s_sum_not = results[9]
+    auc_1s_cnt_not = results[10]
+    out_df_1s_not = results[11]
+    auc_sum = results[12]
+    auc_cnt = results[13]
+    out_df = results[14]
+    auc_sum_not = results[15]
+    auc_cnt_not = results[16]
+    out_df_not = results[17]
 
-                # 0's
-                out_0_file = os.path.join(
-                    this_output_folder,
-                    OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT,
-                )
-                if auc_0s_cnt > 0 and param is not None:
-                    generate_output_file(
-                        auc_0s_sum, auc_0s_cnt, out_df_0s, out_0_file)
+    param_ext = ""
+    if param_name == None:
+        param_ext = "_outside-parameters"
+    elif not param_name == "":
+        param_ext = "_" + param_name
 
-                if auc_0s_cnt_not > 0 and param is None:
-                    generate_output_file(
-                        auc_0s_sum_not, auc_0s_cnt_not, out_df_0s_not, out_0_file
-                    )
+    # 0's
+    out_0_file = os.path.join(
+        output_dir,
+        OUTPUT_ZEROS + csv_basename + param_ext + common.CSV_EXT,
+    )
+    if auc_0s_cnt > 0 and param_name is not None:
+        generate_output_file(
+            auc_0s_sum, auc_0s_cnt, out_df_0s, out_0_file)
 
-                # 1's
-                out_1_file = os.path.join(
-                    this_output_folder,
-                    OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT,
-                )
-                if auc_1s_cnt > 0 and param is not None:
-                    generate_output_file(
-                        auc_1s_sum, auc_1s_cnt, out_df_1s, out_1_file)
+    if auc_0s_cnt_not > 0 and param_name is None:
+        generate_output_file(
+            auc_0s_sum_not, auc_0s_cnt_not, out_df_0s_not, out_0_file
+        )
 
-                if auc_1s_cnt_not > 0 and param is None:
-                    generate_output_file(
-                        auc_1s_sum_not, auc_1s_cnt_not, out_df_1s_not, out_1_file
-                    )
+    # 1's
+    out_1_file = os.path.join(
+        output_dir,
+        OUTPUT_ONES + csv_basename + param_ext + common.CSV_EXT,
+    )
+    if auc_1s_cnt > 0 and param_name is not None:
+        generate_output_file(
+            auc_1s_sum, auc_1s_cnt, out_df_1s, out_1_file)
 
-                # Data independent of 0 or 1
-                out_not_file = os.path.join(
-                    this_output_folder,
-                    OUTPUT_DFF + csv_basename + param_ext + common.CSV_EXT,
-                )
+    if auc_1s_cnt_not > 0 and param_name is None:
+        generate_output_file(
+            auc_1s_sum_not, auc_1s_cnt_not, out_df_1s_not, out_1_file
+        )
 
-                if auc_cnt > 0 and param is not None:
-                    generate_output_file(
-                        auc_sum, auc_cnt, out_df, out_not_file)
+    # Data independent of 0 or 1
+    out_not_file = os.path.join(
+        output_dir,
+        OUTPUT_DFF + csv_basename + param_ext + common.CSV_EXT,
+    )
 
-                if auc_cnt_not > 0 and param is None:
-                    generate_output_file(
-                        auc_sum_not, auc_cnt_not, out_df_not, out_not_file
-                    )
+    if auc_cnt > 0 and param_name is not None:
+        generate_output_file(
+            auc_sum, auc_cnt, out_df, out_not_file)
+
+    if auc_cnt_not > 0 and param_name is None:
+        generate_output_file(
+            auc_sum_not, auc_cnt_not, out_df_not, out_not_file
+        )
 
 
 def process(
@@ -369,7 +444,6 @@ def process(
 
     index_start = -1
     index_end = 0
-    row_count = binary_df.shape[0]
     auc_sum = 0
     auc_cnt = 0
     mi_sum = 0
@@ -661,6 +735,9 @@ def get_ts_split_for_binary(
 
     return splits
 
+# ----------------------------------------------------------------------------
+#                   End of parallelizable section.
+# ----------------------------------------------------------------------------
 
 def print_help():
     """
@@ -691,11 +768,9 @@ def print_help():
     sys.exit()
 
 
-"""
-------------------------------------------------------------
-                UI related stuff
-------------------------------------------------------------
-"""
+# ----------------------------------------------------------------------------
+#                       UI related stuff
+# ----------------------------------------------------------------------------
 
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
 
