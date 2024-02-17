@@ -32,6 +32,7 @@ LIGHT_YELLOW_COLOR = "#FFFFED"
 # globals
 logger = None
 input_dir = ""
+logs = []
 
 
 def convert_obj_to_nan(val: object) -> object:
@@ -248,6 +249,22 @@ class loghandler(logging.StreamHandler):
     def set_result_log_ui_box(self, result_log_ui_box):
         self.result_log_ui_box = result_log_ui_box
 
+    def flush_logs(self, logs):
+        if self.result_log_ui_box is None:
+            return
+
+        for record in logs:
+            level = record[0]
+            msg = record[1]
+            match level:
+                case logging.WARNING:
+                    # If it wasn't previously set to higher attention.
+                    if not self.result_log_ui_box.bg == LIGHT_RED_COLOR:
+                        self.result_log_ui_box.bg = LIGHT_YELLOW_COLOR
+                case logging.CRITICAL | logging.ERROR:
+                    self.result_log_ui_box.bg = LIGHT_RED_COLOR
+            self.result_log_ui_box.value += msg
+
     def emit(self, record):
         """
         Writes the message to the output file (or the default logger stream),
@@ -255,6 +272,7 @@ class loghandler(logging.StreamHandler):
         """
         try:
             msg = self.format(record)
+            logs.append([record.levelno, msg])
             match record.levelno:
                 case logging.WARNING:
                     p_msg = bcolors.WARN + msg + bcolors.ENDC
