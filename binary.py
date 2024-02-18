@@ -45,7 +45,7 @@ UNDERSCORE = "_"
 EMPTY = "_EMPTY"
 
 # output file name formats:
-OUTPUT_NO_PARAMETERS = "_Not"
+OUTPUT_NO_PARAMETERS = "_outside-parameters"
 OUTPUT_ZERO_TO_ONE_CSV_NAME = "01"
 OUTPUT_ONE_TO_ZERO_CSV_NAME = "10"
 OUTPUT_LOG_FILE = "binary_output.log"
@@ -249,7 +249,6 @@ def format_out_nop_file_name(
         + UNDERSCORE
         + OUTPUT_ZERO_TO_ONE_CSV_NAME
         + output_no_parameter
-        + param_names
         + common.CSV_EXT,
     )
     min_time_before_after = format_out_name_with_param_val(
@@ -264,7 +263,6 @@ def format_out_nop_file_name(
             + input_file_without_ext
             + min_time_before_after
             + output_no_parameter
-            + param_names
             + common.CSV_EXT,
         )
     else:
@@ -273,7 +271,6 @@ def format_out_nop_file_name(
             OUTPUT_ZERO_TO_ONE_CSV_NAME
             + min_time_before_after
             + output_no_parameter
-            + param_names
             + common.CSV_EXT,
         )
 
@@ -283,7 +280,6 @@ def format_out_nop_file_name(
         + UNDERSCORE
         + OUTPUT_ONE_TO_ZERO_CSV_NAME
         + output_no_parameter
-        + param_names
         + common.CSV_EXT,
     )
 
@@ -295,7 +291,6 @@ def format_out_nop_file_name(
             + input_file_without_ext
             + min_time_before_after
             + output_no_parameter
-            + param_names
             + common.CSV_EXT,
         )
     else:
@@ -304,7 +299,6 @@ def format_out_nop_file_name(
             OUTPUT_ONE_TO_ZERO_CSV_NAME
             + min_time_before_after
             + output_no_parameter
-            + param_names
             + common.CSV_EXT,
         )
 
