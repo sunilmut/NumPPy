@@ -1,9 +1,12 @@
+import concurrent
 import getopt
 import glob
 import logging
 import os
 import subprocess
 import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
 
 import h5py
 import numpy as np
@@ -23,9 +26,6 @@ from pandas.api.types import is_integer_dtype
 
 import common
 from parameter import *
-import concurrent
-from concurrent.futures import ProcessPoolExecutor
-import time
 
 # UI related constants
 INPUT_FOLDER_NAME_BOX_MAX_WIDTH = 26
@@ -59,7 +59,6 @@ OUTPUT_VALUE_PRECISION = 5
 OUTPUT_ZEROS = "0_"
 OUTPUT_ONES = "1_"
 OUTPUT_DFF = "dff_"
-OUTPUT_NOT = "_Not"
 OUTPUT_AUC = "AUC (sum)"
 OUTPUT_Z_SCORE = "dff (avg)"
 OUTPUT_SUMMARY_COLUMN_SCHEMA = {
