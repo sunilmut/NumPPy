@@ -33,6 +33,7 @@ In the opened command prompt, run:
 
 ```
 pip3 install guizero numpy pandas xlrd xlsxwriter matplotlib openpyxl nested_dict h5py scipy pathlib bcolors==1.0.2
+pip3 install --upgrade pandas pandasai
 ```
 
 ## Update the code:
